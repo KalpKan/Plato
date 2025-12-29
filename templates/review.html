@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Review Extraction - Course Outline Converter{% endblock %}
+
+{% block content %}
+<div class="review-section">
+    <h2>Review Extracted Data</h2>
+    <p>Please review the extracted information and make any necessary corrections.</p>
+
+    <!-- Extraction Completeness Section -->
+    {% if completeness %}
+    <section class="review-section-item completeness-section">
+        <h3>Extraction Completeness</h3>
+        <div class="completeness-grid">
+            <div class="completeness-item">
+                <label>Overall Completeness:</label>
+                <span class="value completeness-{{ 'high' if completeness.overall_completeness >= 80 else 'medium' if completeness.overall_completeness >= 50 else 'low' }}">
+                    {{ "%.1f"|format(completeness.overall_completeness) }}%
+                </span>
+            </div>
+            <div class="completeness-item">
+                <label>Assessment Completeness:</label>
+                <span class="value completeness-{{ 'high' if completeness.assessment_completeness >= 80 else 'medium' if completeness.assessment_completeness >= 50 else 'low' }}">
+                    {{ "%.1f"|format(completeness.assessment_completeness) }}%
+                </span>
+            </div>
+        </div>
+        
+        <div class="completeness-details">
+            <h4>Extracted Information:</h4>
+            <ul>
+                <li class="{{ 'found' if completeness.course_code_found else 'missing' }}">
+                    Course Code: {{ 'Found' if completeness.course_code_found else 'Missing' }}
+                </li>
+                <li class="{{ 'found' if completeness.course_name_found else 'missing' }}">
+                    Course Name: {{ 'Found' if completeness.course_name_found else 'Missing' }}
+                </li>
+                <li class="{{ 'found' if completeness.term_found else 'missing' }}">
+                    Term: {{ 'Found' if completeness.term_found else 'Missing' }}
+                </li>
+                <li class="{{ 'found' if completeness.lecture_sections_found else 'missing' }}">
+                    Lecture Sections: {{ completeness.num_lecture_sections }} found
+                </li>
+                <li class="{{ 'found' if completeness.lab_sections_found else 'missing' }}">
+                    Lab Sections: {{ completeness.num_lab_sections }} found
+                </li>
+                <li class="{{ 'found' if completeness.num_assessments > 0 else 'missing' }}">
+                    Assessments: {{ completeness.num_assessments }} found
+                </li>
+            </ul>
+            
+            <h4>Assessment Details:</h4>
+            <ul>
+                <li>Total Assessments: {{ completeness.num_assessments }}</li>
+                <li>With Weight: {{ completeness.assessments_with_weight }}</li>
+                <li>With Due Date: {{ completeness.assessments_with_date }}</li>
+                <li>Complete (Weight + Date): {{ completeness.assessments_complete }}</li>
+                <li>
+                    Total Weight: 
+                    <strong>{{ "%.1f"|format(completeness.total_weight) }}%</strong>
+                    {% if completeness.has_extra_credit %}
+                        <span class="extra-credit-badge">(Includes Extra Credit)</span>
+                    {% elif completeness.total_weight < 100.0 and completeness.total_weight > 0 %}
+                        <span class="warning-badge">(Below 100%)</span>
+                    {% elif completeness.total_weight == 100.0 %}
+                        <span class="success-badge">(Complete)</span>
+                    {% endif %}
+                </li>
+                {% if completeness.total_weight_without_dates > 0 %}
+                <li class="missing">
+                    Weight Missing Dates: {{ "%.1f"|format(completeness.total_weight_without_dates) }}%
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
+
+    <form action="{{ url_for('review') }}" method="POST" class="review-form">
+        <!-- Course Information -->
+        <section class="review-section-item">
+            <h3>Course Information</h3>
+            <div class="info-grid">
+                <div>
+                    <label>Course Code:</label>
+                    <span class="value">{{ course_code }}</span>
+                </div>
+                <div>
+                    <label>Course Name:</label>
+                    <span class="value">{{ course_name }}</span>
+                </div>
+                <div>
+                    <label>Term:</label>
+                    <span class="value">{{ term.term_name }}</span>
+                </div>
+                <div>
+                    <label>Start Date:</label>
+                    <span class="value">{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else 'Not found' }}</span>
+                </div>
+                <div>
+                    <label>End Date:</label>
+                    <span class="value">{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else 'Not found' }}</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lecture Section Selection -->
+        <section class="review-section-item">
+            <h3>Lecture Section</h3>
+            {% if lecture_sections %}
+                <div class="form-group">
+                    <label for="lecture_section">Select your lecture section:</label>
+                    <select name="lecture_section" id="lecture_section" class="form-control" required>
+                        <option value="none">-- Select Lecture Section --</option>
+                        {% for section in lecture_sections %}
+                            <option value="{{ loop.index0 }}" 
+                                {% if user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id %}selected{% endif %}>
+                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
+                                {% if section.days_of_week %}
+                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                    {% for day_num in section.days_of_week %}
+                                        {{ day_names[day_num] }}{% if not loop.last %}/{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                                {{ section.start_time.strftime('%H:%M') }}-{{ section.end_time.strftime('%H:%M') }}
+                                {% if section.location %} ({{ section.location }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% else %}
+                <p class="no-data">No lecture sections found in PDF. You can enter manually or proceed without lectures.</p>
+                <input type="hidden" name="lecture_section" value="none">
+            {% endif %}
+        </section>
+
+        <!-- Lab Section Selection -->
+        <section class="review-section-item">
+            <h3>Lab Section</h3>
+            {% if lab_sections %}
+                <div class="form-group">
+                    <label for="lab_section">Select your lab section:</label>
+                    <select name="lab_section" id="lab_section" class="form-control">
+                        <option value="none">-- No Lab Section --</option>
+                        {% for section in lab_sections %}
+                            <option value="{{ loop.index0 }}"
+                                {% if user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id %}selected{% endif %}>
+                                Section {{ section.section_id or 'N/A' }}: 
+                                {% if section.days_of_week %}
+                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                    {% for day_num in section.days_of_week %}
+                                        {{ day_names[day_num] }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                                {% if section.start_time %} {{ section.start_time.strftime('%H:%M') }}{% else %}N/A{% endif %}
+                                -
+                                {% if section.end_time %}{{ section.end_time.strftime('%H:%M') }}{% else %}N/A{% endif %}
+                                {% if section.location %} ({{ section.location }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% else %}
+                <p class="no-data">No lab sections found in PDF. You can enter manually or proceed without labs.</p>
+                <input type="hidden" name="lab_section" value="none">
+            {% endif %}
+        </section>
+
+        <!-- Assessments -->
+        <section class="review-section-item">
+            <h3>Assessments</h3>
+            {% if assessments %}
+                <div class="assessments-list">
+                    {% for assessment in assessments %}
+                        <div class="assessment-item {% if assessment.needs_review %}needs-review{% endif %}">
+                            <div class="assessment-header">
+                                <strong>{{ assessment.title }}</strong>
+                                {% if assessment.needs_review %}
+                                    <span class="badge badge-warning">Needs Review</span>
+                                {% endif %}
+                            </div>
+                            <div class="assessment-details">
+                                <span>Type: {{ assessment.type }}</span>
+                                {% if assessment.weight_percent %}
+                                    <span>Weight: {{ assessment.weight_percent }}%</span>
+                                {% endif %}
+                                {% if assessment.due_datetime %}
+                                    <span>Due: {{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else 'Not specified' }}</span>
+                                {% elif assessment.due_rule %}
+                                    <span>Due: {{ assessment.due_rule }}</span>
+                                {% else %}
+                                    <span class="missing">Due date not found</span>
+                                {% endif %}
+                                <span>Confidence: {{ (assessment.confidence * 100)|int }}%</span>
+                            </div>
+                            {% if assessment.source_evidence %}
+                                <div class="assessment-source">
+                                    <small>Source: {{ assessment.source_evidence[:100] }}</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="no-data">No assessments found in PDF. You may need to add them manually.</p>
+            {% endif %}
+        </section>
+
+        <!-- Lead Time Mapping -->
+        <section class="review-section-item">
+            <h3>Study Plan Lead Times</h3>
+            <p>The system will create "start studying" reminders based on assessment weights:</p>
+            <div class="lead-time-mapping">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Assessment Weight</th>
+                            <th>Lead Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for range, days in lead_time_mapping.items() %}
+                            <tr>
+                                <td>{{ range }}</td>
+                                <td>{{ days }} days before due</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="info-text">This mapping will be used for all assessments. You can override individual assessments if needed.</p>
+        </section>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Generate Calendar</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Start Over</a>
+            <a href="{{ url_for('manual') }}" class="btn btn-secondary">Switch to Manual Mode</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

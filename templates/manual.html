@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Mode - Course Outline Converter{% endblock %}
+
+{% block content %}
+<div class="manual-section">
+    <h2>Manual Data Entry</h2>
+    <p>If PDF extraction failed or you prefer to enter data manually, use this form.</p>
+
+    <form action="{{ url_for('manual') }}" method="POST" class="manual-form">
+        <!-- Term Information -->
+        <section class="form-section">
+            <h3>Term Information</h3>
+            <div class="form-group">
+                <label for="term_name">Term Name:</label>
+                <input type="text" id="term_name" name="term_name" placeholder="e.g., Fall 2025" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" required>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lecture Section -->
+        <section class="form-section">
+            <h3>Lecture Section</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="has_lecture" name="has_lecture">
+                    I have a lecture section
+                </label>
+            </div>
+            <div id="lecture-details" style="display: none;">
+                <div class="form-group">
+                    <label for="lecture_days">Days of Week:</label>
+                    <input type="text" id="lecture_days" name="lecture_days" placeholder="e.g., MWF or Mon/Wed/Fri">
+                    <small>Enter days: M, T, W, Th, F, S, Su or full names</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lecture_start">Start Time:</label>
+                        <input type="time" id="lecture_start" name="lecture_start">
+                    </div>
+                    <div class="form-group">
+                        <label for="lecture_end">End Time:</label>
+                        <input type="time" id="lecture_end" name="lecture_end">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="lecture_location">Location (optional):</label>
+                    <input type="text" id="lecture_location" name="lecture_location" placeholder="e.g., UC 202">
+                </div>
+            </div>
+        </section>
+
+        <!-- Lab Section -->
+        <section class="form-section">
+            <h3>Lab Section</h3>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="has_lab" name="has_lab">
+                    I have a lab section
+                </label>
+            </div>
+            <div id="lab-details" style="display: none;">
+                <div class="form-group">
+                    <label for="lab_days">Days of Week:</label>
+                    <input type="text" id="lab_days" name="lab_days" placeholder="e.g., TTh or Tue/Thu">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lab_start">Start Time:</label>
+                        <input type="time" id="lab_start" name="lab_start">
+                    </div>
+                    <div class="form-group">
+                        <label for="lab_end">End Time:</label>
+                        <input type="time" id="lab_end" name="lab_end">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="lab_location">Location (optional):</label>
+                    <input type="text" id="lab_location" name="lab_location" placeholder="e.g., SSC 1201">
+                </div>
+            </div>
+        </section>
+
+        <!-- Assessments -->
+        <section class="form-section">
+            <h3>Assessments</h3>
+            <div id="assessments-container">
+                <div class="assessment-entry">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Title:</label>
+                            <input type="text" name="assessment_titles[]" placeholder="e.g., Assignment 1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Type:</label>
+                            <select name="assessment_types[]" required>
+                                <option value="assignment">Assignment</option>
+                                <option value="lab_report">Lab Report</option>
+                                <option value="quiz">Quiz</option>
+                                <option value="midterm">Midterm</option>
+                                <option value="final">Final Exam</option>
+                                <option value="project">Project</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Due Date:</label>
+                            <input type="datetime-local" name="assessment_due_dates[]" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Weight % (optional):</label>
+                            <input type="number" name="assessment_weights[]" min="0" max="100" step="0.1" placeholder="e.g., 15.0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-assessment" class="btn btn-secondary">Add Another Assessment</button>
+        </section>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Generate Calendar</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Upload</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Show/hide lecture details
+    document.getElementById('has_lecture').addEventListener('change', function() {
+        document.getElementById('lecture-details').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Show/hide lab details
+    document.getElementById('has_lab').addEventListener('change', function() {
+        document.getElementById('lab-details').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Add assessment entry
+    document.getElementById('add-assessment').addEventListener('click', function() {
+        const container = document.getElementById('assessments-container');
+        const newEntry = container.firstElementChild.cloneNode(true);
+        // Clear input values
+        newEntry.querySelectorAll('input').forEach(input => input.value = '');
+        newEntry.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+        container.appendChild(newEntry);
+    });
+</script>
+{% endblock %}
+

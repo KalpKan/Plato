@@ -1,9 +1,15 @@
 """
 Caching system for course outline processing.
 
-Uses SQLite to store extracted data and generated .ics files keyed by PDF hash.
+Uses SQLite for local development and Supabase PostgreSQL for production.
+Automatically selects the appropriate cache manager based on environment variables.
+
+The cache system separates:
+- extraction_cache: PDF-derived facts (keyed by PDF hash)
+- user_choices: User selections (sections, lead times) - separate from extraction
 """
 
+import os
 import sqlite3
 import json
 import hashlib
@@ -72,19 +78,22 @@ class CacheManager:
         conn.commit()
         conn.close()
     
-    def lookup(self, pdf_hash: str) -> Optional[CacheEntry]:
-        """Look up cache entry by PDF hash.
+    def lookup_extraction(self, pdf_hash: str) -> Optional[ExtractedCourseData]:
+        """Look up extracted data from cache by PDF hash.
+        
+        This method queries the extraction_cache table to find previously
+        extracted data for a given PDF. The extraction cache stores facts
+        derived from the PDF itself, independent of user choices.
         
         Args:
-            pdf_hash: SHA-256 hash of PDF
+            pdf_hash: SHA-256 hash of the PDF file
             
         Returns:
-            CacheEntry if found, None otherwise
+            ExtractedCourseData if found in cache, None otherwise
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.execute(
-            "SELECT extracted_json, generated_ics, user_selections_json, timestamp "
-            "FROM cache_entries WHERE pdf_hash = ?",
+            "SELECT extracted_json, timestamp FROM extraction_cache WHERE pdf_hash = ?",
             (pdf_hash,)
         )
         row = cursor.fetchone()
@@ -93,61 +102,179 @@ class CacheManager:
         if row is None:
             return None
         
-        extracted_json, generated_ics, selections_json, timestamp_str = row
+        extracted_json, timestamp_str = row
         
         # Deserialize extracted data
         extracted_dict = json.loads(extracted_json)
-        extracted_data = self._deserialize_extracted_data(extracted_dict)
+        return self._deserialize_extracted_data(extracted_dict)
+    
+    def lookup_user_choices(self, pdf_hash: str, session_id: Optional[str] = None) -> Optional[UserSelections]:
+        """Look up user choices from cache.
+        
+        Retrieves user selections (sections, lead-time overrides) for a given
+        PDF hash. If session_id is provided, looks for session-specific choices.
+        Otherwise, returns the most recent choices for that PDF.
+        
+        Args:
+            pdf_hash: SHA-256 hash of the PDF file
+            session_id: Optional session identifier for user-specific choices
+            
+        Returns:
+            UserSelections if found, None otherwise
+        """
+        conn = sqlite3.connect(self.db_path)
+        
+        if session_id:
+            cursor = conn.execute(
+                """
+                SELECT selected_lecture_section_json, selected_lab_section_json, 
+                       lead_time_overrides_json
+                FROM user_choices
+                WHERE pdf_hash = ? AND session_id = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """,
+                (pdf_hash, session_id)
+            )
+        else:
+            cursor = conn.execute(
+                """
+                SELECT selected_lecture_section_json, selected_lab_section_json,
+                       lead_time_overrides_json
+                FROM user_choices
+                WHERE pdf_hash = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """,
+                (pdf_hash,)
+            )
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row is None:
+            return None
+        
+        lecture_json, lab_json, overrides_json = row
         
         # Deserialize user selections
-        selections_dict = json.loads(selections_json) if selections_json else {}
-        user_selections = self._deserialize_selections(selections_dict)
+        selections_dict = {}
+        if lecture_json:
+            selections_dict['selected_lecture_section'] = json.loads(lecture_json)
+        if lab_json:
+            selections_dict['selected_lab_section'] = json.loads(lab_json)
+        if overrides_json:
+            selections_dict['lead_time_overrides'] = json.loads(overrides_json)
         
-        # Parse timestamp
-        timestamp = datetime.fromisoformat(timestamp_str)
+        return self._deserialize_selections(selections_dict)
+    
+    def lookup(self, pdf_hash: str) -> Optional[CacheEntry]:
+        """Look up cache entry by PDF hash (legacy method for compatibility).
         
+        This method combines extraction cache and user choices for backward
+        compatibility. New code should use lookup_extraction() and lookup_user_choices()
+        separately.
+        
+        Args:
+            pdf_hash: SHA-256 hash of PDF
+            
+        Returns:
+            CacheEntry if found, None otherwise
+        """
+        extracted_data = self.lookup_extraction(pdf_hash)
+        if extracted_data is None:
+            return None
+        
+        user_selections = self.lookup_user_choices(pdf_hash) or UserSelections()
+        
+        # Note: generated_ics is not stored separately anymore
+        # It can be regenerated from extracted_data and user_selections
         return CacheEntry(
             pdf_hash=pdf_hash,
             extracted_data=extracted_data,
             user_selections=user_selections,
-            generated_ics=generated_ics,
-            timestamp=timestamp
+            generated_ics="",  # Will be regenerated
+            timestamp=datetime.now()  # Approximate
         )
     
-    def store(self, pdf_hash: str, extracted_data: ExtractedCourseData,
-              generated_ics: str, user_selections: UserSelections):
-        """Store cache entry.
+    def store_extraction(self, pdf_hash: str, extracted_data: ExtractedCourseData):
+        """Store extracted data in cache.
+        
+        Stores the extracted course data (term, sections, assessments) in the
+        extraction_cache table. This data is derived from the PDF and doesn't
+        depend on user choices.
         
         Args:
-            pdf_hash: SHA-256 hash of PDF
-            extracted_data: Extracted course data
-            generated_ics: Generated .ics file content
-            user_selections: User selections (sections, overrides)
+            pdf_hash: SHA-256 hash of the PDF file
+            extracted_data: Extracted course data to store
         """
         # Serialize extracted data
         extracted_dict = self._serialize_extracted_data(extracted_data)
         extracted_json = json.dumps(extracted_dict)
         
-        # Serialize user selections
-        selections_dict = self._serialize_selections(user_selections)
-        selections_json = json.dumps(selections_dict)
-        
-        # Store in database
         conn = sqlite3.connect(self.db_path)
         conn.execute(
-            "INSERT OR REPLACE INTO cache_entries "
-            "(pdf_hash, extracted_json, generated_ics, user_selections_json, timestamp) "
-            "VALUES (?, ?, ?, ?, ?)",
+            """
+            INSERT OR REPLACE INTO extraction_cache (pdf_hash, extracted_json, timestamp)
+            VALUES (?, ?, ?)
+            """,
+            (pdf_hash, extracted_json, datetime.now().isoformat())
+        )
+        conn.commit()
+        conn.close()
+    
+    def store_user_choices(self, pdf_hash: str, user_selections: UserSelections,
+                          session_id: Optional[str] = None):
+        """Store user choices in cache.
+        
+        Stores user selections (lecture/lab sections, lead-time overrides) in
+        the user_choices table. This is separate from extraction cache, allowing
+        multiple users to have different selections for the same PDF.
+        
+        Args:
+            pdf_hash: SHA-256 hash of the PDF file
+            user_selections: User selections to store
+            session_id: Optional session identifier
+        """
+        # Serialize user selections
+        selections_dict = self._serialize_selections(user_selections)
+        
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            """
+            INSERT INTO user_choices 
+            (pdf_hash, session_id, selected_lecture_section_json, 
+             selected_lab_section_json, lead_time_overrides_json, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
             (
                 pdf_hash,
-                extracted_json,
-                generated_ics,
-                selections_json,
+                session_id,
+                json.dumps(selections_dict.get('selected_lecture_section')),
+                json.dumps(selections_dict.get('selected_lab_section')),
+                json.dumps(selections_dict.get('lead_time_overrides', {})),
                 datetime.now().isoformat()
             )
         )
         conn.commit()
         conn.close()
+    
+    def store(self, pdf_hash: str, extracted_data: ExtractedCourseData,
+              generated_ics: str, user_selections: UserSelections):
+        """Store cache entry (legacy method for compatibility).
+        
+        This method stores both extraction data and user choices for backward
+        compatibility. New code should use store_extraction() and store_user_choices()
+        separately.
+        
+        Args:
+            pdf_hash: SHA-256 hash of PDF
+            extracted_data: Extracted course data
+            generated_ics: Generated .ics file content (not stored separately)
+            user_selections: User selections (sections, overrides)
+        """
+        self.store_extraction(pdf_hash, extracted_data)
+        self.store_user_choices(pdf_hash, user_selections)
     
     def _serialize_extracted_data(self, data: ExtractedCourseData) -> dict:
         """Serialize ExtractedCourseData to dict."""
@@ -297,4 +424,24 @@ class CacheManager:
             }
         
         return selections
+
+
+# Auto-select cache manager based on environment
+def get_cache_manager():
+    """Get the appropriate cache manager based on environment.
+    
+    Returns:
+        SupabaseCacheManager if DATABASE_URL is set, otherwise SQLiteCacheManager
+    """
+    if os.getenv("DATABASE_URL"):
+        # Use Supabase for production
+        from .supabase_cache import SupabaseCacheManager
+        return SupabaseCacheManager()
+    else:
+        # Use SQLite for local development
+        return CacheManager()
+
+
+# Alias for backward compatibility
+SQLiteCacheManager = CacheManager
 

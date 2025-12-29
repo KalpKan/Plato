@@ -2,16 +2,20 @@
 
 This document tracks how to use the program and serves as detailed documentation for git.
 
+**Last Updated:** December 28, 2025
+
 ## Overview
 
 The Course Outline to iCalendar Converter is a web-based application that converts Western University course outline PDFs into iCalendar (.ics) files. The application extracts course information, generates recurring schedules, and creates assessment deadlines with study plan reminders.
+
+**Current Status:** Backend functionality is complete. Web interface is in development.
 
 ## Reference Document
 
 **Important:** When working with PDF extraction or understanding field locations, always refer to the reference PDF file:
 - `BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf`
 
-This file serves as the canonical example of how course outlines are structured and where specific fields are located.
+This file serves as the canonical example of how course outlines are structured and where specific fields are located. All extraction patterns should be tested against this reference PDF.
 
 ## Installation
 
@@ -29,7 +33,36 @@ This file serves as the canonical example of how course outlines are structured 
 
 ## Running the Application
 
-### Starting the Web Server
+### Web Interface (Primary Method)
+
+The web interface is now available and is the recommended way to use the application.
+
+**Start the server:**
+```bash
+python3 src/app.py
+```
+
+Then open your browser to:
+```
+http://localhost:5000
+```
+
+See `WEB_INTERFACE_GUIDE.md` for complete web interface documentation.
+
+### Testing with CLI (Alternative Method)
+
+```bash
+# Test basic functionality
+python3 test_cli.py
+
+# Test full extraction pipeline
+python3 test_extraction.py
+
+# Use CLI interface
+python3 -m src.main "path/to/syllabus.pdf" --no-cache
+```
+
+### Starting the Web Server (When Available)
 
 ```bash
 python src/app.py
@@ -170,6 +203,28 @@ The codebase is organized into modules:
 - `main.py` - CLI entry point (legacy)
 - `app.py` - Flask web application (primary interface)
 
+## Database Configuration
+
+### Local Development (SQLite)
+
+No configuration needed. The system automatically uses SQLite when `DATABASE_URL` is not set.
+
+Cache location: `~/.course_outline_cache/cache.db`
+
+### Production (Supabase)
+
+Set the `DATABASE_URL` environment variable:
+
+```bash
+export DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres"
+```
+
+The system automatically uses Supabase when `DATABASE_URL` is set.
+
+**Database Tables:**
+- `extraction_cache` - Stores PDF extraction results (keyed by PDF hash)
+- `user_choices` - Stores user selections (sections, lead times)
+
 ## Development Guidelines
 
 ### Code Comments
@@ -193,6 +248,7 @@ Code and documentation do not use emojis. This applies to:
 - All code changes are tracked in git
 - Usage documentation (`USAGE_GUIDE.md`) is updated after every change
 - Reference PDF is excluded from git but kept locally for development
+- Environment variables (`.env`) are excluded from git
 
 ### Reference PDF
 - Always refer to `BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf` when:
@@ -200,6 +256,23 @@ Code and documentation do not use emojis. This applies to:
   - Determining field locations
   - Implementing extraction logic
   - Testing extraction functionality
+
+## Project Structure
+
+See `PROJECT_STRUCTURE.md` for complete documentation of:
+- Directory layout
+- Module descriptions
+- Data flow
+- Database schema
+- Configuration options
+
+## Recent Changes
+
+See `CHANGELOG.md` for detailed list of all changes, including:
+- Supabase integration
+- Cache system improvements
+- Documentation updates
+- Code improvements
 
 ## Limitations
 

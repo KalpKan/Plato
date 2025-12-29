@@ -48,6 +48,11 @@ htmlcov/
 # Test fixtures (if large)
 tests/fixtures/pdfs/*.pdf
 
+# Test output
+test_output/
+*.ics
+*_extracted.json
+
 # Planning and documentation files (not for git)
 IMPLEMENTATION_PLAN.md
 ARCHITECTURE.md
@@ -59,4 +64,13 @@ CLARIFYING_QUESTIONS.md
 SUMMARY.md
 CHANGES_SUMMARY.md
 *.pdf
+
+# Environment variables (contains sensitive data)
+.env
+.env.local
+.env.*.local
+
+# Flask uploads and temporary files
+uploads/
+temp_calendars/
 

@@ -34,13 +34,15 @@ pip install -r requirements.txt
 ### Starting the Web Application
 
 ```bash
-python src/app.py
+python3 src/app.py
 ```
 
 Then open your browser and navigate to:
 ```
 http://localhost:5000
 ```
+
+**Note:** The web interface is now fully functional! See `WEB_INTERFACE_GUIDE.md` for detailed usage instructions.
 
 ### Using the Web Interface
 

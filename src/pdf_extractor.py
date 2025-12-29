@@ -162,35 +162,62 @@ class PDFExtractor:
         search_text = "\n".join([text for _, text in self.pages_text[:5]])
         
         # Pattern for schedule tables/lists
-        # This is a simplified pattern - may need refinement based on actual PDFs
-        schedule_pattern = r'(Lecture|LEC|Class|Section)\s*(\d{3})?\s*[:\s]+([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})'
+        # Handle formats like "M/W/F 9:30 – 10:20" or "MWF 9:30-10:20" or "Lecture M/W/F 9:30-10:20"
+        # Look for "Timetabled Sessions" or "Component Date(s) Time" section first
+        schedule_patterns = [
+            r'Lecture\s+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',  # "Lecture M/W/F 9:30-10:20 AM"
+            r'([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',  # "M/W/F 9:30-10:20 AM" (standalone)
+            r'(?:Lecture|LEC|Class|Section)\s*(\d{3})?\s*[:\s]+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',  # "Lecture M/W/F 9:30-10:20"
+            r'(?:Lecture|LEC)\s*([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',  # "Lecture MWF 9:30-10:20"
+        ]
         
-        matches = re.finditer(schedule_pattern, search_text, re.IGNORECASE)
+        matches = []
+        for pattern in schedule_patterns:
+            for match in re.finditer(pattern, search_text, re.IGNORECASE):
+                matches.append(match)
         
         for match in matches:
-            section_id = match.group(2) or ""
-            days_str = match.group(3)
-            start_hour = int(match.group(4))
-            start_min = int(match.group(5))
-            end_hour = int(match.group(6))
-            end_min = int(match.group(7))
-            
-            # Parse days of week
-            days_of_week = self._parse_days_of_week(days_str)
-            
-            # Determine AM/PM (simplified - may need refinement)
-            start_time = time(start_hour % 24, start_min)
-            end_time = time(end_hour % 24, end_min)
-            
-            section = SectionOption(
-                section_type="Lecture",
-                section_id=section_id,
-                days_of_week=days_of_week,
-                start_time=start_time,
-                end_time=end_time,
-                location=None  # Extract location if pattern found
-            )
-            sections.append(section)
+            # Handle different pattern groups
+            groups = match.groups()
+            try:
+                if len(groups) == 6:  # First pattern with section ID
+                    section_id = groups[0] or ""
+                    days_str = groups[1]
+                    start_hour = int(groups[2])
+                    start_min = int(groups[3])
+                    end_hour = int(groups[4])
+                    end_min = int(groups[5])
+                elif len(groups) == 4:  # Second/third pattern without section ID
+                    section_id = ""
+                    days_str = groups[0]
+                    start_hour = int(groups[1])
+                    start_min = int(groups[2])
+                    end_hour = int(groups[3])
+                    end_min = int(groups[4])
+                else:
+                    continue
+                
+                # Parse days of week
+                days_of_week = self._parse_days_of_week(days_str)
+                if not days_of_week:
+                    continue  # Skip if we couldn't parse days
+                
+                # Determine AM/PM (simplified - may need refinement)
+                start_time = time(start_hour % 24, start_min)
+                end_time = time(end_hour % 24, end_min)
+                
+                section = SectionOption(
+                    section_type="Lecture",
+                    section_id=section_id,
+                    days_of_week=days_of_week,
+                    start_time=start_time,
+                    end_time=end_time,
+                    location=None  # Extract location if pattern found
+                )
+                sections.append(section)
+            except (ValueError, IndexError) as e:
+                # Skip matches that don't parse correctly
+                continue
         
         return sections
     
@@ -203,62 +230,137 @@ class PDFExtractor:
         sections = []
         search_text = "\n".join([text for _, text in self.pages_text[:5]])
         
-        # Pattern for lab schedules
-        lab_pattern = r'(Lab|LAB|Laboratory|Tutorial|TUT)\s*(\d{3})?\s*[:\s]+([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})'
+        # Pattern for lab schedules - similar to lecture patterns
+        lab_patterns = [
+            r'(?:Lab|LAB|Laboratory|Tutorial|TUT)\s*(\d{3})?\s*[:\s]+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
+            r'(?:Lab|LAB|Laboratory|Tutorial|TUT)\s*([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
+        ]
         
-        matches = re.finditer(lab_pattern, search_text, re.IGNORECASE)
+        matches = []
+        for pattern in lab_patterns:
+            for match in re.finditer(pattern, search_text, re.IGNORECASE):
+                matches.append(match)
         
         for match in matches:
-            section_id = match.group(2) or ""
-            days_str = match.group(3)
-            start_hour = int(match.group(4))
-            start_min = int(match.group(5))
-            end_hour = int(match.group(6))
-            end_min = int(match.group(7))
-            
-            days_of_week = self._parse_days_of_week(days_str)
-            start_time = time(start_hour % 24, start_min)
-            end_time = time(end_hour % 24, end_min)
-            
-            section = SectionOption(
-                section_type="Lab",
-                section_id=section_id,
-                days_of_week=days_of_week,
-                start_time=start_time,
-                end_time=end_time,
-                location=None
-            )
-            sections.append(section)
+            groups = match.groups()
+            try:
+                if len(groups) == 5:  # First pattern with section ID
+                    section_id = groups[0] or ""
+                    days_str = groups[1]
+                    start_hour = int(groups[2])
+                    start_min = int(groups[3])
+                    end_hour = int(groups[4])
+                    end_min = int(groups[5])
+                elif len(groups) == 4:  # Second pattern without section ID
+                    section_id = ""
+                    days_str = groups[0]
+                    start_hour = int(groups[1])
+                    start_min = int(groups[2])
+                    end_hour = int(groups[3])
+                    end_min = int(groups[4])
+                else:
+                    continue
+                
+                days_of_week = self._parse_days_of_week(days_str)
+                if not days_of_week:
+                    continue  # Skip if we couldn't parse days
+                
+                start_time = time(start_hour % 24, start_min)
+                end_time = time(end_hour % 24, end_min)
+                
+                section = SectionOption(
+                    section_type="Lab",
+                    section_id=section_id,
+                    days_of_week=days_of_week,
+                    start_time=start_time,
+                    end_time=end_time,
+                    location=None
+                )
+                sections.append(section)
+            except (ValueError, IndexError) as e:
+                # Skip matches that don't parse correctly
+                continue
         
         return sections
     
     def extract_assessments(self) -> List[AssessmentTask]:
-        """Extract assessment information.
+        """Extract assessment information from PDF.
+        
+        This function searches for the "Assessment and Evaluation" section and extracts
+        assessment information from the table. It handles various formats including:
+        - Table format with columns: Assessment, Format, Weight, Due Date, Flexibility
+        - Multiple due dates (e.g., PeerWise assignments)
+        - Date ranges (e.g., "December exam period")
+        - Relative dates (e.g., "24 hours after lab")
         
         Returns:
-            List of AssessmentTask objects
+            List of AssessmentTask objects with extracted information
         """
         assessments = []
         # Search entire PDF for assessments
         full_text = "\n".join([text for _, text in self.pages_text])
         
-        # Pattern for assessments with due dates
-        assessment_patterns = [
-            r'(Assignment|ASSIGNMENT|HW|Homework)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
-            r'(Quiz|QUIZ|Test)\s+(\d+)[^\n]*(?:due|Due|DUE|on|On)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
-            r'(Lab\s+Report|Laboratory\s+Report|Lab\s+Assignment)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
-            r'(Final\s+Exam|FINAL|Final\s+Examination)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
-            r'(Midterm|MIDTERM|Mid-term)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
-        ]
+        # First, try to extract from assessment table (more reliable)
+        table_assessments = self._extract_assessments_from_table(full_text)
+        if table_assessments:
+            assessments.extend(table_assessments)
+            # If we found assessments in table, skip pattern matching (avoid duplicates)
+            # But still check for relative rules
+            use_pattern_matching = False
+        else:
+            use_pattern_matching = True
         
-        for pattern in assessment_patterns:
-            matches = re.finditer(pattern, full_text, re.IGNORECASE)
-            for match in matches:
-                assessment_type = self._classify_assessment_type(match.group(1))
-                title = match.group(0)[:50]  # Truncate for title
+        if use_pattern_matching:
+            # Fallback to pattern matching if table extraction didn't work
+            # Pattern for assessments with due dates
+            assessment_patterns = [
+                r'(Assignment|ASSIGNMENT|HW|Homework)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Quiz|QUIZ|Test)\s+(\d+)[^\n]*(?:due|Due|DUE|on|On)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Lab\s+Report|Laboratory\s+Report|Lab\s+Assignment)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Final\s+Exam|FINAL|Final\s+Examination)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Midterm|MIDTERM|Mid-term)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+            ]
+            
+            for pattern in assessment_patterns:
+                matches = re.finditer(pattern, full_text, re.IGNORECASE)
+                for match in matches:
+                    groups = match.groups()
+                # Determine assessment type and title
+                if 'Quiz' in match.group(0):
+                    assessment_type = 'quiz'
+                    # Extract quiz number if available
+                    quiz_num = groups[1] if len(groups) > 1 and groups[1].isdigit() else (groups[2] if len(groups) > 2 and groups[2].isdigit() else '')
+                    title = f"Quiz {quiz_num}" if quiz_num else "Quiz"
+                elif 'Midterm' in match.group(0):
+                    assessment_type = 'midterm'
+                    title = "Midterm Exam"
+                elif 'Final' in match.group(0):
+                    assessment_type = 'final'
+                    title = "Final Exam"
+                elif 'Assignment' in match.group(0) or 'HW' in match.group(0):
+                    assessment_type = 'assignment'
+                    title = match.group(0)[:50]
+                else:
+                    assessment_type = 'other'
+                    title = match.group(0)[:50]
                 
-                # Try to extract due date
-                due_date_str = match.group(-1) if len(match.groups()) > 1 else None
+                # Try to extract due date - look for month and day in the match
+                due_date_str = None
+                # Check last groups for date info
+                for i in range(len(groups) - 1, -1, -1):
+                    if groups[i] and (groups[i].isdigit() or any(month in groups[i] for month in ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'])):
+                        # Try to construct date string
+                        if i > 0 and groups[i-1]:
+                            # Month name and day
+                            due_date_str = f"{groups[i-1]} {groups[i]}, 2025"
+                        elif groups[i].isdigit() and i > 0:
+                            # Look for month before this group
+                            context = match.group(0)[:match.start() + match.end()]
+                            month_match = re.search(r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)', context, re.IGNORECASE)
+                            if month_match:
+                                due_date_str = f"{month_match.group(0)} {groups[i]}, 2025"
+                        break
+                
                 due_datetime = None
                 if due_date_str:
                     parsed_date = dateparser.parse(due_date_str)
@@ -269,7 +371,7 @@ class PDFExtractor:
                             time(23, 59)
                         )
                 
-                # Try to extract weight
+                # Try to extract weight from surrounding text
                 weight = self._extract_weight(match.group(0))
                 
                 assessment = AssessmentTask(
@@ -278,7 +380,7 @@ class PDFExtractor:
                     weight_percent=weight,
                     due_datetime=due_datetime,
                     confidence=0.7 if due_datetime else 0.4,
-                    source_evidence=f"Page {match.start() // 1000}: {match.group(0)[:100]}",
+                    source_evidence=f"Found: {match.group(0)[:100]}",
                     needs_review=(due_datetime is None or weight is None)
                 )
                 assessments.append(assessment)
@@ -298,7 +400,42 @@ class PDFExtractor:
             )
             assessments.append(assessment)
         
-        return assessments
+        # Deduplicate: Remove assessments with same title but no date/weight if we have a better version
+        # Normalize titles for comparison (remove "In Class", case-insensitive, extract core name)
+        def normalize_title(title):
+            # Remove common prefixes and normalize
+            normalized = title.lower().strip()
+            normalized = re.sub(r'^in\s+class\s+', '', normalized)
+            normalized = re.sub(r'\s+', ' ', normalized)
+            # Extract core: "quiz 1", "midterm test", "final exam"
+            normalized = re.sub(r'^(quiz|midterm|final|assignment|lab\s+report)\s*(\d+)?.*', r'\1 \2', normalized).strip()
+            return normalized
+        
+        seen_titles = {}
+        deduplicated = []
+        for assessment in assessments:
+            title_normalized = normalize_title(assessment.title)
+            # Check if we already have a better version (with date and weight)
+            if title_normalized in seen_titles:
+                existing = seen_titles[title_normalized]
+                # Keep the one with date and weight, or higher confidence
+                if (assessment.due_datetime and assessment.weight_percent and 
+                    (not existing.due_datetime or not existing.weight_percent)):
+                    # Replace existing with better one
+                    deduplicated.remove(existing)
+                    deduplicated.append(assessment)
+                    seen_titles[title_normalized] = assessment
+                elif assessment.confidence > existing.confidence:
+                    # Replace with higher confidence
+                    deduplicated.remove(existing)
+                    deduplicated.append(assessment)
+                    seen_titles[title_normalized] = assessment
+                # Otherwise skip this duplicate
+            else:
+                seen_titles[title_normalized] = assessment
+                deduplicated.append(assessment)
+        
+        return deduplicated
     
     def extract_course_info(self) -> Tuple[Optional[str], Optional[str]]:
         """Extract course code and name from the PDF.
@@ -315,27 +452,70 @@ class PDFExtractor:
         # Course codes are almost always on the first page
         first_page = self.pages_text[0][1] if self.pages_text else ""
         
-        # Pattern for course code: 2-4 uppercase letters, space, 3-4 digits
-        # Examples: "CS 101", "MATH 120", "PHYS 3140"
-        course_code_pattern = r'([A-Z]{2,4})\s+(\d{3,4})'
-        match = re.search(course_code_pattern, first_page)
-        course_code = match.group(0) if match else None
+        # Pattern for course code: Can be "PHYS 3140A" or "Physiology 3140A" or "Phys 3140A"
+        # Try multiple patterns to catch different formats - order matters!
+        course_code_patterns = [
+            r'(Physiology|Physics|Phys)\s+(\d{3,4}[A-Z]?)',  # "Physiology 3140A" - check this first!
+            r'([A-Z]{2,4})\s+(\d{3,4}[A-Z]?)',  # "PHYS 3140A" or "CS 101"
+        ]
         
-        # Course name is usually on first page, right after the course code
+        course_code = None
+        for pattern in course_code_patterns:
+            match = re.search(pattern, first_page, re.IGNORECASE)
+            if match:
+                dept_raw = match.group(1).upper()
+                number = match.group(2)
+                
+                # Map common department names to abbreviations
+                dept_map = {
+                    'PHYSIOLOGY': 'PHYS',
+                    'PHYSICS': 'PHYS',
+                    'PHYS': 'PHYS',
+                    'COMPUTER SCIENCE': 'CS',
+                    'MATHEMATICS': 'MATH',
+                    'MATH': 'MATH',
+                    'CHEMISTRY': 'CHEM',
+                    'BIOLOGY': 'BIO',
+                }
+                
+                # Try to find abbreviation in map, otherwise use first 4 chars
+                dept = dept_map.get(dept_raw, dept_raw[:4])
+                course_code = f"{dept} {number}"
+                break
+        
+        # Course name is usually on first page, often on the same line as course code
+        # Look for patterns like "Cellular Physiology-Physiology 3140A" or "Introduction to..."
         course_name = None
-        if course_code:
-            # Try to find course name near course code
-            # Look for the position of the course code in the text
-            idx = first_page.find(course_code)
-            if idx != -1:
-                # Look for text after course code (usually the course name)
-                # Check up to 200 characters after the course code
-                remaining = first_page[idx + len(course_code):idx + 200]
-                # Extract first line or sentence (course name is usually on the same line)
-                lines = remaining.split('\n')
-                if lines:
-                    # Take the first line and limit to 100 characters
-                    course_name = lines[0].strip()[:100]
+        
+        # Try to find course name - look for text before or after course code
+        # Pattern: Look for line with course code, extract descriptive text
+        name_patterns = [
+            r'([A-Z][^-\n]+?)[-–]\s*(?:Physiology|Physics|Phys)\s+\d+',  # "Cellular Physiology-Physiology 3140A"
+            r'(?:Physiology|Physics|Phys)\s+\d+[A-Z]?\s*[-–]\s*([^\n]+)',  # "Physiology 3140A - Course Name"
+            r'([A-Z][^.\n]{10,80}?)(?:\s+Physiology|\s+Physics|\s+Phys)\s+\d+',  # Text before "Physiology 3140A"
+        ]
+        
+        for pattern in name_patterns:
+            match = re.search(pattern, first_page, re.IGNORECASE)
+            if match:
+                course_name = match.group(1).strip()
+                # Clean up common prefixes/suffixes
+                course_name = re.sub(r'^(Course|Outline|Department of)\s+', '', course_name, flags=re.IGNORECASE)
+                course_name = course_name.strip(' -–')
+                if len(course_name) > 5:  # Only use if it's substantial
+                    break
+        
+        # Fallback: if we found course code but not name, look for text on same line
+        if not course_name and course_code:
+            # Find line containing course code
+            for line in first_page.split('\n'):
+                if re.search(r'\d{3,4}[A-Z]?', line):  # Line has course number
+                    # Extract descriptive text from that line
+                    cleaned = re.sub(r'Physiology\s+\d+[A-Z]?.*', '', line, flags=re.IGNORECASE)
+                    cleaned = cleaned.strip(' -–')
+                    if len(cleaned) > 5:
+                        course_name = cleaned[:100]
+                        break
         
         return course_code, course_name
     
@@ -399,6 +579,185 @@ class PDFExtractor:
         # Remove duplicates and sort the list
         # This ensures we return a clean, sorted list like [0, 2, 4] for "MWF"
         return sorted(list(set(days)))
+    
+    def _extract_assessments_from_table(self, text: str) -> List[AssessmentTask]:
+        """Extract assessments from the assessment table in the PDF.
+        
+        Looks for the "Assessment and Evaluation" section and parses the table
+        with columns: Assessment, Format, Weight, Due Date, Flexibility.
+        
+        Args:
+            text: Full text of the PDF
+            
+        Returns:
+            List of AssessmentTask objects extracted from the table
+        """
+        assessments = []
+        
+        # Find the assessment section
+        # Look for "Assessment and Evaluation" or "8. Assessment"
+        assessment_section_pattern = r'(?:8\.\s*)?Assessment\s+(?:and\s+)?Evaluation[^\n]*(?:\n[^\n]*){0,100}'
+        section_match = re.search(assessment_section_pattern, text, re.IGNORECASE | re.DOTALL)
+        
+        if not section_match:
+            return assessments
+        
+        section_text = section_match.group(0)
+        
+        # Look for table header: "Assessment Format Weight Due Date Flexibility"
+        header_pattern = r'Assessment\s+(?:Format\s+)?(?:Weight|Weighting)\s+(?:Due\s+)?Date\s*(?:Flexibility)?'
+        header_match = re.search(header_pattern, section_text, re.IGNORECASE)
+        
+        if not header_match:
+            # Try alternative header patterns
+            header_pattern = r'Assessment\s+Format\s+Weight'
+            header_match = re.search(header_pattern, section_text, re.IGNORECASE)
+        
+        if not header_match:
+            return assessments
+        
+        # Extract text after header (the table rows)
+        table_start = header_match.end()
+        table_text = section_text[table_start:table_start+2000]  # Limit to reasonable size
+        
+        # Split table text into lines and process row by row
+        # Look for assessment rows - each assessment typically starts with a name
+        lines = table_text.split('\n')
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line or len(line) < 3:
+                i += 1
+                continue
+            
+            # Check if this line starts an assessment
+            assessment_name_match = re.search(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign))', line, re.IGNORECASE)
+            
+            if assessment_name_match:
+                # Found an assessment - collect multi-line row
+                assessment_name = assessment_name_match.group(1)
+                row_lines = [line]
+                
+                # Collect continuation lines (up to 5 more lines)
+                j = i + 1
+                while j < len(lines) and j < i + 6:
+                    next_line = lines[j].strip()
+                    # Stop if we hit another assessment or section header
+                    if re.match(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)|(?:Midterm|MIDTERM)|(?:Final\s+)?(?:Exam)|(?:Assignment|ASSIGNMENT)|(?:PeerWise|Peerwise)|(?:Lab\s+)?(?:Report)|(?:Slide\s+)?(?:redesign)|Designated|Information|General)', next_line, re.IGNORECASE):
+                        break
+                    if next_line and len(next_line) > 3:
+                        row_lines.append(next_line)
+                    j += 1
+                
+                row_text = ' '.join(row_lines)
+                
+                # Classify type
+                assessment_type = self._classify_assessment_type(assessment_name)
+                
+                # Extract weight
+                weight = self._extract_weight(row_text)
+                
+                # Extract due date(s)
+                due_dates = []
+                # Pattern for dates: "October 1", "Oct 1", "November 14", "Sunday, Oct 19", "December exam period"
+                date_patterns = [
+                    r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})',
+                    r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})',
+                ]
+                
+                for date_pattern in date_patterns:
+                    date_matches = re.finditer(date_pattern, row_text, re.IGNORECASE)
+                    for date_match in date_matches:
+                        if len(date_match.groups()) == 2:
+                            month = date_match.group(1)
+                            day = date_match.group(2)
+                            
+                            # Determine year
+                            year = 2025
+                            if '2026' in row_text or any(m in row_text for m in ['January', 'February', 'March', 'April']):
+                                year = 2026
+                            
+                            date_str = f"{month} {day}, {year}"
+                            # Avoid duplicates
+                            if date_str not in due_dates:
+                                due_dates.append(date_str)
+                
+                # Handle "December exam period" or date ranges
+                if not due_dates and ('exam period' in row_text.lower() or ('december' in row_text.lower() and 'exam' in row_text.lower())):
+                    # For final exam, use a placeholder date that will be resolved later
+                    due_dates.append("December 15, 2025")  # Default, will be refined
+                
+                # Extract time if present
+                time_str = None
+                # Look for time patterns: "6-8 PM", "11:59 PM", "in class"
+                time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(?:[-–]\s*(\d{1,2})(?:[:–-](\d{2}))?)?\s*(AM|PM)', row_text, re.IGNORECASE)
+                if time_match:
+                    time_str = time_match.group(0)
+                elif 'in class' in row_text.lower():
+                    time_str = 'in class'
+                
+                # Create assessment(s) - handle multiple due dates (e.g., PeerWise)
+                if due_dates:
+                    for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
+                        parsed_date = dateparser.parse(due_date_str)
+                        if parsed_date:
+                            # Handle time
+                            hour = 23
+                            minute = 59
+                            if time_str:
+                                if 'in class' in time_str.lower():
+                                    hour = 10
+                                    minute = 0
+                                else:
+                                    time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', time_str, re.IGNORECASE)
+                                    if time_match:
+                                        hour = int(time_match.group(1))
+                                        minute = int(time_match.group(2)) if time_match.group(2) else 0
+                                        if time_match.group(3).upper() == 'PM' and hour != 12:
+                                            hour += 12
+                                        elif time_match.group(3).upper() == 'AM' and hour == 12:
+                                            hour = 0
+                            
+                            due_datetime = datetime.combine(parsed_date.date(), time(hour, minute))
+                            
+                            # Create title - add suffix for multiple dates (PeerWise)
+                            title = assessment_name
+                            if len(due_dates) > 1 and 'peerwise' in row_text.lower():
+                                if date_idx == 0:
+                                    title = f"{assessment_name} (Author)"
+                                elif date_idx == 1:
+                                    title = f"{assessment_name} (Answer)"
+                            
+                            assessment = AssessmentTask(
+                                title=title,
+                                type=assessment_type,
+                                weight_percent=weight,
+                                due_datetime=due_datetime,
+                                confidence=0.8 if weight and due_datetime else 0.5,
+                                source_evidence=row_text[:200],
+                                needs_review=(due_datetime is None or weight is None)
+                            )
+                            assessments.append(assessment)
+                else:
+                    # If no dates found, still create assessment without date
+                    assessment = AssessmentTask(
+                        title=assessment_name,
+                        type=assessment_type,
+                        weight_percent=weight,
+                        due_datetime=None,
+                        confidence=0.4,
+                        source_evidence=row_text[:200],
+                        needs_review=True
+                    )
+                    assessments.append(assessment)
+                
+                # Move to next potential assessment
+                i = j
+            else:
+                i += 1
+        
+        return assessments
     
     def _classify_assessment_type(self, text: str) -> str:
         """Classify assessment type from text."""

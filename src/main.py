@@ -13,7 +13,7 @@ from .models import (
     ExtractedCourseData, UserSelections, CourseTerm, SectionOption,
     serialize_date, serialize_datetime, serialize_time
 )
-from .cache import CacheManager, compute_pdf_hash
+from .cache import get_cache_manager, compute_pdf_hash
 from .pdf_extractor import PDFExtractor
 from .rule_resolver import RuleResolver
 from .study_plan import StudyPlanGenerator
@@ -310,30 +310,28 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Initialize components
-    cache_manager = CacheManager()
+    cache_manager = get_cache_manager()
     pdf_hash = compute_pdf_hash(pdf_path)
     
     # Check cache
-    cached_entry = None
+    extracted_data = None
+    user_selections = UserSelections()
+    
     if not args.no_cache:
-        cached_entry = cache_manager.lookup(pdf_hash)
-        if cached_entry:
-            print(f"Found cached data for this PDF (cached on {cached_entry.timestamp.date()})")
-            use_cache = input("Use cached data? (y/n): ").strip().lower() == 'y'
+        # Try to get cached extraction data
+        cached_extraction = cache_manager.lookup_extraction(pdf_hash)
+        if cached_extraction:
+            print(f"Found cached extraction data for this PDF")
+            use_cache = input("Use cached extraction data? (y/n): ").strip().lower() == 'y'
             if use_cache:
-                extracted_data = cached_entry.extracted_data
-                user_selections = cached_entry.user_selections
-            else:
-                cached_entry = None
-        else:
-            extracted_data = None
-            user_selections = UserSelections()
-    else:
-        extracted_data = None
-        user_selections = UserSelections()
+                extracted_data = cached_extraction
+                # Also try to get user choices
+                cached_choices = cache_manager.lookup_user_choices(pdf_hash)
+                if cached_choices:
+                    user_selections = cached_choices
     
     # Extract from PDF if not cached
-    if not cached_entry:
+    if extracted_data is None:
         print(f"Extracting data from PDF: {pdf_path}")
         extractor = PDFExtractor(pdf_path)
         extracted_data = extractor.extract_all()
@@ -354,8 +352,8 @@ def main():
         # Review assessments
         extracted_data.assessments = review_assessments(extracted_data.assessments)
     
-    # Get user selections
-    if not cached_entry or not user_selections.selected_lecture_section:
+    # Get user selections (if not already cached)
+    if not user_selections.selected_lecture_section:
         user_selections.selected_lecture_section = prompt_section_selection(
             extracted_data.lecture_sections, "Lecture"
         )
@@ -363,7 +361,7 @@ def main():
         if not user_selections.selected_lecture_section and not extracted_data.lecture_sections:
             user_selections.selected_lecture_section = prompt_missing_section("Lecture")
     
-    if not cached_entry or not user_selections.selected_lab_section:
+    if not user_selections.selected_lab_section:
         user_selections.selected_lab_section = prompt_section_selection(
             extracted_data.lab_sections, "Lab"
         )
@@ -402,8 +400,9 @@ def main():
     
     # Cache results
     if not args.no_cache:
-        ics_content = calendar.to_ical().decode('utf-8')
-        cache_manager.store(pdf_hash, extracted_data, ics_content, user_selections)
+        # Store extraction data and user choices separately
+        cache_manager.store_extraction(pdf_hash, extracted_data)
+        cache_manager.store_user_choices(pdf_hash, user_selections)
         print("Results cached for future use.")
     
     print("\nDone! You can now import the .ics file into your calendar.")
@@ -411,5 +410,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
 
 
