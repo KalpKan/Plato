@@ -20,8 +20,8 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
-venv/
+# Virtual environments (but keep venv/ for Railway)
+# venv/  # Commented out - Railway needs this
 env/
 ENV/
 
