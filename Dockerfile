@@ -23,10 +23,13 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p uploads temp_calendars
 
-# Expose port (Railway will map this to PORT env var)
+# Copy and make startup script executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Expose port (Railway will set PORT env var)
 EXPOSE 5000
 
-# Run gunicorn (PORT is set by Railway as environment variable)
-# Use shell form CMD to allow variable expansion
-CMD sh -c "python -m gunicorn src.app:app --bind 0.0.0.0:${PORT:-5000}"
+# Use startup script that reads PORT from environment
+CMD ["/app/start.sh"]
 
