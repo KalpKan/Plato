@@ -426,7 +426,7 @@ function startEditing(fieldElement) {
     }, true); // Use capture phase
     
     // Handle save button click directly (in case form submit doesn't work)
-    const saveBtn = editForm.querySelector('.btn-save');
+    // saveBtn is already declared above, so just use it
     if (saveBtn) {
         saveBtn.addEventListener('click', function(e) {
             console.log('Save button clicked');
