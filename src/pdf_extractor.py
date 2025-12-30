@@ -423,32 +423,25 @@ class PDFExtractor:
         deduplicated = []
         for assessment in assessments:
             title_normalized = normalize_title(assessment.title)
-            print(f"DEBUG: Deduplication - '{assessment.title}' -> normalized: '{title_normalized}'")
             # Check if we already have a better version (with date and weight)
             if title_normalized in seen_titles:
                 existing = seen_titles[title_normalized]
-                print(f"DEBUG: Duplicate found! Existing: '{existing.title}', New: '{assessment.title}'")
                 # Keep the one with date and weight, or higher confidence
                 if (assessment.due_datetime and assessment.weight_percent and 
                     (not existing.due_datetime or not existing.weight_percent)):
                     # Replace existing with better one
-                    print(f"DEBUG: Replacing existing with better version")
                     deduplicated.remove(existing)
                     deduplicated.append(assessment)
                     seen_titles[title_normalized] = assessment
                 elif assessment.confidence > existing.confidence:
                     # Replace with higher confidence
-                    print(f"DEBUG: Replacing existing with higher confidence version")
                     deduplicated.remove(existing)
                     deduplicated.append(assessment)
                     seen_titles[title_normalized] = assessment
-                else:
-                    print(f"DEBUG: Skipping duplicate (keeping existing)")
                 # Otherwise skip this duplicate
             else:
                 seen_titles[title_normalized] = assessment
                 deduplicated.append(assessment)
-                print(f"DEBUG: Added to deduplicated list (total: {len(deduplicated)})")
         
         return deduplicated
     
@@ -666,8 +659,6 @@ class PDFExtractor:
         i = 0
         while i < len(lines):
             line = lines[i]
-            print(f"DEBUG: Processing line {i}: {line[:60]}")
-            
             # Check if this line starts an assessment - handle multi-line names
             assessment_name_match = None
             assessment_name = None
@@ -816,7 +807,6 @@ class PDFExtractor:
                     for pattern in stop_patterns:
                         if re.match(pattern, next_line, re.IGNORECASE):
                             should_stop = True
-                            print(f"DEBUG: Stopping collection at line {j} due to pattern match: {next_line[:60]}")
                             break
                     
                     if should_stop:
@@ -879,11 +869,9 @@ class PDFExtractor:
                     time_str = 'in class'
                 
                 # Create assessment(s) - handle multiple due dates (e.g., PeerWise)
-                print(f"DEBUG: Assessment '{assessment_name}' - found {len(due_dates)} dates: {due_dates}")
                 if due_dates:
                     for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
                         parsed_date = dateparser.parse(due_date_str)
-                        print(f"DEBUG: Parsing date '{due_date_str}' -> {parsed_date}")
                         if parsed_date:
                             # Handle time
                             hour = 23
@@ -922,10 +910,8 @@ class PDFExtractor:
                                 needs_review=(due_datetime is None or weight is None)
                             )
                             assessments.append(assessment)
-                            print(f"DEBUG: Added assessment '{title}' to list (total: {len(assessments)})")
                 else:
                     # If no dates found, still create assessment without date
-                    print(f"DEBUG: No dates found for '{assessment_name}', creating assessment without date")
                     assessment = AssessmentTask(
                         title=assessment_name,
                         type=assessment_type,
@@ -936,10 +922,8 @@ class PDFExtractor:
                         needs_review=True
                     )
                     assessments.append(assessment)
-                    print(f"DEBUG: Added assessment '{assessment_name}' to list (total: {len(assessments)})")
                 
                 # Move to next potential assessment
-                print(f"DEBUG: Finished processing '{assessment_name}', moving from line {i} to line {j}")
                 i = j
             else:
                 i += 1
