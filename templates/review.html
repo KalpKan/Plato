@@ -19,10 +19,18 @@
                 </span>
             </div>
             <div class="completeness-item">
-                <label>Assessment Completeness:</label>
+                <label>Assessment Data Quality:</label>
                 <span class="value completeness-{{ 'high' if completeness.assessment_completeness >= 80 else 'medium' if completeness.assessment_completeness >= 50 else 'low' }}">
                     {{ "%.1f"|format(completeness.assessment_completeness) }}%
                 </span>
+                <small>(Quality of extracted assessments)</small>
+            </div>
+            <div class="completeness-item">
+                <label>Weight Coverage:</label>
+                <span class="value completeness-{{ 'high' if completeness.weight_coverage_percent >= 90 else 'medium' if completeness.weight_coverage_percent >= 70 else 'low' }}">
+                    {{ "%.1f"|format(completeness.weight_coverage_percent) }}%
+                </span>
+                <small>(Of expected 100% weight)</small>
             </div>
         </div>
         
@@ -61,7 +69,7 @@
                     {% if completeness.has_extra_credit %}
                         <span class="extra-credit-badge">(Includes Extra Credit)</span>
                     {% elif completeness.total_weight < 100.0 and completeness.total_weight > 0 %}
-                        <span class="warning-badge">(Below 100%)</span>
+                        <span class="warning-badge">(Missing {{ "%.1f"|format(completeness.weight_missing_percent) }}% - assessments may not be extracted)</span>
                     {% elif completeness.total_weight == 100.0 %}
                         <span class="success-badge">(Complete)</span>
                     {% endif %}

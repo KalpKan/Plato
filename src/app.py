@@ -223,10 +223,23 @@ def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
         found_items += 1
     
     # Assessments completeness
+    # This measures the quality of extracted assessments (do they have weight + date?)
     if metrics['num_assessments'] > 0:
         assessment_completeness = (metrics['assessments_complete'] / metrics['num_assessments']) * 100
     else:
         assessment_completeness = 0.0
+    
+    # Weight coverage: how much of the expected 100% weight have we captured?
+    # This helps identify missing assessments
+    # If total_weight is 60%, we're missing 40% worth of assessments
+    if metrics['total_weight'] > 0:
+        # Calculate coverage (capped at 100% for display, but can exceed due to extra credit)
+        weight_coverage = min(metrics['total_weight'], 100.0)
+        metrics['weight_coverage_percent'] = weight_coverage
+        metrics['weight_missing_percent'] = max(0.0, 100.0 - weight_coverage)
+    else:
+        metrics['weight_coverage_percent'] = 0.0
+        metrics['weight_missing_percent'] = 100.0
     
     metrics['overall_completeness'] = (found_items / total_items) * 100 if total_items > 0 else 0.0
     metrics['assessment_completeness'] = assessment_completeness
