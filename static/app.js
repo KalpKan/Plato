@@ -229,70 +229,65 @@ function parseDaysOfWeek(daysStr) {
  * Makes missing or reviewable fields clickable for inline editing
  */
 function initEditableFields() {
-    console.log('initEditableFields called');
+    console.log('=== initEditableFields called ===');
     
     // First, find all editable fields and add direct click listeners
     const editableFields = document.querySelectorAll('.editable-field');
     console.log('Found', editableFields.length, 'editable fields');
     
+    if (editableFields.length === 0) {
+        console.warn('WARNING: No editable fields found! Check HTML structure.');
+        return;
+    }
+    
     editableFields.forEach((field, index) => {
-        console.log(`Setting up field ${index}:`, field, 'classes:', field.className);
+        console.log(`Setting up field ${index}:`, field.textContent.substring(0, 30), 'classes:', field.className, 'data-field-type:', field.getAttribute('data-field-type'));
         
         // Make sure cursor shows it's clickable
         field.style.cursor = 'pointer';
         field.style.userSelect = 'none';
+        field.style.position = 'relative'; // Ensure it can receive clicks
+        field.style.zIndex = '10'; // Make sure it's above other elements
         
-        // Add direct click listener - use both capture and bubble phases
-        field.addEventListener('click', function(e) {
-            console.log('Direct click on field:', this, 'Event:', e);
+        // Store reference for debugging
+        field._isEditable = true;
+        
+        // Use onclick as primary handler (most reliable)
+        field.onclick = function(e) {
+            console.log('=== onclick handler triggered ===', this);
+            console.log('Event:', e);
+            console.log('Field type:', this.getAttribute('data-field-type'));
+            
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             
             if (!this.classList.contains('editing')) {
-                console.log('Starting edit for:', this.getAttribute('data-field-type'));
-                startEditing(this);
-            }
-            return false;
-        }, false); // Use bubble phase first
-        
-        // Also add capture phase listener
-        field.addEventListener('click', function(e) {
-            console.log('Capture phase click on field:', this);
-            if (!this.classList.contains('editing')) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, true); // Use capture phase
-        
-        // Prevent form submission when clicking
-        field.addEventListener('mousedown', function(e) {
-            e.stopPropagation();
-        }, true);
-        
-        // Also prevent on the field itself
-        field.onclick = function(e) {
-            console.log('onclick handler triggered');
-            e.preventDefault();
-            e.stopPropagation();
-            if (!this.classList.contains('editing')) {
+                console.log('Calling startEditing...');
                 startEditing(this);
             }
             return false;
         };
-    });
-    
-    // Also use event delegation as backup
-    document.body.addEventListener('click', function(e) {
-        const editableField = e.target.closest('.editable-field');
-        if (editableField && !editableField.classList.contains('editing')) {
-            console.log('Event delegation caught click on:', editableField);
+        
+        // Also add event listener as backup
+        field.addEventListener('click', function(e) {
+            console.log('addEventListener click on field:', this);
             e.preventDefault();
             e.stopPropagation();
-            startEditing(editableField);
+            if (!this.classList.contains('editing')) {
+                startEditing(this);
+            }
             return false;
-        }
-    }, true);
+        }, true); // Capture phase
+        
+        // Prevent form submission when clicking
+        field.addEventListener('mousedown', function(e) {
+            console.log('mousedown on field');
+            e.stopPropagation();
+        }, true);
+    });
+    
+    console.log('=== Finished setting up editable fields ===');
 }
 
 /**
