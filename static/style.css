@@ -479,6 +479,110 @@ footer {
     margin-left: 10px;
 }
 
+/* Editable Fields */
+.editable-field {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: inline-block;
+    min-width: 100px;
+    border: 1px solid transparent;
+}
+
+.editable-field:hover {
+    background-color: #f0f0f0;
+    border-color: #007bff;
+}
+
+.editable-field.missing-field {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+    font-style: italic;
+}
+
+.editable-field.missing-field:hover {
+    background-color: #ffeaa7;
+    border-color: #f39c12;
+}
+
+.editable-field.editing {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+
+.editable-field.saved {
+    background-color: #d4edda;
+    border-color: #28a745;
+    animation: flash-green 0.5s ease;
+}
+
+@keyframes flash-green {
+    0%, 100% { background-color: #d4edda; }
+    50% { background-color: #c3e6cb; }
+}
+
+/* Inline Edit Form */
+.inline-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+}
+
+.inline-edit-input {
+    padding: 6px 10px;
+    border: 2px solid #007bff;
+    border-radius: 4px;
+    font-size: 1em;
+    width: 100%;
+}
+
+.inline-edit-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.inline-edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-save,
+.btn-cancel {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.btn-save {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-save:hover {
+    background-color: #218838;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+.saving {
+    color: #007bff;
+    font-style: italic;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {

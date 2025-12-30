@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initFileUpload();
     initFormValidation();
     initDynamicForms();
+    initEditableFields();
 });
 
 /**
@@ -210,5 +211,228 @@ function parseDaysOfWeek(daysStr) {
     }
     
     return [...new Set(days)].sort();
+}
+
+/**
+ * Initialize editable fields functionality
+ * Makes missing or reviewable fields clickable for inline editing
+ */
+function initEditableFields() {
+    const editableFields = document.querySelectorAll('.editable-field');
+    
+    editableFields.forEach(field => {
+        field.addEventListener('click', function(e) {
+            e.stopPropagation();
+            startEditing(this);
+        });
+    });
+}
+
+/**
+ * Start editing a field
+ * Replaces the field display with an input form
+ * 
+ * @param {HTMLElement} fieldElement - The field element to edit
+ */
+function startEditing(fieldElement) {
+    const fieldType = fieldElement.getAttribute('data-field-type');
+    const currentValue = fieldElement.getAttribute('data-current-value') || '';
+    const assessmentIndex = fieldElement.getAttribute('data-assessment-index');
+    
+    // Determine input type based on field type
+    let inputType = 'text';
+    let placeholder = '';
+    let inputValue = currentValue;
+    
+    if (fieldType === 'term_start' || fieldType === 'term_end') {
+        inputType = 'date';
+        // For date fields, just use the date part
+        if (currentValue && currentValue.includes('T')) {
+            inputValue = currentValue.split('T')[0];
+        } else if (currentValue && currentValue.includes(' ')) {
+            inputValue = currentValue.split(' ')[0];
+        } else {
+            inputValue = currentValue;
+        }
+        placeholder = 'YYYY-MM-DD';
+    } else if (fieldType === 'assessment_due_date') {
+        inputType = 'datetime-local';
+        // Convert YYYY-MM-DD to datetime-local format if needed
+        if (currentValue && !currentValue.includes('T') && !currentValue.includes(' ')) {
+            inputValue = currentValue + 'T00:00';
+        } else if (currentValue && currentValue.includes(' ')) {
+            inputValue = currentValue.replace(' ', 'T');
+        }
+        placeholder = 'YYYY-MM-DD HH:MM';
+    } else if (fieldType === 'assessment_weight') {
+        inputType = 'number';
+        inputValue = currentValue;
+        placeholder = 'Enter weight (%)';
+    } else {
+        placeholder = 'Enter value';
+    }
+    
+    // Create input form
+    const form = document.createElement('form');
+    form.className = 'inline-edit-form';
+    form.innerHTML = `
+        <input type="${inputType}" 
+               class="inline-edit-input" 
+               value="${inputValue}" 
+               placeholder="${placeholder}"
+               ${inputType === 'number' ? 'min="0" max="100" step="0.1"' : ''}
+               autofocus>
+        <div class="inline-edit-actions">
+            <button type="submit" class="btn-save">Save</button>
+            <button type="button" class="btn-cancel">Cancel</button>
+        </div>
+    `;
+    
+    // Store original content
+    const originalContent = fieldElement.innerHTML;
+    const originalDisplay = fieldElement.style.display;
+    
+    // Replace field with form
+    fieldElement.innerHTML = '';
+    fieldElement.appendChild(form);
+    fieldElement.classList.add('editing');
+    
+    const input = form.querySelector('.inline-edit-input');
+    input.focus();
+    input.select();
+    
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newValue = input.value.trim();
+        saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+    });
+    
+    // Handle cancel
+    form.querySelector('.btn-cancel').addEventListener('click', function() {
+        fieldElement.innerHTML = originalContent;
+        fieldElement.classList.remove('editing');
+    });
+    
+    // Handle escape key
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            fieldElement.innerHTML = originalContent;
+            fieldElement.classList.remove('editing');
+        }
+    });
+}
+
+/**
+ * Save field value to server
+ * 
+ * @param {HTMLElement} fieldElement - The field element
+ * @param {string} fieldType - Type of field being edited
+ * @param {string} newValue - New value to save
+ * @param {string} assessmentIndex - Assessment index if editing assessment
+ * @param {string} originalContent - Original HTML content to restore on error
+ */
+function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent) {
+    // Show loading state
+    fieldElement.innerHTML = '<span class="saving">Saving...</span>';
+    
+    // Prepare request data
+    const requestData = {
+        field_type: fieldType,
+        value: newValue || null
+    };
+    
+    if (assessmentIndex !== null) {
+        requestData.assessment_index = parseInt(assessmentIndex);
+    }
+    
+    // Send update request
+    fetch('/api/update-field', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update display with new value
+            updateFieldDisplay(fieldElement, fieldType, newValue);
+            // Show success message briefly
+            fieldElement.classList.add('saved');
+            setTimeout(() => {
+                fieldElement.classList.remove('saved');
+            }, 2000);
+        } else {
+            // Show error and restore original
+            alert('Error: ' + (data.error || 'Failed to save'));
+            fieldElement.innerHTML = originalContent;
+            fieldElement.classList.remove('editing');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving field. Please try again.');
+        fieldElement.innerHTML = originalContent;
+        fieldElement.classList.remove('editing');
+    });
+}
+
+/**
+ * Update field display after successful save
+ * 
+ * @param {HTMLElement} fieldElement - The field element
+ * @param {string} fieldType - Type of field
+ * @param {string} newValue - New value
+ */
+function updateFieldDisplay(fieldElement, fieldType, newValue) {
+    let displayValue = newValue || 'Not found';
+    
+    // Format display based on field type
+    if (fieldType === 'term_start' || fieldType === 'term_end') {
+        if (newValue) {
+            // Extract date part (YYYY-MM-DD) - already just a date
+            displayValue = newValue.split('T')[0].split(' ')[0];
+        } else {
+            displayValue = 'Not found';
+        }
+    } else if (fieldType === 'assessment_due_date') {
+        if (newValue) {
+            // Format datetime for display
+            const dt = new Date(newValue);
+            displayValue = dt.toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } else {
+            displayValue = 'Due date not found';
+        }
+    } else if (fieldType === 'assessment_weight') {
+        if (newValue) {
+            displayValue = newValue + '%';
+        } else {
+            displayValue = 'Not set';
+        }
+    }
+    
+    // Update the field
+    const isMissing = !newValue || newValue === '' || displayValue === 'Not found' || displayValue === 'Not set';
+    fieldElement.innerHTML = displayValue;
+    fieldElement.setAttribute('data-current-value', newValue || '');
+    
+    if (isMissing) {
+        fieldElement.classList.add('missing-field');
+    } else {
+        fieldElement.classList.remove('missing-field');
+    }
+    
+<｜tool▁sep｜>new_string
+    // Update completeness metrics without full page reload
+    // The field display has been updated, so we're done
+    // User can continue editing other fields
 }
 

@@ -83,11 +83,21 @@
             <div class="info-grid">
                 <div>
                     <label>Course Code:</label>
-                    <span class="value">{{ course_code }}</span>
+                    <span class="value editable-field {% if course_code == 'Not found' %}missing-field{% endif %}" 
+                          data-field-type="course_code" 
+                          data-current-value="{{ course_code }}"
+                          title="Click to edit">
+                        {{ course_code }}
+                    </span>
                 </div>
                 <div>
                     <label>Course Name:</label>
-                    <span class="value">{{ course_name }}</span>
+                    <span class="value editable-field {% if course_name == 'Not found' %}missing-field{% endif %}" 
+                          data-field-type="course_name" 
+                          data-current-value="{{ course_name }}"
+                          title="Click to edit">
+                        {{ course_name }}
+                    </span>
                 </div>
                 <div>
                     <label>Term:</label>
@@ -95,11 +105,21 @@
                 </div>
                 <div>
                     <label>Start Date:</label>
-                    <span class="value">{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else 'Not found' }}</span>
+                    <span class="value editable-field {% if not term.start_date %}missing-field{% endif %}" 
+                          data-field-type="term_start" 
+                          data-current-value="{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else '' }}"
+                          title="Click to edit (YYYY-MM-DD)">
+                        {{ term.start_date.strftime('%Y-%m-%d') if term.start_date else 'Not found' }}
+                    </span>
                 </div>
                 <div>
                     <label>End Date:</label>
-                    <span class="value">{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else 'Not found' }}</span>
+                    <span class="value editable-field {% if not term.end_date %}missing-field{% endif %}" 
+                          data-field-type="term_end" 
+                          data-current-value="{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else '' }}"
+                          title="Click to edit (YYYY-MM-DD)">
+                        {{ term.end_date.strftime('%Y-%m-%d') if term.end_date else 'Not found' }}
+                    </span>
                 </div>
             </div>
         </section>
@@ -132,6 +152,9 @@
                 </div>
             {% else %}
                 <p class="no-data">No lecture sections found in PDF. You can enter manually or proceed without lectures.</p>
+                <button type="button" class="btn btn-secondary" id="add-lecture-section" style="margin-top: 10px;">
+                    + Add Lecture Section Manually
+                </button>
                 <input type="hidden" name="lecture_section" value="none">
             {% endif %}
         </section>
@@ -166,6 +189,9 @@
                 </div>
             {% else %}
                 <p class="no-data">No lab sections found in PDF. You can enter manually or proceed without labs.</p>
+                <button type="button" class="btn btn-secondary" id="add-lab-section" style="margin-top: 10px;">
+                    + Add Lab Section Manually
+                </button>
                 <input type="hidden" name="lab_section" value="none">
             {% endif %}
         </section>
@@ -176,7 +202,7 @@
             {% if assessments %}
                 <div class="assessments-list">
                     {% for assessment in assessments %}
-                        <div class="assessment-item {% if assessment.needs_review %}needs-review{% endif %}">
+                        <div class="assessment-item {% if assessment.needs_review %}needs-review{% endif %}" data-assessment-index="{{ loop.index0 }}">
                             <div class="assessment-header">
                                 <strong>{{ assessment.title }}</strong>
                                 {% if assessment.needs_review %}
@@ -185,15 +211,37 @@
                             </div>
                             <div class="assessment-details">
                                 <span>Type: {{ assessment.type }}</span>
-                                {% if assessment.weight_percent %}
-                                    <span>Weight: {{ assessment.weight_percent }}%</span>
-                                {% endif %}
+                                <span class="editable-field assessment-weight {% if not assessment.weight_percent %}missing-field{% endif %}" 
+                                      data-field-type="assessment_weight" 
+                                      data-assessment-index="{{ loop.index0 }}"
+                                      data-current-value="{{ assessment.weight_percent or '' }}"
+                                      title="Click to edit weight (%)">
+                                    Weight: {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Not set{% endif %}
+                                </span>
                                 {% if assessment.due_datetime %}
-                                    <span>Due: {{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else 'Not specified' }}</span>
+                                    <span class="editable-field assessment-due-date" 
+                                          data-field-type="assessment_due_date" 
+                                          data-assessment-index="{{ loop.index0 }}"
+                                          data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
+                                          title="Click to edit due date">
+                                        Due: {{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') }}
+                                    </span>
                                 {% elif assessment.due_rule %}
-                                    <span>Due: {{ assessment.due_rule }}</span>
+                                    <span class="editable-field assessment-due-date missing-field" 
+                                          data-field-type="assessment_due_date" 
+                                          data-assessment-index="{{ loop.index0 }}"
+                                          data-current-value=""
+                                          title="Click to add due date (YYYY-MM-DD HH:MM)">
+                                        Due: {{ assessment.due_rule }} <em>(click to set date)</em>
+                                    </span>
                                 {% else %}
-                                    <span class="missing">Due date not found</span>
+                                    <span class="editable-field assessment-due-date missing-field" 
+                                          data-field-type="assessment_due_date" 
+                                          data-assessment-index="{{ loop.index0 }}"
+                                          data-current-value=""
+                                          title="Click to add due date (YYYY-MM-DD HH:MM)">
+                                        Due date not found <em>(click to add)</em>
+                                    </span>
                                 {% endif %}
                                 <span>Confidence: {{ (assessment.confidence * 100)|int }}%</span>
                             </div>
@@ -207,6 +255,9 @@
                 </div>
             {% else %}
                 <p class="no-data">No assessments found in PDF. You may need to add them manually.</p>
+                <button type="button" class="btn btn-secondary" id="add-assessment" style="margin-top: 10px;">
+                    + Add Assessment Manually
+                </button>
             {% endif %}
         </section>
 
