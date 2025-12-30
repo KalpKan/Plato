@@ -402,12 +402,24 @@ function startEditing(fieldElement) {
         e.stopImmediatePropagation();
         return false;
     };
+    // Build min/max/step attributes for number inputs
+    let numberAttrs = '';
+    if (inputType === 'number') {
+        if (fieldType === 'assessment_weight') {
+            numberAttrs = 'min="0" max="100" step="0.1"';
+        } else if (fieldType === 'assessment_lead_time') {
+            numberAttrs = 'min="0" step="1"';
+        } else {
+            numberAttrs = 'min="0"';
+        }
+    }
+    
     editForm.innerHTML = `
         <input type="${inputType}" 
                class="inline-edit-input" 
                value="${inputValue}" 
                placeholder="${placeholder}"
-               ${inputType === 'number' ? 'min="0" max="100" step="0.1"' : ''}
+               ${numberAttrs}
                autofocus>
         <div class="inline-edit-actions">
             <button type="submit" class="btn-save" style="pointer-events: auto; z-index: 1001;">Save</button>
@@ -630,6 +642,12 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     } else if (fieldType === 'assessment_weight') {
         if (newValue) {
             displayValue = newValue + '%';
+        } else {
+            displayValue = 'Not set';
+        }
+    } else if (fieldType === 'assessment_lead_time') {
+        if (newValue) {
+            displayValue = newValue + ' days';
         } else {
             displayValue = 'Not set';
         }
