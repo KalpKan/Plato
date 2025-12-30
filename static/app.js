@@ -13,6 +13,17 @@ document.addEventListener('DOMContentLoaded', function() {
     initFormValidation();
     initDynamicForms();
     initEditableFields();
+    
+    // Re-enable form submission for the generate calendar button
+    const generateBtn = document.getElementById('generate-calendar-btn');
+    const reviewForm = document.getElementById('review-form');
+    if (generateBtn && reviewForm) {
+        generateBtn.addEventListener('click', function(e) {
+            // Allow form submission when clicking generate button
+            reviewForm.onsubmit = null;
+            reviewForm.submit();
+        });
+    }
 });
 
 /**
@@ -230,8 +241,13 @@ function initEditableFields() {
         newField.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Clicked editable field:', this);
+            console.log('Clicked editable field:', this, 'Field type:', this.getAttribute('data-field-type'));
             startEditing(this);
+        });
+        
+        // Also handle mousedown to catch clicks before form submission
+        newField.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
         });
         
         // Add visual indicator

@@ -76,7 +76,7 @@
     </section>
     {% endif %}
 
-    <form action="{{ url_for('review') }}" method="POST" class="review-form">
+    <form action="{{ url_for('review') }}" method="POST" class="review-form" id="review-form" onsubmit="return false;">
         <!-- Course Information -->
         <section class="review-section-item">
             <h3>Course Information</h3>
