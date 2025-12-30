@@ -919,61 +919,30 @@ class PDFExtractor:
                 
                 # Create assessment(s) - handle multiple due dates (e.g., PeerWise)
                 if due_dates:
-                    for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
+                    # For PeerWise assignments, use the later date (Answer date) as the primary due date
+                    # This represents when the assignment is fully complete
+                    if 'peerwise' in assessment_name.lower() and len(due_dates) > 1:
+                        # Use the last date (Answer/Feedback date) as the primary due date
+                        due_date_str = due_dates[-1]
                         parsed_date = dateparser.parse(due_date_str)
                         if parsed_date:
-                            # Handle time - extract time for each specific date
+                            # Extract time for the Answer/Feedback date
                             hour = 23
                             minute = 59
-                            
-                            if 'peerwise' in assessment_name.lower():
-                                # For PeerWise, extract time from the specific date context
-                                if date_idx == 0:
-                                    # First date is usually the Author date - look for "Author: ... by 11:59 PM"
-                                    author_time_match = re.search(r'Author:?[^.]*?by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
-                                    if author_time_match:
-                                        hour = int(author_time_match.group(1))
-                                        minute = int(author_time_match.group(2)) if author_time_match.group(2) else 59
-                                        if author_time_match.group(3).upper() == 'PM' and hour != 12:
-                                            hour += 12
-                                        elif author_time_match.group(3).upper() == 'AM' and hour == 12:
-                                            hour = 0
-                                elif date_idx == 1:
-                                    # Second date is usually the Answer/Feedback date - look for "feedback: ... by 11:59 PM"
-                                    feedback_time_match = re.search(r'feedback:?[^.]*?by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
-                                    if feedback_time_match:
-                                        hour = int(feedback_time_match.group(1))
-                                        minute = int(feedback_time_match.group(2)) if feedback_time_match.group(2) else 59
-                                        if feedback_time_match.group(3).upper() == 'PM' and hour != 12:
-                                            hour += 12
-                                        elif feedback_time_match.group(3).upper() == 'AM' and hour == 12:
-                                            hour = 0
-                            elif time_str:
-                                if 'in class' in time_str.lower():
-                                    hour = 10
-                                    minute = 0
-                                else:
-                                    time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', time_str, re.IGNORECASE)
-                                    if time_match:
-                                        hour = int(time_match.group(1))
-                                        minute = int(time_match.group(2)) if time_match.group(2) else 0
-                                        if time_match.group(3).upper() == 'PM' and hour != 12:
-                                            hour += 12
-                                        elif time_match.group(3).upper() == 'AM' and hour == 12:
-                                            hour = 0
+                            feedback_time_match = re.search(r'feedback:?[^.]*?by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
+                            if feedback_time_match:
+                                hour = int(feedback_time_match.group(1))
+                                minute = int(feedback_time_match.group(2)) if feedback_time_match.group(2) else 59
+                                if feedback_time_match.group(3).upper() == 'PM' and hour != 12:
+                                    hour += 12
+                                elif feedback_time_match.group(3).upper() == 'AM' and hour == 12:
+                                    hour = 0
                             
                             due_datetime = datetime.combine(parsed_date.date(), time(hour, minute))
                             
-                            # Create title - add suffix for multiple dates (PeerWise)
-                            title = assessment_name
-                            if len(due_dates) > 1 and 'peerwise' in row_text.lower():
-                                if date_idx == 0:
-                                    title = f"{assessment_name} (Author)"
-                                elif date_idx == 1:
-                                    title = f"{assessment_name} (Answer)"
-                            
+                            # Create single assessment with the Answer date
                             assessment = AssessmentTask(
-                                title=title,
+                                title=assessment_name,
                                 type=assessment_type,
                                 weight_percent=weight,
                                 due_datetime=due_datetime,
@@ -982,6 +951,40 @@ class PDFExtractor:
                                 needs_review=(due_datetime is None or weight is None)
                             )
                             assessments.append(assessment)
+                    else:
+                        # For non-PeerWise or single-date assessments, process normally
+                        for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
+                            parsed_date = dateparser.parse(due_date_str)
+                            if parsed_date:
+                                # Handle time
+                                hour = 23
+                                minute = 59
+                                if time_str:
+                                    if 'in class' in time_str.lower():
+                                        hour = 10
+                                        minute = 0
+                                    else:
+                                        time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', time_str, re.IGNORECASE)
+                                        if time_match:
+                                            hour = int(time_match.group(1))
+                                            minute = int(time_match.group(2)) if time_match.group(2) else 0
+                                            if time_match.group(3).upper() == 'PM' and hour != 12:
+                                                hour += 12
+                                            elif time_match.group(3).upper() == 'AM' and hour == 12:
+                                                hour = 0
+                                
+                                due_datetime = datetime.combine(parsed_date.date(), time(hour, minute))
+                                
+                                assessment = AssessmentTask(
+                                    title=assessment_name,
+                                    type=assessment_type,
+                                    weight_percent=weight,
+                                    due_datetime=due_datetime,
+                                    confidence=0.8 if weight and due_datetime else 0.5,
+                                    source_evidence=row_text[:200],
+                                    needs_review=(due_datetime is None or weight is None)
+                                )
+                                assessments.append(assessment)
                 else:
                     # If no dates found, still create assessment without date
                     assessment = AssessmentTask(
