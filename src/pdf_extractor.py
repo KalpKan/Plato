@@ -653,39 +653,94 @@ class PDFExtractor:
                 i += 1
                 continue
             
-            # Check if this line starts an assessment - look for specific patterns first
+            # Check if this line starts an assessment - handle multi-line names
             assessment_name_match = None
             assessment_name = None
             
-            # Priority patterns - check these first for better matching
-            priority_patterns = [
-                (r'^PeerWise\s+(?:Assignment|ASSIGNMENT)\s+(\d+)', lambda m: f"PeerWise Assignment {m.group(1)}"),
-                (r'^Midterm\s+(?:Test|TEST)\s+(\d+)', lambda m: f"Midterm Test {m.group(1)}"),
-                (r'^Assignment\s+(\d+)\s+Slide\s+redesign(?:\s+&\s+Teach)?', lambda m: f"Assignment {m.group(1)} Slide redesign" + (" & Teach" if "Teach" in m.group(0) else "")),
-                (r'^Final\s+(?:Exam|EXAM)', lambda m: "Final Exam"),
-                (r'^(?:Optional\s+)?(?:Bonus|BONUS)', lambda m: "Optional Bonus Assignment"),
-            ]
+            # First, check if this line starts with "PeerWise" - the assignment number is on next line
+            if re.match(r'^PeerWise', line, re.IGNORECASE):
+                # Look ahead to next line for "Assignment X"
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    assign_match = re.search(r'Assignment\s+(\d+)', next_line, re.IGNORECASE)
+                    if assign_match:
+                        assessment_name = f"PeerWise Assignment {assign_match.group(1)}"
+                        # Include next line in row_lines
+                        row_lines = [line, next_line]
+                        i += 1  # Skip next line since we're including it
+                        j = i + 1  # Start collecting from line after that
+                    else:
+                        # Just "PeerWise" without assignment number
+                        assessment_name = "PeerWise Assignment"
+                        row_lines = [line]
+                        j = i + 1
+                else:
+                    assessment_name = "PeerWise Assignment"
+                    row_lines = [line]
+                    j = i + 1
             
-            for pattern, name_func in priority_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    assessment_name_match = match
-                    assessment_name = name_func(match)
-                    break
+            # Check for "Assignment X Slide redesign" - might be split
+            elif re.match(r'^Assignment\s+(\d+)', line, re.IGNORECASE):
+                assign_num_match = re.match(r'^Assignment\s+(\d+)', line, re.IGNORECASE)
+                assign_num = assign_num_match.group(1) if assign_num_match else None
+                
+                # Check if next line has "Slide redesign"
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if 'slide redesign' in next_line.lower():
+                        if 'teach' in next_line.lower():
+                            assessment_name = f"Assignment {assign_num} Slide redesign & Teach"
+                        else:
+                            assessment_name = f"Assignment {assign_num} Slide redesign"
+                        row_lines = [line, next_line]
+                        i += 1
+                        j = i + 1
+                    else:
+                        # Just "Assignment X" - might be PeerWise (already handled above) or other
+                        assessment_name = f"Assignment {assign_num}"
+                        row_lines = [line]
+                        j = i + 1
+                else:
+                    assessment_name = f"Assignment {assign_num}"
+                    row_lines = [line]
+                    j = i + 1
             
-            # Fallback to general pattern if no priority match
-            if not assessment_name_match:
+            # Check for other patterns
+            elif re.match(r'^Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE):
+                match = re.match(r'^Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
+                assessment_name = f"Midterm Test {match.group(1)}"
+                row_lines = [line]
+                j = i + 1
+            
+            elif re.match(r'^Final\s+(?:Exam|EXAM)', line, re.IGNORECASE):
+                assessment_name = "Final Exam"
+                row_lines = [line]
+                j = i + 1
+            
+            elif re.match(r'^(?:Optional\s+)?(?:Bonus|BONUS)', line, re.IGNORECASE):
+                assessment_name = "Optional Bonus Assignment"
+                row_lines = [line]
+                j = i + 1
+            
+            # Fallback to general pattern
+            else:
                 general_match = re.search(r'((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign)(?:\s+&\s+Teach)?|(?:Participation|Participation\s+Grade)|(?:Project|PROJECT)|(?:Presentation|PRESENTATION)|(?:Paper|PAPER)|(?:Essay|ESSAY)|(?:Reflection|REFLECTION)|(?:Optional\s+)?(?:Bonus|BONUS)\s+(?:Assignment|ASSIGNMENT)?)', line, re.IGNORECASE)
                 if general_match:
                     assessment_name_match = general_match
                     assessment_name = general_match.group(1)
+                    row_lines = [line]
+                    j = i + 1
+                else:
+                    i += 1
+                    continue
             
-            if assessment_name_match:
-                # Found an assessment - collect multi-line row
-                row_lines = [line]
+            if assessment_name:
+                # Found an assessment - collect continuation lines (if not already done above)
+                if 'row_lines' not in locals() or 'j' not in locals():
+                    row_lines = [line]
+                    j = i + 1
                 
                 # Collect continuation lines (up to 10 more lines to capture multi-line entries)
-                j = i + 1
                 while j < len(lines) and j < i + 11:
                     next_line = lines[j].strip()
                     # Stop if we hit another assessment or section header
