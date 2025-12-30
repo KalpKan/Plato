@@ -380,6 +380,11 @@ function startEditing(fieldElement) {
         inputType = 'number';
         inputValue = currentValue;
         placeholder = 'Enter weight (%)';
+    } else if (fieldType === 'assessment_lead_time') {
+        inputType = 'number';
+        inputValue = currentValue;
+        placeholder = 'Enter lead time (days)';
+        min = 0;  // Lead time must be non-negative
     } else {
         placeholder = 'Enter value';
     }

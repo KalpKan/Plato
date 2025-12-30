@@ -106,6 +106,35 @@ CREATE INDEX IF NOT EXISTS idx_user_choices_session ON user_choices(session_id);
 4. Click **"Run"** (or press Cmd/Ctrl + Enter)
 5. You should see "Success. No rows returned"
 
+### Step 4: Enable Row Level Security (RLS) - IMPORTANT!
+
+**This fixes the security warnings you're seeing!**
+
+1. In SQL Editor, run this SQL:
+
+```sql
+-- Enable Row Level Security on both tables
+ALTER TABLE extraction_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_choices ENABLE ROW LEVEL SECURITY;
+
+-- Create policies to allow all operations
+-- Note: For a single-user app, allowing all is fine
+-- For multi-user apps, you'd restrict based on user_id
+CREATE POLICY "Allow all operations on extraction_cache" 
+ON extraction_cache FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Allow all operations on user_choices" 
+ON user_choices FOR ALL 
+USING (true) 
+WITH CHECK (true);
+```
+
+2. Click **"Run"**
+3. Go to **Advisors** → **Security** in Supabase dashboard
+4. Verify the warnings are gone (should show 0 errors)
+
 ### Step 4: Get API Keys (Optional - for future use)
 
 1. Go to **Settings** → **API**

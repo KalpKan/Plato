@@ -69,6 +69,33 @@ CREATE INDEX IF NOT EXISTS idx_user_choices_session ON user_choices(session_id);
 
 3. Click "Run" to execute
 
+### Step 4: Enable Row Level Security (RLS)
+
+**Important**: This is required for security. Supabase will warn you if RLS is disabled.
+
+1. In SQL Editor, run this to enable RLS:
+
+```sql
+-- Enable Row Level Security on both tables
+ALTER TABLE extraction_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_choices ENABLE ROW LEVEL SECURITY;
+
+-- Create policies to allow all operations (since this is a single-user app)
+-- For production, you may want to restrict access based on authentication
+CREATE POLICY "Allow all operations on extraction_cache" 
+ON extraction_cache FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Allow all operations on user_choices" 
+ON user_choices FOR ALL 
+USING (true) 
+WITH CHECK (true);
+```
+
+2. Click "Run" to execute
+3. Verify in Supabase dashboard → **Advisors** → **Security** that warnings are gone
+
 ### Step 4: Set Up Row Level Security (Optional but Recommended)
 
 ```sql

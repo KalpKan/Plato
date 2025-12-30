@@ -517,17 +517,25 @@ def review():
             except (ValueError, IndexError):
                 pass
         
+        # Get lead time overrides from session
+        user_choices_dict = session.get('user_choices', {})
+        lead_time_overrides = user_choices_dict.get('lead_time_overrides', {})
+        
         # Store user choices in session
         session['user_choices'] = {
             'selected_lecture_section': serialize_section(user_selections.selected_lecture_section),
             'selected_lab_section': serialize_section(user_selections.selected_lab_section),
+            'lead_time_overrides': lead_time_overrides  # Preserve lead time overrides
         }
         
         # Generate calendar
         try:
-            # Generate study plan
+            # Generate study plan (pass lead time overrides)
             study_plan_gen = StudyPlanGenerator()
-            study_plan = study_plan_gen.generate_study_plan(extracted_data.assessments)
+            study_plan = study_plan_gen.generate_study_plan(
+                extracted_data.assessments,
+                user_lead_times=lead_time_overrides if lead_time_overrides else None
+            )
             
             # Generate calendar
             cal_gen = ICalendarGenerator(timezone_str=extracted_data.term.timezone)
@@ -601,9 +609,21 @@ def review():
     # Calculate completeness metrics (do this for both GET and POST)
     completeness = calculate_completeness(extracted_data)
     
+    # Get user lead time overrides from session
+    user_choices_dict = session.get('user_choices', {})
+    lead_time_overrides = user_choices_dict.get('lead_time_overrides', {})
+    
     # Prepare assessments list for template
+    # Calculate current lead time for each assessment
+    study_plan_gen = StudyPlanGenerator()
     assessments_list = []
     for a in extracted_data.assessments:
+        # Calculate current lead time (using override if available, otherwise default)
+        current_lead_time = lead_time_overrides.get(a.title)
+        if current_lead_time is None:
+            # Use default calculation
+            current_lead_time = study_plan_gen._get_lead_time(a, lead_time_overrides)
+        
         assessments_list.append({
             'title': a.title,
             'type': a.type,
@@ -612,7 +632,8 @@ def review():
             'due_rule': a.due_rule,
             'confidence': a.confidence,
             'source_evidence': a.source_evidence,
-            'needs_review': a.needs_review
+            'needs_review': a.needs_review,
+            'lead_time_days': current_lead_time  # Add lead time for display
         })
     
     # Prepare data for template (convert to dict for easier template handling)
@@ -788,6 +809,65 @@ def update_field():
                             extracted_data.assessments[idx].weight_percent = None
                 except (ValueError, IndexError):
                     return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
+            else:
+                return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
+                
+        elif field_type == 'assessment_lead_time':
+            if assessment_index is not None:
+                try:
+                    idx = int(assessment_index)
+                    if 0 <= idx < len(extracted_data.assessments):
+                        assessment = extracted_data.assessments[idx]
+                        
+                        # Get or create lead_time_overrides in user_choices
+                        user_choices_dict = session.get('user_choices', {})
+                        if 'lead_time_overrides' not in user_choices_dict:
+                            user_choices_dict['lead_time_overrides'] = {}
+                        
+                        if value:
+                            try:
+                                lead_time = int(value)
+                                if lead_time < 0:
+                                    return jsonify({'success': False, 'error': 'Lead time must be non-negative'}), 400
+                                # Store override
+                                user_choices_dict['lead_time_overrides'][assessment.title] = lead_time
+                            except ValueError:
+                                return jsonify({'success': False, 'error': 'Invalid lead time value (must be an integer)'}), 400
+                        else:
+                            # Remove override (use default)
+                            if assessment.title in user_choices_dict['lead_time_overrides']:
+                                del user_choices_dict['lead_time_overrides'][assessment.title]
+                        
+                        # Update session
+                        session['user_choices'] = user_choices_dict
+                        
+                        # Also update cache
+                        pdf_hash = session.get('pdf_hash')
+                        if pdf_hash:
+                            # Get existing user selections or create new
+                            user_selections = cache_manager.lookup_user_choices(pdf_hash, session.get('session_id'))
+                            if user_selections is None:
+                                from .models import UserSelections
+                                user_selections = UserSelections()
+                            
+                            # Update lead time overrides
+                            if not hasattr(user_selections, 'lead_time_overrides') or user_selections.lead_time_overrides is None:
+                                user_selections.lead_time_overrides = {}
+                            else:
+                                # Convert from dict if needed
+                                if isinstance(user_selections.lead_time_overrides, dict):
+                                    pass  # Already a dict
+                                else:
+                                    user_selections.lead_time_overrides = {}
+                            
+                            if value:
+                                user_selections.lead_time_overrides[assessment.title] = int(value)
+                            elif assessment.title in user_selections.lead_time_overrides:
+                                del user_selections.lead_time_overrides[assessment.title]
+                            
+                            cache_manager.store_user_choices(pdf_hash, user_selections, session.get('session_id'))
+                except (ValueError, IndexError) as e:
+                    return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
             else:
                 return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
         

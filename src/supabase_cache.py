@@ -388,6 +388,9 @@ class SupabaseCacheManager:
             result["selected_lab_section"] = self._serialize_section(
                 selections.selected_lab_section
             )
+        # Handle lead_time_overrides if it exists as an attribute
+        if hasattr(selections, 'lead_time_overrides') and selections.lead_time_overrides:
+            result["lead_time_overrides"] = selections.lead_time_overrides
         return result
     
     def _deserialize_selections(self, data: dict) -> UserSelections:
@@ -411,6 +414,15 @@ class SupabaseCacheManager:
                 k: self._deserialize_assessment(v)
                 for k, v in data["assessment_overrides"].items()
             }
+        
+        # Handle lead_time_overrides - store as attribute (not in model, but accessible)
+        if "lead_time_overrides" in data and data["lead_time_overrides"]:
+            # Parse JSON if it's a string
+            if isinstance(data["lead_time_overrides"], str):
+                import json
+                selections.lead_time_overrides = json.loads(data["lead_time_overrides"])
+            else:
+                selections.lead_time_overrides = data["lead_time_overrides"]
         
         return selections
 

@@ -244,6 +244,13 @@
                                     </span>
                                 {% endif %}
                                 <span>Confidence: {{ (assessment.confidence * 100)|int }}%</span>
+                                <span class="editable-field assessment-lead-time" 
+                                      data-field-type="assessment_lead_time" 
+                                      data-assessment-index="{{ loop.index0 }}"
+                                      data-current-value="{{ assessment.lead_time_days or '' }}"
+                                      title="Click to edit lead time (days)">
+                                    Lead Time: {% if assessment.lead_time_days is not none %}{{ assessment.lead_time_days }} days{% else %}Not set{% endif %}
+                                </span>
                             </div>
                             {% if assessment.source_evidence %}
                                 <div class="assessment-source">
