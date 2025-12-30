@@ -675,6 +675,7 @@ class PDFExtractor:
             
             # IMPORTANT: Check for Midterm Test FIRST, before other patterns
             # This ensures Midterm Tests are caught even if they appear in unexpected positions
+            # Handle both "Midterm Test 1" (with number) and "Midterm Test" (without number)
             if 'Midterm' in line and 'Test' in line:
                 match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
                 if match:
@@ -684,15 +685,39 @@ class PDFExtractor:
                     j = i + 1
                 else:
                     # Try alternative pattern - maybe "Midterm" and number are separated
-                    alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
+                    # BUT: Exclude numbers in parentheses like "(2 hrs)" - those are durations, not test numbers
+                    # Look for "Midterm Test" followed by a number that's NOT in parentheses
+                    alt_match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
                     if alt_match:
-                        midterm_num = alt_match.group(1)
-                        assessment_name = f"Midterm Test {midterm_num}"
-                        row_lines = [line]
-                        j = i + 1
+                        # Check if this number is in parentheses (like "(2 hrs)")
+                        num_pos = alt_match.start(1)
+                        # Look backwards to see if there's an opening parenthesis before the number
+                        before_num = line[:num_pos]
+                        if '(' in before_num and ')' not in before_num[:before_num.rfind('(')+1]:
+                            # Number is in parentheses - this is a duration, not a test number
+                            # Treat as "Midterm Test" without number
+                            if re.search(r'Midterm\s+(?:Test|TEST)(?:\s|\(|,|$)', line, re.IGNORECASE):
+                                assessment_name = "Midterm Test"
+                                row_lines = [line]
+                                j = i + 1
+                            else:
+                                i += 1
+                                continue
+                        else:
+                            midterm_num = alt_match.group(1)
+                            assessment_name = f"Midterm Test {midterm_num}"
+                            row_lines = [line]
+                            j = i + 1
                     else:
-                        i += 1
-                        continue
+                        # No number found - this is just "Midterm Test" (common case)
+                        # Check that it's actually "Midterm Test" and not just "Midterm" in another context
+                        if re.search(r'Midterm\s+(?:Test|TEST)(?:\s|\(|,|$)', line, re.IGNORECASE):
+                            assessment_name = "Midterm Test"
+                            row_lines = [line]
+                            j = i + 1
+                        else:
+                            i += 1
+                            continue
             
             # First, check if this line starts with "PeerWise" - collect more lines for dates
             elif re.match(r'^PeerWise', line, re.IGNORECASE):
@@ -770,15 +795,33 @@ class PDFExtractor:
                     j = i + 1
                 else:
                     # Try alternative pattern - maybe "Midterm" and number are separated
-                    alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
+                    # BUT: Exclude numbers in parentheses like "(2 hrs)" - those are durations, not test numbers
+                    # Look for "Midterm Test" followed by a number that's NOT in parentheses
+                    alt_match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
                     if alt_match:
                         midterm_num = alt_match.group(1)
                         assessment_name = f"Midterm Test {midterm_num}"
                         row_lines = [line]
                         j = i + 1
                     else:
-                        i += 1
-                        continue
+                        # Check if there's a number after "Midterm Test" but not in parentheses
+                        # Pattern: "Midterm Test" followed by optional whitespace, then a number NOT preceded by "("
+                        alt_match2 = re.search(r'Midterm\s+(?:Test|TEST)(?:\s+)(\d+)(?!\s*hrs?|hours?)', line, re.IGNORECASE)
+                        if alt_match2 and not re.search(r'Midterm\s+(?:Test|TEST)\s*\(', line, re.IGNORECASE):
+                            midterm_num = alt_match2.group(1)
+                            assessment_name = f"Midterm Test {midterm_num}"
+                            row_lines = [line]
+                            j = i + 1
+                        else:
+                            # No number found - this is just "Midterm Test" (common case)
+                            # Check that it's actually "Midterm Test" and not just "Midterm" in another context
+                            if re.search(r'Midterm\s+(?:Test|TEST)(?:\s|\(|,|$)', line, re.IGNORECASE):
+                                assessment_name = "Midterm Test"
+                                row_lines = [line]
+                                j = i + 1
+                            else:
+                                i += 1
+                                continue
             
             elif re.match(r'^Final\s+(?:Exam|EXAM)', line, re.IGNORECASE):
                 assessment_name = "Final Exam"
@@ -816,7 +859,7 @@ class PDFExtractor:
                     # Check for assessment names at start of line, or section headers
                     stop_patterns = [
                         r'^(?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+',  # Quiz 1, Quiz 2, etc.
-                        r'^Midterm\s+(?:Test|TEST)\s+\d+',  # Midterm Test 1, Midterm Test 2
+                        r'^Midterm\s+(?:Test|TEST)(?:\s+\d+)?',  # Midterm Test 1, Midterm Test 2, or just Midterm Test
                         r'^(?:Final\s+)?(?:Exam|EXAM)',  # Final Exam
                         r'^PeerWise',  # New PeerWise assignment
                         r'^Assignment\s+\d+\s+(?:Slide|Augment)',  # Assignment X Slide redesign (new assessment)
