@@ -365,9 +365,14 @@ function startEditing(fieldElement) {
     // Create input form - make sure it doesn't submit parent form
     const editForm = document.createElement('form');
     editForm.className = 'inline-edit-form';
+    editForm.style.display = 'inline-block';
+    editForm.style.position = 'relative';
+    editForm.style.zIndex = '1000';
     editForm.onsubmit = function(e) {
+        console.log('Edit form onsubmit handler called');
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         return false;
     };
     editForm.innerHTML = `
@@ -392,10 +397,20 @@ function startEditing(fieldElement) {
     fieldElement.appendChild(editForm);
     fieldElement.classList.add('editing');
     
+    console.log('Edit form created and appended:', editForm);
+    
     const input = editForm.querySelector('.inline-edit-input');
+    const saveBtn = editForm.querySelector('.btn-save');
+    const cancelBtn = editForm.querySelector('.btn-cancel');
+    
+    console.log('Form elements found:', { input: !!input, saveBtn: !!saveBtn, cancelBtn: !!cancelBtn });
+    
     if (input) {
-        input.focus();
-        input.select();
+        // Use setTimeout to ensure focus works after DOM update
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 10);
     }
     
     // Handle form submission - prevent bubbling to parent form
