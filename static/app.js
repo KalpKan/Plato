@@ -304,14 +304,17 @@ function startEditing(fieldElement) {
         return;
     }
     
-    // Prevent any form submission
-    const form = fieldElement.closest('form');
-    if (form) {
-        const originalSubmit = form.onsubmit;
-        form.onsubmit = function(e) {
-            e.preventDefault();
-            return false;
-        };
+    // Prevent any form submission from parent form
+    const parentForm = fieldElement.closest('form');
+    if (parentForm) {
+        // Temporarily prevent parent form submission
+        parentForm.addEventListener('submit', function(e) {
+            // Only prevent if clicking on editable field
+            if (document.activeElement && document.activeElement.classList.contains('editable-field')) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
     }
     
     const fieldType = fieldElement.getAttribute('data-field-type');
@@ -354,7 +357,7 @@ function startEditing(fieldElement) {
     }
     
     // Create input form - make sure it doesn't submit parent form
-    const form = document.createElement('form');
+    const editForm = document.createElement('form');
     form.className = 'inline-edit-form';
     form.onsubmit = function(e) {
         e.preventDefault();
