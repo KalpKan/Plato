@@ -229,29 +229,50 @@ function parseDaysOfWeek(daysStr) {
  * Makes missing or reviewable fields clickable for inline editing
  */
 function initEditableFields() {
-    // Use event delegation to handle clicks on editable fields
-    // This works even if fields are added dynamically and catches clicks before form submission
-    document.body.addEventListener('click', function(e) {
-        const editableField = e.target.closest('.editable-field');
-        if (editableField && !editableField.classList.contains('editing')) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('Clicked editable field:', editableField, 'Field type:', editableField.getAttribute('data-field-type'));
-            startEditing(editableField);
-            return false;
-        }
-    }, true); // Use capture phase to catch before form submission
+    console.log('initEditableFields called');
     
-    // Also add direct listeners and visual indicators
+    // First, find all editable fields and add direct click listeners
     const editableFields = document.querySelectorAll('.editable-field');
     console.log('Found', editableFields.length, 'editable fields');
     
-    editableFields.forEach(field => {
+    editableFields.forEach((field, index) => {
+        console.log(`Setting up field ${index}:`, field, 'classes:', field.className);
+        
         // Make sure cursor shows it's clickable
         field.style.cursor = 'pointer';
-        field.style.userSelect = 'none'; // Prevent text selection when clicking
+        field.style.userSelect = 'none';
+        
+        // Add direct click listener
+        field.addEventListener('click', function(e) {
+            console.log('Direct click on field:', this, 'Event:', e);
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            if (!this.classList.contains('editing')) {
+                console.log('Starting edit for:', this.getAttribute('data-field-type'));
+                startEditing(this);
+            }
+            return false;
+        }, true); // Use capture phase
+        
+        // Also prevent form submission when clicking
+        field.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+        }, true);
     });
+    
+    // Also use event delegation as backup
+    document.body.addEventListener('click', function(e) {
+        const editableField = e.target.closest('.editable-field');
+        if (editableField && !editableField.classList.contains('editing')) {
+            console.log('Event delegation caught click on:', editableField);
+            e.preventDefault();
+            e.stopPropagation();
+            startEditing(editableField);
+            return false;
+        }
+    }, true);
 }
 
 /**
