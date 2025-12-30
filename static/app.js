@@ -282,9 +282,28 @@ function initEditableFields() {
  * @param {HTMLElement} fieldElement - The field element to edit
  */
 function startEditing(fieldElement) {
+    console.log('startEditing called with:', fieldElement);
+    
+    if (!fieldElement) {
+        console.error('startEditing: fieldElement is null or undefined');
+        return;
+    }
+    
+    // Prevent any form submission
+    const form = fieldElement.closest('form');
+    if (form) {
+        const originalSubmit = form.onsubmit;
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            return false;
+        };
+    }
+    
     const fieldType = fieldElement.getAttribute('data-field-type');
     const currentValue = fieldElement.getAttribute('data-current-value') || '';
     const assessmentIndex = fieldElement.getAttribute('data-assessment-index');
+    
+    console.log('Field details:', { fieldType, currentValue, assessmentIndex });
     
     // Determine input type based on field type
     let inputType = 'text';
