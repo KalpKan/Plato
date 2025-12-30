@@ -717,16 +717,34 @@ def update_field():
         elif field_type == 'term_start':
             if value:
                 try:
-                    extracted_data.term.start_date = deserialize_date(value)
-                except (ValueError, AttributeError):
-                    return jsonify({'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                    # Parse date from datetime-local format (YYYY-MM-DDTHH:MM) or just YYYY-MM-DD
+                    if 'T' in value:
+                        date_str = value.split('T')[0]
+                    elif ' ' in value:
+                        date_str = value.split(' ')[0]
+                    else:
+                        date_str = value
+                    extracted_data.term.start_date = deserialize_date(date_str)
+                except (ValueError, AttributeError) as e:
+                    return jsonify({'success': False, 'error': f'Invalid date format: {str(e)}. Use YYYY-MM-DD'}), 400
+            else:
+                extracted_data.term.start_date = None
             
         elif field_type == 'term_end':
             if value:
                 try:
-                    extracted_data.term.end_date = deserialize_date(value)
-                except (ValueError, AttributeError):
-                    return jsonify({'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                    # Parse date from datetime-local format (YYYY-MM-DDTHH:MM) or just YYYY-MM-DD
+                    if 'T' in value:
+                        date_str = value.split('T')[0]
+                    elif ' ' in value:
+                        date_str = value.split(' ')[0]
+                    else:
+                        date_str = value
+                    extracted_data.term.end_date = deserialize_date(date_str)
+                except (ValueError, AttributeError) as e:
+                    return jsonify({'success': False, 'error': f'Invalid date format: {str(e)}. Use YYYY-MM-DD'}), 400
+            else:
+                extracted_data.term.end_date = None
             
         elif field_type == 'assessment_due_date':
             if assessment_index is not None:
@@ -734,20 +752,24 @@ def update_field():
                     idx = int(assessment_index)
                     if 0 <= idx < len(extracted_data.assessments):
                         if value:
-                            # Parse datetime string (expects ISO format or YYYY-MM-DD HH:MM)
+                            # Parse datetime from datetime-local format (YYYY-MM-DDTHH:MM)
                             try:
-                                if 'T' in value or ' ' in value:
-                                    extracted_data.assessments[idx].due_datetime = deserialize_datetime(value)
+                                if 'T' in value:
+                                    dt_str = value.replace('T', ' ')
                                 else:
-                                    # Just date, set time to 23:59
-                                    dt = datetime.combine(deserialize_date(value), time(23, 59))
-                                    extracted_data.assessments[idx].due_datetime = dt
-                            except (ValueError, AttributeError):
-                                return jsonify({'success': False, 'error': 'Invalid datetime format'}), 400
+                                    dt_str = value
+                                # Ensure we have time component
+                                if len(dt_str.split(' ')) == 1:
+                                    dt_str += ' 23:59:59'
+                                extracted_data.assessments[idx].due_datetime = deserialize_datetime(dt_str)
+                                # Clear rule if setting absolute date
+                                extracted_data.assessments[idx].due_rule = None
+                            except (ValueError, AttributeError) as e:
+                                return jsonify({'success': False, 'error': f'Invalid datetime format: {str(e)}'}), 400
                         else:
                             extracted_data.assessments[idx].due_datetime = None
-                except (ValueError, IndexError):
-                    return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
+                except (ValueError, IndexError) as e:
+                    return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
             else:
                 return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
                 
@@ -786,138 +808,6 @@ def update_field():
         import traceback
         error_details = traceback.format_exc()
         print(f"Error updating field: {error_details}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/update-field', methods=['POST'])
-def update_field():
-    """API endpoint to update a field in the extracted data.
-    
-    This endpoint allows the frontend to update individual fields like
-    course code, course name, dates, assessment weights, etc. without
-    requiring a full page reload.
-    
-    Expected JSON payload:
-    {
-        "field_type": "course_code" | "course_name" | "term_start" | "term_end" | 
-                      "assessment_weight" | "assessment_due_date",
-        "value": "new value",
-        "assessment_index": 0  // Optional, only for assessment fields
-    }
-    
-    Returns:
-        JSON response with success status and updated data
-    """
-    if 'extracted_data' not in session:
-        return jsonify({'success': False, 'error': 'No data to update'}), 400
-    
-    try:
-        data = request.get_json()
-        field_type = data.get('field_type')
-        value = data.get('value')
-        assessment_index = data.get('assessment_index')
-        
-        if not field_type:
-            return jsonify({'success': False, 'error': 'field_type is required'}), 400
-        
-        # Load current extracted data
-        extracted_data_dict = session['extracted_data']
-        extracted_data = deserialize_extracted_data(extracted_data_dict)
-        
-        # Update based on field type
-        if field_type == 'course_code':
-            extracted_data.course_code = value if value else None
-            
-        elif field_type == 'course_name':
-            extracted_data.course_name = value if value else None
-            
-        elif field_type == 'term_start':
-            if value:
-                try:
-                    # Parse date from datetime-local format (YYYY-MM-DDTHH:MM)
-                    if 'T' in value:
-                        date_str = value.split('T')[0]
-                    else:
-                        date_str = value.split(' ')[0]
-                    extracted_data.term.start_date = deserialize_date(date_str)
-                except (ValueError, AttributeError) as e:
-                    return jsonify({'success': False, 'error': f'Invalid date format: {str(e)}'}), 400
-            else:
-                extracted_data.term.start_date = None
-                
-        elif field_type == 'term_end':
-            if value:
-                try:
-                    # Parse date from datetime-local format
-                    if 'T' in value:
-                        date_str = value.split('T')[0]
-                    else:
-                        date_str = value.split(' ')[0]
-                    extracted_data.term.end_date = deserialize_date(date_str)
-                except (ValueError, AttributeError) as e:
-                    return jsonify({'success': False, 'error': f'Invalid date format: {str(e)}'}), 400
-            else:
-                extracted_data.term.end_date = None
-                
-        elif field_type == 'assessment_weight':
-            if assessment_index is None:
-                return jsonify({'success': False, 'error': 'assessment_index required for assessment fields'}), 400
-            
-            try:
-                idx = int(assessment_index)
-                if 0 <= idx < len(extracted_data.assessments):
-                    if value:
-                        weight = float(value)
-                        extracted_data.assessments[idx].weight_percent = weight
-                    else:
-                        extracted_data.assessments[idx].weight_percent = None
-                else:
-                    return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
-            except (ValueError, IndexError) as e:
-                return jsonify({'success': False, 'error': f'Invalid assessment index or weight: {str(e)}'}), 400
-                
-        elif field_type == 'assessment_due_date':
-            if assessment_index is None:
-                return jsonify({'success': False, 'error': 'assessment_index required for assessment fields'}), 400
-            
-            try:
-                idx = int(assessment_index)
-                if 0 <= idx < len(extracted_data.assessments):
-                    if value:
-                        # Parse datetime from datetime-local format
-                        if 'T' in value:
-                            dt_str = value.replace('T', ' ')
-                        else:
-                            dt_str = value
-                        # Ensure we have time component
-                        if len(dt_str.split(' ')) == 1:
-                            dt_str += ' 23:59:59'
-                        extracted_data.assessments[idx].due_datetime = deserialize_datetime(dt_str)
-                        # Clear rule if setting absolute date
-                        extracted_data.assessments[idx].due_rule = None
-                    else:
-                        extracted_data.assessments[idx].due_datetime = None
-                else:
-                    return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
-            except (ValueError, IndexError) as e:
-                return jsonify({'success': False, 'error': f'Invalid assessment index or date: {str(e)}'}), 400
-        else:
-            return jsonify({'success': False, 'error': f'Unknown field_type: {field_type}'}), 400
-        
-        # Update session with modified data
-        session['extracted_data'] = serialize_extracted_data(extracted_data)
-        
-        # Update cache if we have a PDF hash
-        pdf_hash = session.get('pdf_hash')
-        if pdf_hash:
-            cache_manager.store_extraction(pdf_hash, extracted_data)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Field updated successfully'
-        })
-        
-    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
