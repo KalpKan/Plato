@@ -653,20 +653,43 @@ class PDFExtractor:
                 i += 1
                 continue
             
-            # Check if this line starts an assessment - expanded pattern to catch more types
-            assessment_name_match = re.search(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign)|(?:Participation|Participation\s+Grade)|(?:Project|PROJECT)|(?:Presentation|PRESENTATION)|(?:Paper|PAPER)|(?:Essay|ESSAY)|(?:Reflection|REFLECTION))', line, re.IGNORECASE)
+            # Check if this line starts an assessment - look for specific patterns first
+            assessment_name_match = None
+            assessment_name = None
+            
+            # Priority patterns - check these first for better matching
+            priority_patterns = [
+                (r'^PeerWise\s+(?:Assignment|ASSIGNMENT)\s+(\d+)', lambda m: f"PeerWise Assignment {m.group(1)}"),
+                (r'^Midterm\s+(?:Test|TEST)\s+(\d+)', lambda m: f"Midterm Test {m.group(1)}"),
+                (r'^Assignment\s+(\d+)\s+Slide\s+redesign(?:\s+&\s+Teach)?', lambda m: f"Assignment {m.group(1)} Slide redesign" + (" & Teach" if "Teach" in m.group(0) else "")),
+                (r'^Final\s+(?:Exam|EXAM)', lambda m: "Final Exam"),
+                (r'^(?:Optional\s+)?(?:Bonus|BONUS)', lambda m: "Optional Bonus Assignment"),
+            ]
+            
+            for pattern, name_func in priority_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    assessment_name_match = match
+                    assessment_name = name_func(match)
+                    break
+            
+            # Fallback to general pattern if no priority match
+            if not assessment_name_match:
+                general_match = re.search(r'((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign)(?:\s+&\s+Teach)?|(?:Participation|Participation\s+Grade)|(?:Project|PROJECT)|(?:Presentation|PRESENTATION)|(?:Paper|PAPER)|(?:Essay|ESSAY)|(?:Reflection|REFLECTION)|(?:Optional\s+)?(?:Bonus|BONUS)\s+(?:Assignment|ASSIGNMENT)?)', line, re.IGNORECASE)
+                if general_match:
+                    assessment_name_match = general_match
+                    assessment_name = general_match.group(1)
             
             if assessment_name_match:
                 # Found an assessment - collect multi-line row
-                assessment_name = assessment_name_match.group(1)
                 row_lines = [line]
                 
-                # Collect continuation lines (up to 5 more lines)
+                # Collect continuation lines (up to 10 more lines to capture multi-line entries)
                 j = i + 1
-                while j < len(lines) and j < i + 6:
+                while j < len(lines) and j < i + 11:
                     next_line = lines[j].strip()
                     # Stop if we hit another assessment or section header
-                    if re.match(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)|(?:Midterm|MIDTERM)|(?:Final\s+)?(?:Exam)|(?:Assignment|ASSIGNMENT)|(?:PeerWise|Peerwise)|(?:Lab\s+)?(?:Report)|(?:Slide\s+)?(?:redesign)|Designated|Information|General)', next_line, re.IGNORECASE):
+                    if re.match(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)|(?:Midterm|MIDTERM)|(?:Final\s+)?(?:Exam|EXAM)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)|(?:Lab\s+)?(?:Report)|(?:Slide\s+)?(?:redesign)|(?:Optional\s+)?(?:Bonus|BONUS)|Designated|Information|General)', next_line, re.IGNORECASE):
                         break
                     if next_line and len(next_line) > 3:
                         row_lines.append(next_line)

@@ -215,6 +215,7 @@
                                       data-field-type="assessment_weight" 
                                       data-assessment-index="{{ loop.index0 }}"
                                       data-current-value="{{ assessment.weight_percent or '' }}"
+                                      onclick="event.stopPropagation(); event.preventDefault();"
                                       title="Click to edit weight (%)">
                                     Weight: {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Not set{% endif %}
                                 </span>
@@ -223,6 +224,7 @@
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
+                                          onclick="event.stopPropagation(); event.preventDefault();"
                                           title="Click to edit due date">
                                         Due: {{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') }}
                                     </span>
@@ -231,6 +233,7 @@
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
+                                          onclick="event.stopPropagation(); event.preventDefault();"
                                           title="Click to add due date (YYYY-MM-DD HH:MM)">
                                         Due: {{ assessment.due_rule }} <em>(click to set date)</em>
                                     </span>
@@ -239,6 +242,7 @@
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
+                                          onclick="event.stopPropagation(); event.preventDefault();"
                                           title="Click to add due date (YYYY-MM-DD HH:MM)">
                                         Due date not found <em>(click to add)</em>
                                     </span>
