@@ -864,9 +864,11 @@ class PDFExtractor:
                     time_str = 'in class'
                 
                 # Create assessment(s) - handle multiple due dates (e.g., PeerWise)
+                print(f"DEBUG: Assessment '{assessment_name}' - found {len(due_dates)} dates: {due_dates}")
                 if due_dates:
                     for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
                         parsed_date = dateparser.parse(due_date_str)
+                        print(f"DEBUG: Parsing date '{due_date_str}' -> {parsed_date}")
                         if parsed_date:
                             # Handle time
                             hour = 23
@@ -905,8 +907,10 @@ class PDFExtractor:
                                 needs_review=(due_datetime is None or weight is None)
                             )
                             assessments.append(assessment)
+                            print(f"DEBUG: Added assessment '{title}' to list (total: {len(assessments)})")
                 else:
                     # If no dates found, still create assessment without date
+                    print(f"DEBUG: No dates found for '{assessment_name}', creating assessment without date")
                     assessment = AssessmentTask(
                         title=assessment_name,
                         type=assessment_type,
@@ -917,6 +921,7 @@ class PDFExtractor:
                         needs_review=True
                     )
                     assessments.append(assessment)
+                    print(f"DEBUG: Added assessment '{assessment_name}' to list (total: {len(assessments)})")
                 
                 # Move to next potential assessment
                 print(f"DEBUG: Finished processing '{assessment_name}', moving from line {i} to line {j}")
