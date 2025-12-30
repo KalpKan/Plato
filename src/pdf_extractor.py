@@ -672,7 +672,6 @@ class PDFExtractor:
                     assessment_name = f"Midterm Test {midterm_num}"
                     row_lines = [line]
                     j = i + 1
-                    print(f"DEBUG: Found Midterm Test {midterm_num} at line {i}: {line[:80]}")
                 else:
                     # Try alternative pattern - maybe "Midterm" and number are separated
                     alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
@@ -681,12 +680,11 @@ class PDFExtractor:
                         assessment_name = f"Midterm Test {midterm_num}"
                         row_lines = [line]
                         j = i + 1
-                        print(f"DEBUG: Found Midterm Test {midterm_num} (alt pattern) at line {i}: {line[:80]}")
                     else:
                         i += 1
                         continue
             
-            # First, check if this line starts with "PeerWise" - the assignment number is on next line
+            # First, check if this line starts with "PeerWise" - collect more lines for dates
             elif re.match(r'^PeerWise', line, re.IGNORECASE):
                 # Look ahead to next line for "Assignment X"
                 if i + 1 < len(lines):
@@ -707,6 +705,22 @@ class PDFExtractor:
                     assessment_name = "PeerWise Assignment"
                     row_lines = [line]
                     j = i + 1
+                
+                # For PeerWise, collect more lines to capture all date information
+                # PeerWise dates are often split across multiple lines
+                while j < len(lines) and j < i + 8:  # Collect up to 8 more lines for PeerWise
+                    next_line = lines[j]
+                    # Stop if we hit another assessment
+                    if re.match(r'^(?:Midterm|Final|Assignment\s+\d+|PeerWise|Optional|Designated)', next_line, re.IGNORECASE):
+                        break
+                    # Stop if we've collected enough date information (both Author and Answer dates)
+                    if 'by 11:59 PM' in ' '.join(row_lines).lower() and 'feedback' in ' '.join(row_lines).lower():
+                        # Check if we have both dates
+                        if re.search(r'Author.*?(\w+\.?\s+\w+\.?\s+\d+)', ' '.join(row_lines), re.IGNORECASE) and \
+                           re.search(r'feedback.*?(\w+\.?\s+\w+\.?\s+\d+)', ' '.join(row_lines), re.IGNORECASE):
+                            break
+                    row_lines.append(next_line)
+                    j += 1
             
             # Check for "Assignment X Slide redesign" - might be split
             # BUT: Skip if this is part of a PeerWise description (already handled above)
@@ -744,7 +758,6 @@ class PDFExtractor:
                     assessment_name = f"Midterm Test {midterm_num}"
                     row_lines = [line]
                     j = i + 1
-                    print(f"DEBUG: Found Midterm Test {midterm_num} at line {i}: {line[:80]}")
                 else:
                     # Try alternative pattern - maybe "Midterm" and number are separated
                     alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
@@ -753,7 +766,6 @@ class PDFExtractor:
                         assessment_name = f"Midterm Test {midterm_num}"
                         row_lines = [line]
                         j = i + 1
-                        print(f"DEBUG: Found Midterm Test {midterm_num} (alt pattern) at line {i}: {line[:80]}")
                     else:
                         i += 1
                         continue
@@ -830,29 +842,59 @@ class PDFExtractor:
                 
                 # Extract due date(s)
                 due_dates = []
-                # Pattern for dates: "October 1", "Oct 1", "November 14th", "Sunday, Oct 19", "December exam period"
-                # Handle ordinal suffixes (st, nd, rd, th) by making them optional
-                date_patterns = [
-                    r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})(?:st|nd|rd|th)?',
-                    r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})(?:st|nd|rd|th)?',
-                ]
+                # For PeerWise assignments, look for "Author:" and "Answer and provide feedback:" dates
+                if 'peerwise' in assessment_name.lower():
+                    # Pattern for PeerWise dates: "Author: Mon, Oct. 27th by 11:59 PM" and "feedback: Wed, Oct. 29th by 11:59 PM"
+                    # Handle abbreviated day names (Mon, Tue, Wed, Thu, Fri, Sat, Sun) and abbreviated months (Oct., Jan., etc.)
+                    peerwise_patterns = [
+                        r'Author:?\s*(?:Mon|Monday|Tue|Tuesday|Wed|Wednesday|Thu|Thursday|Fri|Friday|Sat|Saturday|Sun|Sunday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\.?\s+(\d{1,2})(?:st|nd|rd|th)?',
+                        r'feedback:?\s*(?:Mon|Monday|Tue|Tuesday|Wed|Wednesday|Thu|Thursday|Fri|Friday|Sat|Saturday|Sun|Sunday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\.?\s+(\d{1,2})(?:st|nd|rd|th)?',
+                    ]
+                    
+                    for pattern in peerwise_patterns:
+                        date_matches = re.finditer(pattern, row_text, re.IGNORECASE)
+                        for date_match in date_matches:
+                            if len(date_match.groups()) == 2:
+                                month = date_match.group(1)
+                                day = date_match.group(2)
+                                
+                                # Determine year based on month
+                                year = 2025
+                                if any(m in month.lower() for m in ['jan', 'feb', 'mar', 'apr']):
+                                    year = 2026
+                                elif month.lower() in ['october', 'oct', 'november', 'nov', 'december', 'dec']:
+                                    year = 2025
+                                
+                                date_str = f"{month} {day}, {year}"
+                                # Avoid duplicates
+                                if date_str not in due_dates:
+                                    due_dates.append(date_str)
                 
-                for date_pattern in date_patterns:
-                    date_matches = re.finditer(date_pattern, row_text, re.IGNORECASE)
-                    for date_match in date_matches:
-                        if len(date_match.groups()) == 2:
-                            month = date_match.group(1)
-                            day = date_match.group(2)
-                            
-                            # Determine year
-                            year = 2025
-                            if '2026' in row_text or any(m in row_text for m in ['January', 'February', 'March', 'April']):
-                                year = 2026
-                            
-                            date_str = f"{month} {day}, {year}"
-                            # Avoid duplicates
-                            if date_str not in due_dates:
-                                due_dates.append(date_str)
+                # General date patterns for other assessments
+                if not due_dates:
+                    # Pattern for dates: "October 1", "Oct 1", "November 14th", "Sunday, Oct 19", "December exam period"
+                    # Handle ordinal suffixes (st, nd, rd, th) by making them optional
+                    date_patterns = [
+                        r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\.?\s+(\d{1,2})(?:st|nd|rd|th)?',
+                        r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\.?\s+(\d{1,2})(?:st|nd|rd|th)?',
+                    ]
+                
+                    for date_pattern in date_patterns:
+                        date_matches = re.finditer(date_pattern, row_text, re.IGNORECASE)
+                        for date_match in date_matches:
+                            if len(date_match.groups()) == 2:
+                                month = date_match.group(1)
+                                day = date_match.group(2)
+                                
+                                # Determine year
+                                year = 2025
+                                if '2026' in row_text or any(m in row_text.lower() for m in ['january', 'february', 'march', 'april', 'jan', 'feb', 'mar', 'apr']):
+                                    year = 2026
+                                
+                                date_str = f"{month} {day}, {year}"
+                                # Avoid duplicates
+                                if date_str not in due_dates:
+                                    due_dates.append(date_str)
                 
                 # Handle "December exam period" or date ranges
                 if not due_dates and ('exam period' in row_text.lower() or ('december' in row_text.lower() and 'exam' in row_text.lower())):
@@ -860,23 +902,53 @@ class PDFExtractor:
                     due_dates.append("December 15, 2025")  # Default, will be refined
                 
                 # Extract time if present
+                # For PeerWise, times are usually "11:59 PM" and appear after each date
                 time_str = None
-                # Look for time patterns: "6-8 PM", "11:59 PM", "in class"
-                time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(?:[-–]\s*(\d{1,2})(?:[:–-](\d{2}))?)?\s*(AM|PM)', row_text, re.IGNORECASE)
-                if time_match:
-                    time_str = time_match.group(0)
-                elif 'in class' in row_text.lower():
-                    time_str = 'in class'
+                if 'peerwise' in assessment_name.lower():
+                    # Look for "by 11:59 PM" pattern (common for PeerWise)
+                    time_match = re.search(r'by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
+                    if time_match:
+                        time_str = time_match.group(0)
+                else:
+                    # Look for time patterns: "6-8 PM", "11:59 PM", "in class"
+                    time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(?:[-–]\s*(\d{1,2})(?:[:–-](\d{2}))?)?\s*(AM|PM)', row_text, re.IGNORECASE)
+                    if time_match:
+                        time_str = time_match.group(0)
+                    elif 'in class' in row_text.lower():
+                        time_str = 'in class'
                 
                 # Create assessment(s) - handle multiple due dates (e.g., PeerWise)
                 if due_dates:
                     for date_idx, due_date_str in enumerate(due_dates[:2]):  # Limit to 2 dates per assessment
                         parsed_date = dateparser.parse(due_date_str)
                         if parsed_date:
-                            # Handle time
+                            # Handle time - extract time for each specific date
                             hour = 23
                             minute = 59
-                            if time_str:
+                            
+                            if 'peerwise' in assessment_name.lower():
+                                # For PeerWise, extract time from the specific date context
+                                if date_idx == 0:
+                                    # First date is usually the Author date - look for "Author: ... by 11:59 PM"
+                                    author_time_match = re.search(r'Author:?[^.]*?by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
+                                    if author_time_match:
+                                        hour = int(author_time_match.group(1))
+                                        minute = int(author_time_match.group(2)) if author_time_match.group(2) else 59
+                                        if author_time_match.group(3).upper() == 'PM' and hour != 12:
+                                            hour += 12
+                                        elif author_time_match.group(3).upper() == 'AM' and hour == 12:
+                                            hour = 0
+                                elif date_idx == 1:
+                                    # Second date is usually the Answer/Feedback date - look for "feedback: ... by 11:59 PM"
+                                    feedback_time_match = re.search(r'feedback:?[^.]*?by\s+(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM)', row_text, re.IGNORECASE)
+                                    if feedback_time_match:
+                                        hour = int(feedback_time_match.group(1))
+                                        minute = int(feedback_time_match.group(2)) if feedback_time_match.group(2) else 59
+                                        if feedback_time_match.group(3).upper() == 'PM' and hour != 12:
+                                            hour += 12
+                                        elif feedback_time_match.group(3).upper() == 'AM' and hour == 12:
+                                            hour = 0
+                            elif time_str:
                                 if 'in class' in time_str.lower():
                                     hour = 10
                                     minute = 0
