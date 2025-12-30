@@ -358,9 +358,14 @@ function startEditing(fieldElement) {
         placeholder = 'Enter value';
     }
     
-    // Create input form
+    // Create input form - make sure it doesn't submit parent form
     const form = document.createElement('form');
     form.className = 'inline-edit-form';
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    };
     form.innerHTML = `
         <input type="${inputType}" 
                class="inline-edit-input" 
@@ -384,15 +389,21 @@ function startEditing(fieldElement) {
     fieldElement.classList.add('editing');
     
     const input = form.querySelector('.inline-edit-input');
-    input.focus();
-    input.select();
+    if (input) {
+        input.focus();
+        input.select();
+    }
     
-    // Handle form submission
+    // Handle form submission - prevent bubbling to parent form
     form.addEventListener('submit', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const newValue = input.value.trim();
+        console.log('Saving field:', fieldType, 'new value:', newValue);
         saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
-    });
+        return false;
+    }, true); // Use capture phase
     
     // Handle cancel
     form.querySelector('.btn-cancel').addEventListener('click', function() {
