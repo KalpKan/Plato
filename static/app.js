@@ -441,7 +441,7 @@ function startEditing(fieldElement) {
     }
     
     // Handle cancel
-    const cancelBtn = editForm.querySelector('.btn-cancel');
+    // cancelBtn is already declared above, so just use it
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function(e) {
             console.log('Cancel button clicked');
