@@ -358,13 +358,13 @@ function startEditing(fieldElement) {
     
     // Create input form - make sure it doesn't submit parent form
     const editForm = document.createElement('form');
-    form.className = 'inline-edit-form';
-    form.onsubmit = function(e) {
+    editForm.className = 'inline-edit-form';
+    editForm.onsubmit = function(e) {
         e.preventDefault();
         e.stopPropagation();
         return false;
     };
-    form.innerHTML = `
+    editForm.innerHTML = `
         <input type="${inputType}" 
                class="inline-edit-input" 
                value="${inputValue}" 
@@ -383,17 +383,17 @@ function startEditing(fieldElement) {
     
     // Replace field with form
     fieldElement.innerHTML = '';
-    fieldElement.appendChild(form);
+    fieldElement.appendChild(editForm);
     fieldElement.classList.add('editing');
     
-    const input = form.querySelector('.inline-edit-input');
+    const input = editForm.querySelector('.inline-edit-input');
     if (input) {
         input.focus();
         input.select();
     }
     
     // Handle form submission - prevent bubbling to parent form
-    form.addEventListener('submit', function(e) {
+    editForm.addEventListener('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -404,18 +404,29 @@ function startEditing(fieldElement) {
     }, true); // Use capture phase
     
     // Handle cancel
-    form.querySelector('.btn-cancel').addEventListener('click', function() {
-        fieldElement.innerHTML = originalContent;
-        fieldElement.classList.remove('editing');
-    });
-    
-    // Handle escape key
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+    const cancelBtn = editForm.querySelector('.btn-cancel');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Cancel clicked');
             fieldElement.innerHTML = originalContent;
             fieldElement.classList.remove('editing');
-        }
-    });
+            return false;
+        }, true);
+    }
+    
+    // Handle escape key
+    if (input) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                console.log('Escape pressed');
+                fieldElement.innerHTML = originalContent;
+                fieldElement.classList.remove('editing');
+            }
+        });
+    }
 }
 
 /**
