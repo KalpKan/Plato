@@ -659,6 +659,16 @@ class PDFExtractor:
         i = 0
         while i < len(lines):
             line = lines[i]
+            
+            # Stop processing if we hit the "Designated Assessment" section - this is informational, not an assessment
+            if re.match(r'^Designated\s+Assessment', line, re.IGNORECASE):
+                break
+            
+            # Skip lines that are bullet points (informational sections, not assessments)
+            if line.strip().startswith('•') or line.strip().startswith('-'):
+                i += 1
+                continue
+            
             # Check if this line starts an assessment - handle multi-line names
             assessment_name_match = None
             assessment_name = None
