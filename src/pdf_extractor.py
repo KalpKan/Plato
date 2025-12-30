@@ -594,15 +594,36 @@ class PDFExtractor:
         """
         assessments = []
         
-        # Find the assessment section
-        # Look for "Assessment and Evaluation" or "8. Assessment"
-        assessment_section_pattern = r'(?:8\.\s*)?Assessment\s+(?:and\s+)?Evaluation[^\n]*(?:\n[^\n]*){0,100}'
-        section_match = re.search(assessment_section_pattern, text, re.IGNORECASE | re.DOTALL)
+        # Find the assessment section - look for "Assessment and Evaluation" title
+        # Try multiple patterns to find the section
+        assessment_section_patterns = [
+            r'(?:8\.\s*)?Assessment\s+(?:and\s+)?Evaluation[^\n]*(?:\n[^\n]*){0,500}',  # More lines after title
+            r'Assessment\s+(?:and\s+)?Evaluation\s+Policy[^\n]*(?:\n[^\n]*){0,500}',
+            r'Assessment\s+(?:and\s+)?Evaluation[^\n]*(?:\n[^\n]*){0,1000}',  # Even more lines
+        ]
         
-        if not section_match:
+        section_text = None
+        for pattern in assessment_section_patterns:
+            section_match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if section_match:
+                section_text = section_match.group(0)
+                # Find where the section ends (next major section or end of document)
+                # Look for next numbered section or major heading
+                next_section_match = re.search(r'\n(?:\d+\.\s+)?(?:Course|Instructor|Textbook|Schedule|Policies|Grading|Contact|Information|General|Appendix)', section_text, re.IGNORECASE)
+                if next_section_match:
+                    section_text = section_text[:next_section_match.start()]
+                break
+        
+        if not section_text:
+            # Fallback: search for any mention of assessment table
+            assessment_mentions = re.finditer(r'Assessment[^\n]*(?:\n[^\n]*){0,200}', text, re.IGNORECASE)
+            for match in assessment_mentions:
+                if 'weight' in match.group(0).lower() or 'due' in match.group(0).lower():
+                    section_text = match.group(0)
+                    break
+        
+        if not section_text:
             return assessments
-        
-        section_text = section_match.group(0)
         
         # Look for table header: "Assessment Format Weight Due Date Flexibility"
         header_pattern = r'Assessment\s+(?:Format\s+)?(?:Weight|Weighting)\s+(?:Due\s+)?Date\s*(?:Flexibility)?'
@@ -618,7 +639,8 @@ class PDFExtractor:
         
         # Extract text after header (the table rows)
         table_start = header_match.end()
-        table_text = section_text[table_start:table_start+2000]  # Limit to reasonable size
+        # Extract more text to capture all assessments (up to 5000 chars)
+        table_text = section_text[table_start:table_start+5000]  # Increased limit
         
         # Split table text into lines and process row by row
         # Look for assessment rows - each assessment typically starts with a name
@@ -631,8 +653,8 @@ class PDFExtractor:
                 i += 1
                 continue
             
-            # Check if this line starts an assessment
-            assessment_name_match = re.search(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign))', line, re.IGNORECASE)
+            # Check if this line starts an assessment - expanded pattern to catch more types
+            assessment_name_match = re.search(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+|(?:Midterm|MIDTERM|Mid-term)\s+(?:Test|Exam)?\s*\d*|(?:Final\s+)?(?:Exam|EXAM|Examination)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)\s+(?:Assignment|ASSIGNMENT)\s+\d+|(?:Lab\s+)?(?:Report|REPORT)|(?:Slide\s+)?(?:redesign|Redesign)|(?:Participation|Participation\s+Grade)|(?:Project|PROJECT)|(?:Presentation|PRESENTATION)|(?:Paper|PAPER)|(?:Essay|ESSAY)|(?:Reflection|REFLECTION))', line, re.IGNORECASE)
             
             if assessment_name_match:
                 # Found an assessment - collect multi-line row

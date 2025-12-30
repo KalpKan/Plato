@@ -220,11 +220,22 @@ function parseDaysOfWeek(daysStr) {
 function initEditableFields() {
     const editableFields = document.querySelectorAll('.editable-field');
     
+    console.log('Found', editableFields.length, 'editable fields');
+    
     editableFields.forEach(field => {
-        field.addEventListener('click', function(e) {
+        // Remove any existing listeners to avoid duplicates
+        const newField = field.cloneNode(true);
+        field.parentNode.replaceChild(newField, field);
+        
+        newField.addEventListener('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
+            console.log('Clicked editable field:', this);
             startEditing(this);
         });
+        
+        // Add visual indicator
+        newField.style.cursor = 'pointer';
     });
 }
 
