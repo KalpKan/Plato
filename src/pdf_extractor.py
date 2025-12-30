@@ -825,10 +825,11 @@ class PDFExtractor:
                 
                 # Extract due date(s)
                 due_dates = []
-                # Pattern for dates: "October 1", "Oct 1", "November 14", "Sunday, Oct 19", "December exam period"
+                # Pattern for dates: "October 1", "Oct 1", "November 14th", "Sunday, Oct 19", "December exam period"
+                # Handle ordinal suffixes (st, nd, rd, th) by making them optional
                 date_patterns = [
-                    r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})',
-                    r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})',
+                    r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})(?:st|nd|rd|th)?',
+                    r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)\s+(\d{1,2})(?:st|nd|rd|th)?',
                 ]
                 
                 for date_pattern in date_patterns:
