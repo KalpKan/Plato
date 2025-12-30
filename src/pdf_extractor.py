@@ -644,14 +644,13 @@ class PDFExtractor:
         
         # Split table text into lines and process row by row
         # Look for assessment rows - each assessment typically starts with a name
-        lines = table_text.split('\n')
+        # Filter out empty/short lines to avoid index issues
+        all_lines = table_text.split('\n')
+        lines = [l.strip() for l in all_lines if l.strip() and len(l.strip()) >= 3]
         
         i = 0
         while i < len(lines):
-            line = lines[i].strip()
-            if not line or len(line) < 3:
-                i += 1
-                continue
+            line = lines[i]
             
             # Check if this line starts an assessment - handle multi-line names
             assessment_name_match = None
@@ -661,7 +660,7 @@ class PDFExtractor:
             if re.match(r'^PeerWise', line, re.IGNORECASE):
                 # Look ahead to next line for "Assignment X"
                 if i + 1 < len(lines):
-                    next_line = lines[i + 1].strip()
+                    next_line = lines[i + 1]  # Already stripped in filtered lines
                     assign_match = re.search(r'Assignment\s+(\d+)', next_line, re.IGNORECASE)
                     if assign_match:
                         assessment_name = f"PeerWise Assignment {assign_match.group(1)}"
@@ -680,13 +679,14 @@ class PDFExtractor:
                     j = i + 1
             
             # Check for "Assignment X Slide redesign" - might be split
-            elif re.match(r'^Assignment\s+(\d+)', line, re.IGNORECASE):
+            # BUT: Skip if this is part of a PeerWise description (already handled above)
+            elif re.match(r'^Assignment\s+(\d+)', line, re.IGNORECASE) and not any('peerwise' in prev_line.lower() for prev_line in lines[max(0, i-2):i]):
                 assign_num_match = re.match(r'^Assignment\s+(\d+)', line, re.IGNORECASE)
                 assign_num = assign_num_match.group(1) if assign_num_match else None
                 
                 # Check if next line has "Slide redesign"
                 if i + 1 < len(lines):
-                    next_line = lines[i + 1].strip()
+                    next_line = lines[i + 1]  # Already stripped
                     if 'slide redesign' in next_line.lower():
                         if 'teach' in next_line.lower():
                             assessment_name = f"Assignment {assign_num} Slide redesign & Teach"
@@ -746,7 +746,7 @@ class PDFExtractor:
                 
                 # Collect continuation lines (up to 10 more lines to capture multi-line entries)
                 while j < len(lines) and j < i + 11:
-                    next_line = lines[j].strip()
+                    next_line = lines[j]  # Already stripped in filtered array
                     # Stop if we hit another assessment or section header
                     # Be more specific: only stop if it's clearly a new assessment (not part of description)
                     # Check for assessment names at start of line, or section headers
@@ -768,6 +768,8 @@ class PDFExtractor:
                             break
                     
                     if should_stop:
+                        # Don't include this line in row_lines, but j now points to it
+                        # This ensures the next iteration will process this line
                         break
                     
                     if next_line and len(next_line) > 3:
