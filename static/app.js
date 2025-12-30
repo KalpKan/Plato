@@ -536,7 +536,6 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
         fieldElement.classList.remove('missing-field');
     }
     
-<｜tool▁sep｜>new_string
     // Update completeness metrics without full page reload
     // The field display has been updated, so we're done
     // User can continue editing other fields
