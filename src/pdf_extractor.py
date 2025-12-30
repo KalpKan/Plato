@@ -651,13 +651,37 @@ class PDFExtractor:
         i = 0
         while i < len(lines):
             line = lines[i]
+            print(f"DEBUG: Processing line {i}: {line[:60]}")
             
             # Check if this line starts an assessment - handle multi-line names
             assessment_name_match = None
             assessment_name = None
             
+            # IMPORTANT: Check for Midterm Test FIRST, before other patterns
+            # This ensures Midterm Tests are caught even if they appear in unexpected positions
+            if 'Midterm' in line and 'Test' in line:
+                match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
+                if match:
+                    midterm_num = match.group(1)
+                    assessment_name = f"Midterm Test {midterm_num}"
+                    row_lines = [line]
+                    j = i + 1
+                    print(f"DEBUG: Found Midterm Test {midterm_num} at line {i}: {line[:80]}")
+                else:
+                    # Try alternative pattern - maybe "Midterm" and number are separated
+                    alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
+                    if alt_match:
+                        midterm_num = alt_match.group(1)
+                        assessment_name = f"Midterm Test {midterm_num}"
+                        row_lines = [line]
+                        j = i + 1
+                        print(f"DEBUG: Found Midterm Test {midterm_num} (alt pattern) at line {i}: {line[:80]}")
+                    else:
+                        i += 1
+                        continue
+            
             # First, check if this line starts with "PeerWise" - the assignment number is on next line
-            if re.match(r'^PeerWise', line, re.IGNORECASE):
+            elif re.match(r'^PeerWise', line, re.IGNORECASE):
                 # Look ahead to next line for "Assignment X"
                 if i + 1 < len(lines):
                     next_line = lines[i + 1]  # Already stripped in filtered lines
@@ -706,15 +730,27 @@ class PDFExtractor:
                     j = i + 1
             
             # Check for other patterns - Midterm Test (can appear anywhere in line, not just start)
-            elif 'Midterm' in line and re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE):
+            # Make this check more robust - check if line contains "Midterm Test" followed by a number
+            elif 'Midterm' in line and 'Test' in line:
                 match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
                 if match:
-                    assessment_name = f"Midterm Test {match.group(1)}"
+                    midterm_num = match.group(1)
+                    assessment_name = f"Midterm Test {midterm_num}"
                     row_lines = [line]
                     j = i + 1
+                    print(f"DEBUG: Found Midterm Test {midterm_num} at line {i}: {line[:80]}")
                 else:
-                    i += 1
-                    continue
+                    # Try alternative pattern - maybe "Midterm" and number are separated
+                    alt_match = re.search(r'Midterm[^\d]*(\d+)', line, re.IGNORECASE)
+                    if alt_match:
+                        midterm_num = alt_match.group(1)
+                        assessment_name = f"Midterm Test {midterm_num}"
+                        row_lines = [line]
+                        j = i + 1
+                        print(f"DEBUG: Found Midterm Test {midterm_num} (alt pattern) at line {i}: {line[:80]}")
+                    else:
+                        i += 1
+                        continue
             
             elif re.match(r'^Final\s+(?:Exam|EXAM)', line, re.IGNORECASE):
                 assessment_name = "Final Exam"
@@ -765,11 +801,14 @@ class PDFExtractor:
                     for pattern in stop_patterns:
                         if re.match(pattern, next_line, re.IGNORECASE):
                             should_stop = True
+                            print(f"DEBUG: Stopping collection at line {j} due to pattern match: {next_line[:60]}")
                             break
                     
                     if should_stop:
                         # Don't include this line in row_lines, but j now points to it
                         # This ensures the next iteration will process this line
+                        # BUT: Make sure we don't skip the line - the while loop will increment i
+                        # Actually, we need to make sure i gets set correctly after processing
                         break
                     
                     if next_line and len(next_line) > 3:
@@ -879,6 +918,7 @@ class PDFExtractor:
                     assessments.append(assessment)
                 
                 # Move to next potential assessment
+                print(f"DEBUG: Finished processing '{assessment_name}', moving from line {i} to line {j}")
                 i = j
             else:
                 i += 1
