@@ -242,7 +242,7 @@ function initEditableFields() {
         field.style.cursor = 'pointer';
         field.style.userSelect = 'none';
         
-        // Add direct click listener
+        // Add direct click listener - use both capture and bubble phases
         field.addEventListener('click', function(e) {
             console.log('Direct click on field:', this, 'Event:', e);
             e.preventDefault();
@@ -254,12 +254,32 @@ function initEditableFields() {
                 startEditing(this);
             }
             return false;
+        }, false); // Use bubble phase first
+        
+        // Also add capture phase listener
+        field.addEventListener('click', function(e) {
+            console.log('Capture phase click on field:', this);
+            if (!this.classList.contains('editing')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
         }, true); // Use capture phase
         
-        // Also prevent form submission when clicking
+        // Prevent form submission when clicking
         field.addEventListener('mousedown', function(e) {
             e.stopPropagation();
         }, true);
+        
+        // Also prevent on the field itself
+        field.onclick = function(e) {
+            console.log('onclick handler triggered');
+            e.preventDefault();
+            e.stopPropagation();
+            if (!this.classList.contains('editing')) {
+                startEditing(this);
+            }
+            return false;
+        };
     });
     
     // Also use event delegation as backup
