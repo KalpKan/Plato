@@ -267,6 +267,17 @@ function initEditableFields() {
         
         // Use onclick as primary handler (most reliable)
         field.onclick = function(e) {
+            // Don't handle clicks on buttons or inside the edit form
+            const target = e.target;
+            if (target.closest('.inline-edit-form') || 
+                target.closest('.btn-save') || 
+                target.closest('.btn-cancel') ||
+                target.closest('button') ||
+                target.closest('input')) {
+                console.log('Click on button/form element, ignoring editable field handler');
+                return true; // Allow the click to proceed
+            }
+            
             console.log('=== onclick handler triggered ===', this);
             console.log('Event:', e);
             console.log('Field type:', this.getAttribute('data-field-type'));
@@ -284,6 +295,17 @@ function initEditableFields() {
         
         // Also add event listener as backup
         field.addEventListener('click', function(e) {
+            // Don't handle clicks on buttons or inside the edit form
+            const target = e.target;
+            if (target.closest('.inline-edit-form') || 
+                target.closest('.btn-save') || 
+                target.closest('.btn-cancel') ||
+                target.closest('button') ||
+                target.closest('input')) {
+                console.log('Click on button/form element (addEventListener), ignoring');
+                return true; // Allow the click to proceed
+            }
+            
             console.log('addEventListener click on field:', this);
             e.preventDefault();
             e.stopPropagation();
@@ -383,8 +405,8 @@ function startEditing(fieldElement) {
                ${inputType === 'number' ? 'min="0" max="100" step="0.1"' : ''}
                autofocus>
         <div class="inline-edit-actions">
-            <button type="submit" class="btn-save">Save</button>
-            <button type="button" class="btn-cancel">Cancel</button>
+            <button type="submit" class="btn-save" style="pointer-events: auto; z-index: 1001;">Save</button>
+            <button type="button" class="btn-cancel" style="pointer-events: auto; z-index: 1001;">Cancel</button>
         </div>
     `;
     
@@ -428,8 +450,9 @@ function startEditing(fieldElement) {
     // Handle save button click directly (in case form submit doesn't work)
     // saveBtn is already declared above, so just use it
     if (saveBtn) {
+        // Use both capture and bubble phases to ensure we catch the event
         saveBtn.addEventListener('click', function(e) {
-            console.log('Save button clicked');
+            console.log('Save button clicked - handler 1');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -437,21 +460,65 @@ function startEditing(fieldElement) {
             console.log('Saving field via button:', fieldType, 'new value:', newValue);
             saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
             return false;
-        }, true);
+        }, true); // Capture phase
+        
+        saveBtn.addEventListener('click', function(e) {
+            console.log('Save button clicked - handler 2');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const newValue = input.value.trim();
+            console.log('Saving field via button (bubble):', fieldType, 'new value:', newValue);
+            saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+            return false;
+        }, false); // Bubble phase
+        
+        // Also use onclick as a fallback
+        saveBtn.onclick = function(e) {
+            console.log('Save button onclick handler');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const newValue = input.value.trim();
+            saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+            return false;
+        };
     }
     
     // Handle cancel
     // cancelBtn is already declared above, so just use it
     if (cancelBtn) {
+        // Use both capture and bubble phases to ensure we catch the event
         cancelBtn.addEventListener('click', function(e) {
-            console.log('Cancel button clicked');
+            console.log('Cancel button clicked - handler 1');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             fieldElement.innerHTML = originalContent;
             fieldElement.classList.remove('editing');
             return false;
-        }, true);
+        }, true); // Capture phase
+        
+        cancelBtn.addEventListener('click', function(e) {
+            console.log('Cancel button clicked - handler 2');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            fieldElement.innerHTML = originalContent;
+            fieldElement.classList.remove('editing');
+            return false;
+        }, false); // Bubble phase
+        
+        // Also use onclick as a fallback
+        cancelBtn.onclick = function(e) {
+            console.log('Cancel button onclick handler');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            fieldElement.innerHTML = originalContent;
+            fieldElement.classList.remove('editing');
+            return false;
+        };
     }
     
     // Handle escape key
