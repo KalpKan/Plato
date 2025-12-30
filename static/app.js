@@ -19,8 +19,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const reviewForm = document.getElementById('review-form');
     if (generateBtn && reviewForm) {
         generateBtn.addEventListener('click', function(e) {
+            console.log('Generate Calendar button clicked');
+            // Check if any field is currently being edited
+            const editingField = document.querySelector('.editable-field.editing');
+            if (editingField) {
+                e.preventDefault();
+                alert('Please save or cancel your current edit before generating the calendar.');
+                return false;
+            }
             // Allow form submission when clicking generate button
-            reviewForm.onsubmit = null;
+            // Remove the onsubmit="return false;" handler
+            reviewForm.onsubmit = function(e) {
+                // Allow submission
+                return true;
+            };
+            // Submit the form
             reviewForm.submit();
         });
     }
@@ -304,17 +317,10 @@ function startEditing(fieldElement) {
         return;
     }
     
-    // Prevent any form submission from parent form
-    const parentForm = fieldElement.closest('form');
-    if (parentForm) {
-        // Temporarily prevent parent form submission
-        parentForm.addEventListener('submit', function(e) {
-            // Only prevent if clicking on editable field
-            if (document.activeElement && document.activeElement.classList.contains('editable-field')) {
-                e.preventDefault();
-                return false;
-            }
-        }, true);
+    // Don't start editing if already in edit mode
+    if (fieldElement.classList.contains('editing')) {
+        console.log('Field already in editing mode, skipping');
+        return;
     }
     
     const fieldType = fieldElement.getAttribute('data-field-type');
@@ -394,6 +400,7 @@ function startEditing(fieldElement) {
     
     // Handle form submission - prevent bubbling to parent form
     editForm.addEventListener('submit', function(e) {
+        console.log('Edit form submit event triggered');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -403,13 +410,29 @@ function startEditing(fieldElement) {
         return false;
     }, true); // Use capture phase
     
+    // Handle save button click directly (in case form submit doesn't work)
+    const saveBtn = editForm.querySelector('.btn-save');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function(e) {
+            console.log('Save button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const newValue = input.value.trim();
+            console.log('Saving field via button:', fieldType, 'new value:', newValue);
+            saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+            return false;
+        }, true);
+    }
+    
     // Handle cancel
     const cancelBtn = editForm.querySelector('.btn-cancel');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function(e) {
+            console.log('Cancel button clicked');
             e.preventDefault();
             e.stopPropagation();
-            console.log('Cancel clicked');
+            e.stopImmediatePropagation();
             fieldElement.innerHTML = originalContent;
             fieldElement.classList.remove('editing');
             return false;
