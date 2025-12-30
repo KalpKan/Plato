@@ -705,12 +705,16 @@ class PDFExtractor:
                     row_lines = [line]
                     j = i + 1
             
-            # Check for other patterns
-            elif re.match(r'^Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE):
-                match = re.match(r'^Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
-                assessment_name = f"Midterm Test {match.group(1)}"
-                row_lines = [line]
-                j = i + 1
+            # Check for other patterns - Midterm Test (can appear anywhere in line, not just start)
+            elif 'Midterm' in line and re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE):
+                match = re.search(r'Midterm\s+(?:Test|TEST)\s+(\d+)', line, re.IGNORECASE)
+                if match:
+                    assessment_name = f"Midterm Test {match.group(1)}"
+                    row_lines = [line]
+                    j = i + 1
+                else:
+                    i += 1
+                    continue
             
             elif re.match(r'^Final\s+(?:Exam|EXAM)', line, re.IGNORECASE):
                 assessment_name = "Final Exam"
@@ -744,8 +748,28 @@ class PDFExtractor:
                 while j < len(lines) and j < i + 11:
                     next_line = lines[j].strip()
                     # Stop if we hit another assessment or section header
-                    if re.match(r'^((?:In\s+Class\s+)?(?:Quiz|QUIZ)|(?:Midterm|MIDTERM)|(?:Final\s+)?(?:Exam|EXAM)|(?:Assignment|ASSIGNMENT)\s+\d+|(?:PeerWise|Peerwise)|(?:Lab\s+)?(?:Report)|(?:Slide\s+)?(?:redesign)|(?:Optional\s+)?(?:Bonus|BONUS)|Designated|Information|General)', next_line, re.IGNORECASE):
+                    # Be more specific: only stop if it's clearly a new assessment (not part of description)
+                    # Check for assessment names at start of line, or section headers
+                    stop_patterns = [
+                        r'^(?:In\s+Class\s+)?(?:Quiz|QUIZ)\s+\d+',  # Quiz 1, Quiz 2, etc.
+                        r'^Midterm\s+(?:Test|TEST)\s+\d+',  # Midterm Test 1, Midterm Test 2
+                        r'^(?:Final\s+)?(?:Exam|EXAM)',  # Final Exam
+                        r'^PeerWise',  # New PeerWise assignment
+                        r'^Assignment\s+\d+\s+(?:Slide|Augment)',  # Assignment X Slide redesign (new assessment)
+                        r'^(?:Optional\s+)?(?:Bonus|BONUS)',  # Optional Bonus
+                        r'^Designated',  # Section header
+                        r'^Information',  # Section header
+                        r'^General',  # Section header
+                    ]
+                    should_stop = False
+                    for pattern in stop_patterns:
+                        if re.match(pattern, next_line, re.IGNORECASE):
+                            should_stop = True
+                            break
+                    
+                    if should_stop:
                         break
+                    
                     if next_line and len(next_line) > 3:
                         row_lines.append(next_line)
                     j += 1
