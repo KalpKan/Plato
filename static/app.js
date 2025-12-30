@@ -229,29 +229,28 @@ function parseDaysOfWeek(daysStr) {
  * Makes missing or reviewable fields clickable for inline editing
  */
 function initEditableFields() {
-    const editableFields = document.querySelectorAll('.editable-field');
+    // Use event delegation to handle clicks on editable fields
+    // This works even if fields are added dynamically and catches clicks before form submission
+    document.body.addEventListener('click', function(e) {
+        const editableField = e.target.closest('.editable-field');
+        if (editableField && !editableField.classList.contains('editing')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('Clicked editable field:', editableField, 'Field type:', editableField.getAttribute('data-field-type'));
+            startEditing(editableField);
+            return false;
+        }
+    }, true); // Use capture phase to catch before form submission
     
+    // Also add direct listeners and visual indicators
+    const editableFields = document.querySelectorAll('.editable-field');
     console.log('Found', editableFields.length, 'editable fields');
     
     editableFields.forEach(field => {
-        // Remove any existing listeners to avoid duplicates
-        const newField = field.cloneNode(true);
-        field.parentNode.replaceChild(newField, field);
-        
-        newField.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Clicked editable field:', this, 'Field type:', this.getAttribute('data-field-type'));
-            startEditing(this);
-        });
-        
-        // Also handle mousedown to catch clicks before form submission
-        newField.addEventListener('mousedown', function(e) {
-            e.stopPropagation();
-        });
-        
-        // Add visual indicator
-        newField.style.cursor = 'pointer';
+        // Make sure cursor shows it's clickable
+        field.style.cursor = 'pointer';
+        field.style.userSelect = 'none'; // Prevent text selection when clicking
     });
 }
 
