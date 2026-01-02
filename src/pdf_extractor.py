@@ -1717,8 +1717,16 @@ class PDFExtractor:
                         name_idx = column_map['name']
                         if name_idx < len(row) and row[name_idx]:
                             name_text = str(row[name_idx]).lower().strip()
-                            if 'rotation' in name_text or 'total' in name_text or 'course' in name_text:
-                                return True
+                            # Use same strict patterns as name column check
+                            summary_patterns = [
+                                r'^(course\s+)?total$',
+                                r'^subtotal$',
+                                r'^sum$',
+                                r'^grand\s+total$',
+                            ]
+                            for pattern in summary_patterns:
+                                if re.match(pattern, name_text, re.IGNORECASE):
+                                    return True
         
         return False
     
