@@ -1383,6 +1383,25 @@ footer .footer-disclaimer {
     }
 }
 
+/* Responsive calendar animation - reduce on mobile for performance */
+@media (max-width: 768px) {
+    .calendar-event {
+        animation-duration: 3s !important; /* Faster on mobile */
+    }
+    
+    /* Reduce animation complexity on very small screens */
+    @media (max-width: 480px) {
+        .calendar-event {
+            animation-duration: 2s !important;
+        }
+        
+        /* Hide some calendar events on very small screens to reduce clutter */
+        .calendar-day:nth-child(odd) .calendar-event {
+            display: none;
+        }
+    }
+}
+
 .hero-content {
     position: relative;
     z-index: 10;
