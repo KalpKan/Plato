@@ -1636,9 +1636,19 @@ footer .footer-disclaimer {
     color: rgb(96, 165, 250); /* blue-400 */
 }
 
-/* Override global section h3 styles for feature items */
-.how-it-works-section .feature-item h3,
-.feature-item h3 {
+/* Text wrapper to ensure perfect alignment */
+.feature-text-wrapper {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.feature-title {
     font-size: var(--font-size-lg) !important;
     font-weight: 500 !important;
     margin: 0 0 var(--spacing-sm) 0 !important;
@@ -1646,22 +1656,28 @@ footer .footer-disclaimer {
     color: var(--color-text-primary) !important;
     text-align: center !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
     line-height: 1.5 !important;
-    letter-spacing: normal !important;
+    letter-spacing: 0 !important;
+    display: block !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
 }
 
-/* Override any global p styles for feature items */
-.how-it-works-section .feature-item p,
-.feature-item p {
+.feature-description {
     color: #a1a1aa !important; /* zinc-400 */
     font-size: var(--font-size-base) !important;
     text-align: center !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
     line-height: 1.5 !important;
+    display: block !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
 }
 
 /* Upload Section */
