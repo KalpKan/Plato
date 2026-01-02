@@ -1,46 +1,294 @@
 {% extends "base.html" %}
 
-{% block title %}Plato - Upload{% endblock %}
+{% block title %}Plato - Course Outline to Calendar{% endblock %}
+
+{% block main_class %}landing-page{% endblock %}
 
 {% block content %}
-<div class="upload-section">
-    <h2>Upload Course Outline</h2>
-    <p>Upload your Western University course outline to generate a calendar file with all your deadlines.</p>
-
-    <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="upload-form">
-        <div class="form-group">
-            <label for="pdf_file" class="file-input-label">
-                <div class="file-input-wrapper">
-                    <i data-lucide="file-up"></i>
-                    <span class="file-input-text">Select PDF</span>
-                    <span class="file-input-name" id="file-name">No file selected</span>
+<!-- Hero Section -->
+<section class="hero-section">
+    <!-- Background Calendar Animation -->
+    <div class="calendar-background">
+        <div class="calendar-grid">
+            {% for day in range(1, 36) %}
+            <div class="calendar-day">
+                <div class="calendar-day-inner">
+                    <div class="calendar-day-number">{{ day }}</div>
+                    {% if day in [2, 4, 9, 11, 16, 18, 23, 25] %}
+                    <div class="calendar-event" data-day="{{ day }}">
+                        {% if day == 2 %}Lecture 1
+                        {% elif day == 4 %}Assignment 1
+                        {% elif day == 9 %}Lab 1
+                        {% elif day == 11 %}Lecture 2
+                        {% elif day == 16 %}Assignment 2
+                        {% elif day == 18 %}Lab 2
+                        {% elif day == 23 %}Midterm
+                        {% elif day == 25 %}Lecture 3
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
-                <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required class="file-input-hidden">
-            </label>
+            </div>
+            {% endfor %}
         </div>
+    </div>
 
-        <input type="hidden" name="force_refresh" value="">
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                <i data-lucide="arrow-right"></i>
-                Continue
+    <div class="hero-content">
+        <div class="hero-card">
+            <div class="hero-badge">
+                <i data-lucide="calendar-check"></i>
+                <span>Automatic Course Calendar Generation</span>
+            </div>
+            
+            <h1 class="hero-title">From Course Outline to Calendar in Seconds</h1>
+            
+            <p class="hero-description">
+                Upload your course outline and instantly generate a calendar file with all assignments, 
+                lectures, labs, and due dates automatically extracted.
+            </p>
+            
+            <button class="btn-hero" onclick="document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth' })">
+                <i data-lucide="upload"></i>
+                Get Started
             </button>
         </div>
-    </form>
-
-    <div class="info-box">
-        <h3>
-            <i data-lucide="info"></i>
-            How it works
-        </h3>
-        <ol>
-            <li>Upload your course outline PDF</li>
-            <li>Review the extracted assessments and schedule</li>
-            <li>Download your calendar file (.ics)</li>
-            <li>Import into Google Calendar, Apple Calendar, or Outlook</li>
-        </ol>
     </div>
-</div>
+    
+    <div class="hero-glow"></div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works-section">
+    <div class="how-it-works-container">
+        <h2 class="section-title">How It Works</h2>
+        
+        <!-- Animated Workflow Visualization -->
+        <div class="workflow-visualization">
+            <!-- Document Icon -->
+            <div class="workflow-step" data-step="1">
+                <div class="workflow-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <span class="workflow-label">Course Outline</span>
+            </div>
+
+            <!-- Arrow 1 -->
+            <div class="workflow-arrow">
+                <div class="arrow-line"></div>
+                <div class="arrow-particle"></div>
+            </div>
+
+            <!-- Processing Icon -->
+            <div class="workflow-step" data-step="2">
+                <div class="workflow-icon processing">
+                    <i data-lucide="zap"></i>
+                </div>
+                <span class="workflow-label">Processing</span>
+            </div>
+
+            <!-- Arrow 2 -->
+            <div class="workflow-arrow">
+                <div class="arrow-line"></div>
+                <div class="arrow-particle"></div>
+            </div>
+
+            <!-- Calendar Icon -->
+            <div class="workflow-step" data-step="3">
+                <div class="workflow-icon">
+                    <i data-lucide="calendar"></i>
+                </div>
+                <span class="workflow-label">Calendar File</span>
+            </div>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <h3>Upload Course Outline</h3>
+                <p>Support for PDF, DOCX, and TXT formats</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i data-lucide="zap"></i>
+                </div>
+                <h3>Automatic Extraction</h3>
+                <p>AI-powered parsing of assignments, lectures, and labs</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">
+                    <i data-lucide="calendar"></i>
+                </div>
+                <h3>Calendar Export</h3>
+                <p>Download .ics file compatible with all calendar apps</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Upload Section -->
+<section id="upload-section" class="upload-section-new">
+    <div class="upload-container">
+        <h2 class="section-title">Upload Your Course Outline</h2>
+        
+        <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="upload-form-new" id="upload-form">
+            <div class="upload-dropzone" id="upload-dropzone">
+                <input
+                    type="file"
+                    id="pdf_file"
+                    name="pdf_file"
+                    accept=".pdf"
+                    required
+                    class="file-input-hidden"
+                />
+                
+                <div class="upload-content" id="upload-content">
+                    <i data-lucide="upload" class="upload-icon"></i>
+                    <p class="upload-text">Drag and drop your course outline here</p>
+                    <p class="upload-or">or</p>
+                    <label for="pdf_file" class="upload-browse-btn">
+                        Browse Files
+                    </label>
+                    <p class="upload-hint">Supports PDF files</p>
+                </div>
+                
+                <div class="upload-file-info" id="upload-file-info" style="display: none;">
+                    <i data-lucide="file-text" class="file-icon"></i>
+                    <div class="file-details">
+                        <p class="file-name" id="file-name-display"></p>
+                        <p class="file-size" id="file-size-display"></p>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="force_refresh" value="">
+
+            <div class="upload-actions" id="upload-actions" style="display: none;">
+                <button type="button" class="btn-remove-file" id="btn-remove-file">
+                    Remove File
+                </button>
+                <button type="submit" class="btn-generate">
+                    <i data-lucide="download"></i>
+                    Generate Calendar
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
 {% endblock %}
 
+{% block scripts %}
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+    
+    // File upload handling
+    const fileInput = document.getElementById('pdf_file');
+    const dropzone = document.getElementById('upload-dropzone');
+    const uploadContent = document.getElementById('upload-content');
+    const uploadFileInfo = document.getElementById('upload-file-info');
+    const uploadActions = document.getElementById('upload-actions');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const fileSizeDisplay = document.getElementById('file-size-display');
+    const btnRemoveFile = document.getElementById('btn-remove-file');
+    
+    let isDragging = false;
+    
+    // Drag and drop handlers
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        dropzone.classList.add('dragging');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        isDragging = false;
+        dropzone.classList.remove('dragging');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        isDragging = false;
+        dropzone.classList.remove('dragging');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    // Handle file selection
+    function handleFileSelect(file) {
+        if (file && file.type === 'application/pdf') {
+            fileInput.files = new DataTransfer().files; // Clear first
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            
+            // Update UI
+            fileNameDisplay.textContent = file.name;
+            fileSizeDisplay.textContent = (file.size / 1024).toFixed(1) + ' KB';
+            
+            uploadContent.style.display = 'none';
+            uploadFileInfo.style.display = 'flex';
+            uploadActions.style.display = 'flex';
+            
+            lucide.createIcons();
+        } else {
+            alert('Please select a PDF file.');
+        }
+    }
+    
+    // Remove file
+    btnRemoveFile.addEventListener('click', () => {
+        fileInput.value = '';
+        uploadContent.style.display = 'block';
+        uploadFileInfo.style.display = 'none';
+        uploadActions.style.display = 'none';
+    });
+    
+    // Calendar animation
+    document.addEventListener('DOMContentLoaded', () => {
+        const events = document.querySelectorAll('.calendar-event');
+        events.forEach((event, index) => {
+            setTimeout(() => {
+                event.style.animation = 'calendarPulse 5s infinite';
+                event.style.animationDelay = (index * 0.3) + 's';
+            }, 100);
+        });
+    });
+    
+    // Workflow animation
+    document.addEventListener('DOMContentLoaded', () => {
+        const steps = document.querySelectorAll('.workflow-step');
+        const arrows = document.querySelectorAll('.workflow-arrow');
+        
+        function animateWorkflow() {
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    step.classList.add('active');
+                    if (index < arrows.length) {
+                        arrows[index].classList.add('active');
+                    }
+                }, index * 2000);
+            });
+            
+            setTimeout(() => {
+                steps.forEach(step => step.classList.remove('active'));
+                arrows.forEach(arrow => arrow.classList.remove('active'));
+                setTimeout(animateWorkflow, 1000);
+            }, 7000);
+        }
+        
+        animateWorkflow();
+    });
+</script>
+{% endblock %}
