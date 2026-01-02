@@ -507,6 +507,8 @@ def review():
     if request.method == 'POST':
         # Process form submission
         # Handle manual sections first (add them to extracted_data)
+        # Note: Manual sections are only used when automatic extraction found no sections
+        # The template only shows the "Add Manually" button when lab_sections/lecture_sections is empty
         manual_lecture_sections = request.form.get('manual_lecture_sections')
         manual_lab_sections = request.form.get('manual_lab_sections')
         
