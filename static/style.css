@@ -1636,25 +1636,32 @@ footer .footer-disclaimer {
     color: rgb(96, 165, 250); /* blue-400 */
 }
 
+/* Override global section h3 styles for feature items */
+.how-it-works-section .feature-item h3,
 .feature-item h3 {
-    font-size: var(--font-size-lg);
-    font-weight: 500;
-    margin: 0 0 var(--spacing-sm) 0;
-    padding: 0;
-    color: var(--color-text-primary);
-    text-align: center;
-    width: 100%;
-    box-sizing: border-box;
+    font-size: var(--font-size-lg) !important;
+    font-weight: 500 !important;
+    margin: 0 0 var(--spacing-sm) 0 !important;
+    padding: 0 !important;
+    color: var(--color-text-primary) !important;
+    text-align: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
 }
 
+/* Override any global p styles for feature items */
+.how-it-works-section .feature-item p,
 .feature-item p {
-    color: #a1a1aa; /* zinc-400 */
-    font-size: var(--font-size-base);
-    text-align: center;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    box-sizing: border-box;
+    color: #a1a1aa !important; /* zinc-400 */
+    font-size: var(--font-size-base) !important;
+    text-align: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    line-height: 1.5 !important;
 }
 
 /* Upload Section */
