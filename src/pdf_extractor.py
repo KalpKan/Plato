@@ -2,18 +2,24 @@
 PDF extraction module for course outlines.
 
 Extracts term information, lecture/lab sections, and assessments from PDF files.
+Uses a multi-layered extraction approach for maximum compatibility.
 """
 
+import os
 import re
 import pdfplumber
 from pathlib import Path
 from datetime import date, datetime, time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 import dateparser
 
 from .models import (
     CourseTerm, SectionOption, AssessmentTask, ExtractedCourseData
 )
+
+# Constants
+MAX_FILE_SIZE_MB = 2.0
+MAX_PAGES_TO_SEARCH = 8
 
 
 class PDFExtractor:
@@ -24,9 +30,19 @@ class PDFExtractor:
         
         Args:
             pdf_path: Path to PDF file
+            
+        Raises:
+            ValueError: If file is too large
         """
-        self.pdf_path = pdf_path
+        self.pdf_path = Path(pdf_path)
         self.pages_text = []
+        
+        # Check file size
+        if self.pdf_path.exists():
+            size_mb = os.path.getsize(self.pdf_path) / (1024 * 1024)
+            if size_mb > MAX_FILE_SIZE_MB:
+                raise ValueError(f"PDF too large ({size_mb:.1f}MB). Maximum is {MAX_FILE_SIZE_MB}MB.")
+        
         self._load_pdf()
     
     def _load_pdf(self):
@@ -152,23 +168,31 @@ class PDFExtractor:
         )
     
     def extract_lecture_sections(self) -> List[SectionOption]:
-        """Extract lecture section schedules.
+        """Extract lecture section schedules using multi-pattern matching.
         
         Returns:
             List of SectionOption objects for lectures
         """
         sections = []
         # Search for schedule section (usually in first few pages)
-        search_text = "\n".join([text for _, text in self.pages_text[:5]])
+        search_text = "\n".join([text for _, text in self.pages_text[:MAX_PAGES_TO_SEARCH]])
         
-        # Pattern for schedule tables/lists
-        # Handle formats like "M/W/F 9:30 – 10:20" or "MWF 9:30-10:20" or "Lecture M/W/F 9:30-10:20"
-        # Look for "Timetabled Sessions" or "Component Date(s) Time" section first
+        # Try table-based extraction first
+        table_sections = self._extract_schedule_from_tables("lecture")
+        if table_sections:
+            return table_sections
+        
+        # Try text-based extraction
+        text_sections = self._extract_schedule_from_text("lecture", search_text)
+        if text_sections:
+            return text_sections
+        
+        # Legacy pattern matching (keeping existing logic as fallback)
         schedule_patterns = [
-            r'Lecture\s+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',  # "Lecture M/W/F 9:30-10:20 AM"
-            r'([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',  # "M/W/F 9:30-10:20 AM" (standalone)
-            r'(?:Lecture|LEC|Class|Section)\s*(\d{3})?\s*[:\s]+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',  # "Lecture M/W/F 9:30-10:20"
-            r'(?:Lecture|LEC)\s*([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',  # "Lecture MWF 9:30-10:20"
+            r'Lecture\s+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',
+            r'([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(?:AM|PM)?',
+            r'(?:Lecture|LEC|Class|Section)\s*(\d{3})?\s*[:\s]+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
+            r'(?:Lecture|LEC)\s*([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
         ]
         
         matches = []
@@ -222,15 +246,25 @@ class PDFExtractor:
         return sections
     
     def extract_lab_sections(self) -> List[SectionOption]:
-        """Extract lab section schedules.
+        """Extract lab section schedules using multi-pattern matching.
         
         Returns:
-            List of SectionOption objects for labs
+            List of SectionOption objects for labs (empty if course has no labs)
         """
         sections = []
-        search_text = "\n".join([text for _, text in self.pages_text[:5]])
+        search_text = "\n".join([text for _, text in self.pages_text[:MAX_PAGES_TO_SEARCH]])
         
-        # Pattern for lab schedules - similar to lecture patterns
+        # Try table-based extraction first
+        table_sections = self._extract_schedule_from_tables("lab")
+        if table_sections:
+            return table_sections
+        
+        # Try text-based extraction
+        text_sections = self._extract_schedule_from_text("lab", search_text)
+        if text_sections:
+            return text_sections
+        
+        # Legacy pattern matching (keeping existing logic as fallback)
         lab_patterns = [
             r'(?:Lab|LAB|Laboratory|Tutorial|TUT)\s*(\d{3})?\s*[:\s]+([M/T/W/Th/F/S]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
             r'(?:Lab|LAB|Laboratory|Tutorial|TUT)\s*([MTWThFS]+)\s+(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})',
@@ -244,14 +278,14 @@ class PDFExtractor:
         for match in matches:
             groups = match.groups()
             try:
-                if len(groups) == 5:  # First pattern with section ID
+                if len(groups) == 5:
                     section_id = groups[0] or ""
                     days_str = groups[1]
                     start_hour = int(groups[2])
                     start_min = int(groups[3])
                     end_hour = int(groups[4])
                     end_min = int(groups[5])
-                elif len(groups) == 4:  # Second pattern without section ID
+                elif len(groups) == 4:
                     section_id = ""
                     days_str = groups[0]
                     start_hour = int(groups[1])
@@ -263,7 +297,7 @@ class PDFExtractor:
                 
                 days_of_week = self._parse_days_of_week(days_str)
                 if not days_of_week:
-                    continue  # Skip if we couldn't parse days
+                    continue
                 
                 start_time = time(start_hour % 24, start_min)
                 end_time = time(end_hour % 24, end_min)
@@ -277,8 +311,7 @@ class PDFExtractor:
                     location=None
                 )
                 sections.append(section)
-            except (ValueError, IndexError) as e:
-                # Skip matches that don't parse correctly
+            except (ValueError, IndexError):
                 continue
         
         return sections
@@ -315,10 +348,16 @@ class PDFExtractor:
         if table_assessments:
             assessments.extend(table_assessments)
             # If we found assessments in table, skip pattern matching (avoid duplicates)
-            # But still check for relative rules
             use_pattern_matching = False
         else:
             use_pattern_matching = True
+        
+        # Try text-based extraction (for PDFs with assessments in plain text like "Midterm 35%")
+        if use_pattern_matching:
+            text_assessments = self._extract_assessments_from_text_patterns(full_text)
+            if text_assessments:
+                assessments.extend(text_assessments)
+                use_pattern_matching = False
         
         if use_pattern_matching:
             # Fallback to pattern matching if table extraction didn't work
@@ -561,6 +600,281 @@ class PDFExtractor:
                         break
         
         return course_code, course_name
+    
+    def _extract_schedule_from_tables(self, section_type: str) -> List[SectionOption]:
+        """Extract schedule from structured tables.
+        
+        Args:
+            section_type: "lecture" or "lab"
+            
+        Returns:
+            List of SectionOption objects
+        """
+        sections = []
+        keywords = ["lecture", "lec", "class"] if section_type == "lecture" else ["lab", "laboratory", "tutorial", "tut"]
+        
+        with pdfplumber.open(self.pdf_path) as pdf:
+            for page_num, page in enumerate(pdf.pages[:MAX_PAGES_TO_SEARCH], 1):
+                tables = page.extract_tables()
+                for table in tables:
+                    if not table or len(table) < 2:
+                        continue
+                    
+                    # Check each row for schedule info
+                    for row in table:
+                        row_text = ' '.join([str(c).lower() if c else '' for c in row])
+                        
+                        # Check if row contains our section type
+                        if not any(kw in row_text for kw in keywords):
+                            continue
+                        
+                        # Look for time pattern in the row
+                        for cell in row:
+                            if not cell:
+                                continue
+                            cell_text = str(cell)
+                            parsed = self._parse_time_and_days_from_text(cell_text)
+                            if parsed:
+                                days, start_t, end_t = parsed
+                                sections.append(SectionOption(
+                                    section_type=section_type.capitalize(),
+                                    section_id="",
+                                    days_of_week=days,
+                                    start_time=start_t,
+                                    end_time=end_t,
+                                    location=None
+                                ))
+        
+        return sections
+    
+    def _extract_schedule_from_text(self, section_type: str, search_text: str) -> List[SectionOption]:
+        """Extract schedule from text patterns.
+        
+        Args:
+            section_type: "lecture" or "lab"
+            search_text: Text to search in
+            
+        Returns:
+            List of SectionOption objects
+        """
+        sections = []
+        
+        # Comprehensive patterns for schedule extraction
+        patterns = [
+            # "Mondays, 1:30 – 4:30 pm in SSC 3018"
+            r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)s?[,\s]+(\d{1,2})[:.:](\d{2})\s*[-–]\s*(\d{1,2})[:.:](\d{2})\s*([ap]\.?m\.?)?(?:\s+in\s+([A-Z0-9\s]+))?',
+            # "Lecture: Friday 1.30 pm-2.30 pm"
+            r'(?:Lecture|Lab|Tutorial)[:\s]+([A-Za-z]+(?:day)?)\s+(\d{1,2})[\.:](\d{2})\s*([ap]\.?m\.?)?\s*[-–]\s*(\d{1,2})[\.:](\d{2})\s*([ap]\.?m\.?)?',
+            # "Section 001: Tuesday, 1:30pm-4:30pm"
+            r'Section\s*\d*[:\s]+([A-Za-z]+(?:day)?)[,\s]+(\d{1,2})[:.:](\d{2})\s*([ap]\.?m\.?)?\s*[-–]\s*(\d{1,2})[:.:](\d{2})\s*([ap]\.?m\.?)?',
+        ]
+        
+        # Filter patterns by section type
+        if section_type == "lecture":
+            keyword_pattern = r'(?:lecture|lec|class)[\s:]+.*?(\d{1,2})[:.:](\d{2})\s*[-–]\s*(\d{1,2})[:.:](\d{2})'
+        else:
+            keyword_pattern = r'(?:lab|laboratory|tutorial)[\s:]+.*?(\d{1,2})[:.:](\d{2})\s*[-–]\s*(\d{1,2})[:.:](\d{2})'
+        
+        patterns.append(keyword_pattern)
+        
+        for pattern in patterns:
+            for match in re.finditer(pattern, search_text, re.IGNORECASE):
+                full_match = match.group(0)
+                parsed = self._parse_time_and_days_from_text(full_match)
+                if parsed:
+                    days, start_t, end_t = parsed
+                    sections.append(SectionOption(
+                        section_type=section_type.capitalize(),
+                        section_id="",
+                        days_of_week=days,
+                        start_time=start_t,
+                        end_time=end_t,
+                        location=None
+                    ))
+        
+        # Deduplicate
+        seen = set()
+        unique = []
+        for s in sections:
+            key = (tuple(s.days_of_week), s.start_time, s.end_time)
+            if key not in seen:
+                seen.add(key)
+                unique.append(s)
+        
+        return unique
+    
+    def _parse_time_and_days_from_text(self, text: str) -> Optional[Tuple[List[int], time, time]]:
+        """Parse time and days from text.
+        
+        Args:
+            text: Text containing time and day information
+            
+        Returns:
+            Tuple of (days_list, start_time, end_time) or None
+        """
+        # Extract days
+        days = []
+        day_patterns = [
+            (r'\b(Monday)s?\b', [0]),
+            (r'\b(Tuesday)s?\b', [1]),
+            (r'\b(Wednesday)s?\b', [2]),
+            (r'\b(Thursday)s?\b', [3]),
+            (r'\b(Friday)s?\b', [4]),
+            (r'\b(Saturday)s?\b', [5]),
+            (r'\b(Sunday)s?\b', [6]),
+            (r'\b([MTWRF]{1,5})\b', None),  # MWF, TTh, etc.
+        ]
+        
+        for pattern, fixed_days in day_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                if fixed_days:
+                    days = fixed_days
+                else:
+                    days = self._parse_days_of_week(match.group(1))
+                break
+        
+        if not days:
+            return None
+        
+        # Extract time
+        time_pattern = r'(\d{1,2})[\.:](\d{2})\s*([ap]\.?m\.?)?\s*[-–]\s*(\d{1,2})[\.:](\d{2})\s*([ap]\.?m\.?)?'
+        match = re.search(time_pattern, text, re.IGNORECASE)
+        if not match:
+            return None
+        
+        try:
+            start_hour = int(match.group(1))
+            start_min = int(match.group(2))
+            start_ampm = match.group(3)
+            end_hour = int(match.group(4))
+            end_min = int(match.group(5))
+            end_ampm = match.group(6)
+            
+            # Adjust for AM/PM
+            if start_ampm and 'p' in start_ampm.lower() and start_hour < 12:
+                start_hour += 12
+            if end_ampm and 'p' in end_ampm.lower() and end_hour < 12:
+                end_hour += 12
+            elif not end_ampm and start_ampm and 'p' in start_ampm.lower() and end_hour < 12:
+                end_hour += 12
+            
+            return (days, time(start_hour % 24, start_min), time(end_hour % 24, end_min))
+        except (ValueError, IndexError):
+            return None
+    
+    def _extract_assessments_from_text_patterns(self, text: str) -> List[AssessmentTask]:
+        """Extract assessments from plain text format.
+        
+        Handles formats like:
+        - "Midterm Test 35%"
+        - "Final Exam 45%"
+        - "Quizzes... 20%"
+        
+        Args:
+            text: Full text of the PDF
+            
+        Returns:
+            List of AssessmentTask objects
+        """
+        assessments = []
+        
+        # Find assessment/evaluation section
+        section_patterns = [
+            r'(?:Methods\s+of\s+)?Evaluation\b',
+            r'Assessment\s+(?:and\s+)?Evaluation',
+            r'Grading\s+Scheme',
+            r'Grade\s+Breakdown',
+            r'Mark\s+Breakdown',
+            r'Course\s+Evaluation',
+        ]
+        
+        section_start = -1
+        for pattern in section_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                section_start = match.start()
+                break
+        
+        if section_start == -1:
+            return []
+        
+        # Extract the section (next ~5000 chars)
+        section_text = text[section_start:section_start + 5000]
+        lines = section_text.split('\n')
+        
+        # Assessment keywords
+        assessment_keywords = [
+            'quiz', 'midterm', 'final', 'exam', 'test', 'assignment', 'project',
+            'lab', 'report', 'essay', 'presentation', 'participation', 'homework',
+            'peerwise', 'pcb', 'bonus'
+        ]
+        
+        # Look for lines with percentages
+        for line in lines[:60]:
+            if len(line.strip()) < 5 or len(line.strip()) > 200:
+                continue
+            
+            # Check for percentage pattern
+            weight_match = re.search(r'(\d+(?:\.\d+)?)\s*%', line)
+            if not weight_match:
+                continue
+            
+            weight = float(weight_match.group(1))
+            
+            # Skip if weight is too high
+            if weight > 60:
+                continue
+            
+            # Check if line contains assessment keywords
+            line_lower = line.lower()
+            if not any(kw in line_lower for kw in assessment_keywords):
+                continue
+            
+            # Extract assessment name
+            name_text = line[:weight_match.start()].strip()
+            name_text = re.sub(r'^[\s\-•·]+', '', name_text)
+            name_text = re.sub(r'\([^)]*\)$', '', name_text).strip()
+            
+            if len(name_text) < 3:
+                continue
+            
+            # Determine assessment type
+            if 'quiz' in line_lower:
+                atype = 'quiz'
+            elif 'midterm' in line_lower or 'mid-term' in line_lower:
+                atype = 'midterm'
+            elif 'final' in line_lower and 'exam' in line_lower:
+                atype = 'final'
+            elif 'exam' in line_lower or 'test' in line_lower:
+                atype = 'midterm'
+            else:
+                atype = 'other'
+            
+            # Try to extract due date
+            due_datetime = self._parse_date_from_text(line)
+            
+            assessment = AssessmentTask(
+                title=name_text[:80],
+                type=atype,
+                weight_percent=weight,
+                due_datetime=due_datetime,
+                due_rule=None,
+                confidence=0.7,
+                source_evidence=f"Text: {line[:50]}..."
+            )
+            assessments.append(assessment)
+        
+        # Deduplicate
+        seen = set()
+        unique = []
+        for a in assessments:
+            key = a.title.lower().strip()
+            if key not in seen:
+                seen.add(key)
+                unique.append(a)
+        
+        return unique
     
     def _parse_days_of_week(self, days_str: str) -> List[int]:
         """Parse day abbreviations from text like "MWF" or "TTh".
@@ -1700,7 +2014,6 @@ class PDFExtractor:
                     r'^sum$',  # "Sum" as standalone
                     r'^grand\s+total$',  # "Grand Total" as standalone
                 ]
-                import re
                 for pattern in summary_patterns:
                     if re.match(pattern, name_text, re.IGNORECASE):
                         return True
