@@ -1245,8 +1245,11 @@ class PDFExtractor:
         assessments = []
         current_assessment = None
         
-        # Process data rows (skip header)
-        for row_idx, row in enumerate(table[1:], 1):
+        # Process ALL data rows (skip header) - make sure we don't stop early
+        # Process from row 1 to the end of the table
+        total_rows = len(table)
+        for row_idx in range(1, total_rows):
+            row = table[row_idx]
             # Skip empty rows
             if not row or not any(cell for cell in row if cell):
                 continue
@@ -1289,9 +1292,14 @@ class PDFExtractor:
                 # Check if it looks like a continuation of the previous assessment name
                 if len(name_lower) < 20:  # Short name might be continuation
                     # Check if previous name suggests continuation (ends with incomplete phrase)
-                    if any(prev_name.endswith(word) for word in ['short', 'intro', 'methods', 'results', 'assignment', 'long', 'rotation 1:', 'rotation 1: short', 'time']):
+                    continuation_endings = ['short', 'intro', 'methods', 'results', 'assignment', 'long', 
+                                           'rotation 1:', 'rotation 1: short', 'rotation 2:', 'rotation 3:', 
+                                           'rotation 3 long', 'time', 'rotation']
+                    if any(prev_name.endswith(word) for word in continuation_endings):
                         # And this name is a common continuation word or phrase
-                        if name_lower in ['report', 'assignment', 'quiz', 'methods', 'results', 'intro', 'references', 'in lab', 'in person']:
+                        continuation_words = ['report', 'assignment', 'quiz', 'methods', 'results', 'intro', 
+                                            'references', 'in lab', 'in person']
+                        if name_lower in continuation_words:
                             # Also check: if current row has no weight and no date, it's likely continuation
                             if row_weight is None and not row_due_datetime:
                                 is_continuation = True
@@ -1300,12 +1308,26 @@ class PDFExtractor:
                     if prev_name.strip() == 'practicum time' and name_lower == 'in lab':
                         is_continuation = True
                     
+                    # Special case: "Rotation X: short" or "Rotation X long" followed by "report"
+                    if (('rotation' in prev_name and ('short' in prev_name or 'long' in prev_name)) and 
+                        name_lower == 'report' and 
+                        row_weight is None and not row_due_datetime):
+                        is_continuation = True
+                    
                     # If previous assessment has no weight and no date, and this row also has no weight,
                     # it might be a continuation (especially if name is short)
                     if (current_assessment.weight_percent is None and 
                         current_assessment.due_datetime is None and
                         row_weight is None and not row_due_datetime and
                         len(name_lower) < 10):
+                        is_continuation = True
+                    
+                    # General rule: if name is just "report" and previous name contains "rotation" and "short" or "long",
+                    # and current row has no weight/date, it's almost certainly a continuation
+                    if (name_lower == 'report' and 
+                        'rotation' in prev_name and 
+                        ('short' in prev_name or 'long' in prev_name) and
+                        row_weight is None and not row_due_datetime):
                         is_continuation = True
             
             if is_continuation and current_assessment:
@@ -1334,8 +1356,12 @@ class PDFExtractor:
                 confidence = 0.6
             
             # Skip if name is empty or too short (likely not a real assessment)
+            # BUT: Don't skip if it has weight or date (might be a valid assessment with short name)
             if not name or len(name.strip()) < 2:
-                continue
+                # Only skip if it also has no weight and no date
+                if weight is None and not due_datetime:
+                    continue
+                # If it has weight or date, keep it (might be a valid short-named assessment)
             
             # Create assessment
             assessment = AssessmentTask(
