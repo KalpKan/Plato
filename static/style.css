@@ -1837,34 +1837,242 @@ footer .footer-disclaimer {
 
 /* Responsive */
 @media (max-width: 768px) {
+    /* Hero Section Mobile */
+    .hero-section {
+        padding: var(--spacing-xl) var(--spacing-sm);
+        min-height: auto;
+    }
+    
     .hero-title {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 8vw, 2.5rem);
+        margin-bottom: var(--spacing-md);
     }
     
     .hero-description {
-        font-size: var(--font-size-lg);
+        font-size: var(--font-size-base);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .hero-card {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+    
+    .hero-badge {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-xs);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .btn-hero {
+        padding: var(--spacing-sm) var(--spacing-xl);
+        font-size: var(--font-size-sm);
+    }
+    
+    /* Calendar Background Animation Mobile */
+    .calendar-background {
+        padding: var(--spacing-xs);
+        opacity: 0.2; /* Slightly more transparent on mobile */
+    }
+    
+    .calendar-grid {
+        gap: 2px; /* Smaller gap on mobile */
+        max-width: 100%;
+    }
+    
+    .calendar-day-inner {
+        padding: 2px;
+    }
+    
+    .calendar-day-number {
+        font-size: 8px; /* Much smaller on mobile */
+    }
+    
+    .calendar-event {
+        font-size: 6px; /* Smaller event text */
+        padding: 1px 2px;
+        margin-top: 1px;
+    }
+    
+    /* How It Works Section Mobile */
+    .how-it-works-section {
+        padding: var(--spacing-2xl) var(--spacing-sm);
+    }
+    
+    .section-title {
+        font-size: clamp(1.75rem, 6vw, 2rem);
+        margin-bottom: var(--spacing-2xl);
     }
     
     .workflow-visualization {
         flex-direction: column;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-2xl);
+    }
+    
+    .workflow-step {
+        opacity: 1; /* Always visible on mobile */
+        transform: translateX(0);
+    }
+    
+    .workflow-step[data-step="3"] {
+        transform: translateX(0);
+    }
+    
+    .workflow-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .workflow-icon i {
+        width: 30px;
+        height: 30px;
     }
     
     .workflow-arrow {
         transform: rotate(90deg);
-        width: 48px;
-        height: 48px;
+        width: 2px;
+        height: 40px;
+    }
+    
+    .workflow-arrow .arrow-line {
+        width: 2px;
+        height: 100%;
+        background: linear-gradient(to bottom, rgb(59, 130, 246), transparent);
+        transform-origin: top;
+    }
+    
+    .workflow-arrow.active .arrow-line {
+        transform: scaleY(1);
+    }
+    
+    .workflow-arrow .arrow-particle {
+        left: 50%;
+        top: 0;
+        transform: translateX(-50%) translateY(0);
+        width: 6px;
+        height: 6px;
     }
     
     .workflow-arrow.active .arrow-particle {
-        left: 0;
-        top: 48px;
+        left: 50%;
+        top: 40px;
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    .workflow-label {
+        font-size: 10px;
     }
     
     .features-grid {
         grid-template-columns: 1fr;
+        gap: var(--spacing-2xl);
+    }
+    
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .feature-icon i {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .feature-title {
+        font-size: var(--font-size-base) !important;
+    }
+    
+    .feature-description {
+        font-size: var(--font-size-sm) !important;
     }
 
+    /* Upload Section Mobile */
+    .upload-section-new {
+        padding: var(--spacing-2xl) var(--spacing-sm);
+    }
+    
+    .upload-container {
+        max-width: 100%;
+    }
+    
+    .upload-dropzone {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+    
     .upload-actions {
         flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .btn-remove-file,
+    .btn-generate {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small mobile */
+    .hero-section {
+        padding: var(--spacing-lg) var(--spacing-xs);
+    }
+    
+    .hero-card {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+    
+    .hero-title {
+        font-size: 1.75rem;
+    }
+    
+    .hero-description {
+        font-size: var(--font-size-sm);
+    }
+    
+    .calendar-grid {
+        gap: 1px;
+    }
+    
+    .calendar-day-number {
+        font-size: 6px;
+    }
+    
+    .calendar-event {
+        font-size: 4px;
+        padding: 1px;
+    }
+    
+    .workflow-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .workflow-icon i {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .workflow-arrow {
+        height: 30px;
+    }
+    
+    .workflow-arrow.active .arrow-particle {
+        top: 30px;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .how-it-works-section {
+        padding: var(--spacing-xl) var(--spacing-xs);
+    }
+    
+    .upload-section-new {
+        padding: var(--spacing-xl) var(--spacing-xs);
+    }
+    
+    .upload-dropzone {
+        padding: var(--spacing-lg) var(--spacing-sm);
     }
 }

@@ -263,21 +263,50 @@
         uploadActions.style.display = 'none';
     });
     
-    // Calendar animation
+    // Calendar animation - responsive
     document.addEventListener('DOMContentLoaded', () => {
         const events = document.querySelectorAll('.calendar-event');
+        const isMobile = window.innerWidth <= 768;
+        
         events.forEach((event, index) => {
             setTimeout(() => {
-                event.style.animation = 'calendarPulse 5s infinite';
+                // Use shorter animation on mobile for better performance
+                const duration = isMobile ? '3s' : '5s';
+                event.style.animation = `calendarPulse ${duration} infinite`;
                 event.style.animationDelay = (index * 0.3) + 's';
             }, 100);
         });
+        
+        // Re-initialize on resize
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const newIsMobile = window.innerWidth <= 768;
+                events.forEach((event, index) => {
+                    const duration = newIsMobile ? '3s' : '5s';
+                    event.style.animation = `calendarPulse ${duration} infinite`;
+                });
+            }, 250);
+        });
     });
     
-    // Workflow animation
+    // Workflow animation - responsive
     document.addEventListener('DOMContentLoaded', () => {
         const steps = document.querySelectorAll('.workflow-step');
         const arrows = document.querySelectorAll('.workflow-arrow');
+        const isMobile = window.innerWidth <= 768;
+        
+        // On mobile, show all steps immediately (no animation needed)
+        if (isMobile) {
+            steps.forEach(step => {
+                step.classList.add('active');
+            });
+            arrows.forEach(arrow => {
+                arrow.classList.add('active');
+            });
+            return;
+        }
         
         function animateWorkflow() {
             steps.forEach((step, index) => {
@@ -297,6 +326,25 @@
         }
         
         animateWorkflow();
+        
+        // Handle resize
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const newIsMobile = window.innerWidth <= 768;
+                if (newIsMobile) {
+                    // Show all on mobile
+                    steps.forEach(step => step.classList.add('active'));
+                    arrows.forEach(arrow => arrow.classList.add('active'));
+                } else {
+                    // Restart animation on desktop
+                    steps.forEach(step => step.classList.remove('active'));
+                    arrows.forEach(arrow => arrow.classList.remove('active'));
+                    animateWorkflow();
+                }
+            }, 250);
+        });
     });
 </script>
 {% endblock %}
