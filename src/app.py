@@ -1074,6 +1074,175 @@ def update_field():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/add-assessment', methods=['POST'])
+def add_assessment():
+    """API endpoint to add a new assessment.
+    
+    Expected JSON payload:
+    {
+        "title": "Assessment title",
+        "type": "assignment" | "quiz" | "midterm" | "final" | etc,
+        "weight_percent": 15.5 (optional),
+        "due_datetime": "2025-12-15T23:59" (optional),
+        "due_rule": "24 hours after lab" (optional),
+        "rule_anchor": "lab" | "tutorial" | "lecture" (optional),
+        "confidence": 0.8 (optional, default 0.8),
+        "source_evidence": "Manual entry" (optional),
+        "needs_review": true/false (optional)
+    }
+    
+    Returns:
+        JSON response with success status and updated completeness
+    """
+    if 'extracted_data' not in session:
+        return jsonify({'success': False, 'error': 'No data to update'}), 400
+    
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('title'):
+            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        if not data.get('type'):
+            return jsonify({'success': False, 'error': 'Type is required'}), 400
+        
+        # Get current extracted data
+        extracted_data_dict = session['extracted_data']
+        extracted_data = deserialize_extracted_data(extracted_data_dict)
+        
+        # Parse due_datetime if provided
+        due_datetime = None
+        if data.get('due_datetime'):
+            try:
+                if 'T' in data['due_datetime']:
+                    dt_str = data['due_datetime'].replace('T', ' ')
+                else:
+                    dt_str = data['due_datetime']
+                if len(dt_str.split(' ')) == 1:
+                    dt_str += ' 23:59:59'
+                due_datetime = deserialize_datetime(dt_str)
+            except (ValueError, AttributeError) as e:
+                return jsonify({'success': False, 'error': f'Invalid datetime format: {str(e)}'}), 400
+        
+        # Parse weight if provided
+        weight_percent = None
+        if data.get('weight_percent'):
+            try:
+                weight_percent = float(data['weight_percent'])
+                if weight_percent < 0 or weight_percent > 100:
+                    return jsonify({'success': False, 'error': 'Weight must be between 0 and 100'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'success': False, 'error': 'Invalid weight value'}), 400
+        
+        # Parse confidence
+        confidence = float(data.get('confidence', 0.8))
+        if confidence < 0 or confidence > 1:
+            confidence = 0.8
+        
+        # Create new assessment
+        new_assessment = AssessmentTask(
+            title=data['title'],
+            type=data['type'],
+            weight_percent=weight_percent,
+            due_datetime=due_datetime,
+            due_rule=data.get('due_rule'),
+            rule_anchor=data.get('rule_anchor'),
+            confidence=confidence,
+            source_evidence=data.get('source_evidence', 'Manual entry'),
+            needs_review=bool(data.get('needs_review', False))
+        )
+        
+        # Add to assessments list
+        extracted_data.assessments.append(new_assessment)
+        
+        # Store updated data back in session
+        session['extracted_data'] = serialize_extracted_data(extracted_data)
+        
+        # Update cache if available
+        pdf_hash = session.get('pdf_hash')
+        if pdf_hash:
+            cache_manager = CacheManager()
+            cache_manager.update_extracted_data(pdf_hash, extracted_data)
+        
+        # Recalculate completeness
+        completeness = calculate_completeness(extracted_data)
+        
+        return jsonify({
+            'success': True,
+            'completeness': completeness,
+            'message': 'Assessment added successfully'
+        })
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error adding assessment: {error_details}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/remove-assessment', methods=['POST'])
+def remove_assessment():
+    """API endpoint to remove an assessment.
+    
+    Expected JSON payload:
+    {
+        "assessment_index": 0 (index of assessment to remove)
+    }
+    
+    Returns:
+        JSON response with success status and updated completeness
+    """
+    if 'extracted_data' not in session:
+        return jsonify({'success': False, 'error': 'No data to update'}), 400
+    
+    try:
+        data = request.get_json()
+        assessment_index = data.get('assessment_index')
+        
+        if assessment_index is None:
+            return jsonify({'success': False, 'error': 'assessment_index is required'}), 400
+        
+        # Get current extracted data
+        extracted_data_dict = session['extracted_data']
+        extracted_data = deserialize_extracted_data(extracted_data_dict)
+        
+        # Validate index
+        try:
+            idx = int(assessment_index)
+            if idx < 0 or idx >= len(extracted_data.assessments):
+                return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
+            
+            # Remove assessment
+            removed_assessment = extracted_data.assessments.pop(idx)
+            
+        except (ValueError, IndexError) as e:
+            return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
+        
+        # Store updated data back in session
+        session['extracted_data'] = serialize_extracted_data(extracted_data)
+        
+        # Update cache if available
+        pdf_hash = session.get('pdf_hash')
+        if pdf_hash:
+            cache_manager = CacheManager()
+            cache_manager.update_extracted_data(pdf_hash, extracted_data)
+        
+        # Recalculate completeness
+        completeness = calculate_completeness(extracted_data)
+        
+        return jsonify({
+            'success': True,
+            'completeness': completeness,
+            'message': f'Assessment "{removed_assessment.title}" removed successfully'
+        })
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error removing assessment: {error_details}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/download/<filename>')
 def download(filename: str):
     """Download generated .ics file.

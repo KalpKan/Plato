@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initDynamicForms();
     initEditableFields();
     initManualSectionAdders();
+    initAssessmentAddRemove();
     
     // Re-enable form submission for the generate calendar button
     const generateBtn = document.getElementById('generate-calendar-btn');
@@ -985,5 +986,155 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
     
     // Select the newly added option
     option.selected = true;
+}
+
+// Initialize assessment add/remove functionality
+function initAssessmentAddRemove() {
+    // Add Assessment button
+    const addBtn = document.getElementById('add-assessment-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            showAddAssessmentModal();
+        });
+    }
+    
+    // Remove Assessment buttons
+    const removeButtons = document.querySelectorAll('.btn-remove-assessment');
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-assessment-index'));
+            removeAssessment(index);
+        });
+    });
+    
+    // Modal close handlers
+    const modal = document.getElementById('add-assessment-modal');
+    if (modal) {
+        const closeBtn = modal.querySelector('.close-modal');
+        const cancelBtn = modal.querySelector('.cancel-add-assessment');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+        }
+        
+        // Close when clicking outside modal
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Form submission
+    const form = document.getElementById('add-assessment-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            addAssessment();
+        });
+    }
+}
+
+function showAddAssessmentModal() {
+    const modal = document.getElementById('add-assessment-modal');
+    if (modal) {
+        modal.style.display = 'block';
+        // Reset form
+        const form = document.getElementById('add-assessment-form');
+        if (form) {
+            form.reset();
+            // Set default values
+            document.getElementById('assessment-confidence').value = '0.8';
+        }
+    }
+}
+
+function addAssessment() {
+    const form = document.getElementById('add-assessment-form');
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const data = {
+        title: formData.get('title'),
+        type: formData.get('type'),
+        weight_percent: formData.get('weight_percent') || null,
+        due_datetime: formData.get('due_datetime') || null,
+        due_rule: formData.get('due_rule') || null,
+        rule_anchor: formData.get('rule_anchor') || null,
+        confidence: parseFloat(formData.get('confidence')) || 0.8,
+        source_evidence: formData.get('source_evidence') || 'Manual entry',
+        needs_review: formData.has('needs_review')
+    };
+    
+    // Remove null/empty values
+    Object.keys(data).forEach(key => {
+        if (data[key] === null || data[key] === '') {
+            delete data[key];
+        }
+    });
+    
+    fetch('/api/add-assessment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Close modal
+            const modal = document.getElementById('add-assessment-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // Reload page to show new assessment
+            window.location.reload();
+        } else {
+            alert('Error adding assessment: ' + (result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding assessment: ' + error.message);
+    });
+}
+
+function removeAssessment(index) {
+    if (!confirm('Are you sure you want to remove this assessment?')) {
+        return;
+    }
+    
+    fetch('/api/remove-assessment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            assessment_index: index
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Reload page to reflect changes
+            window.location.reload();
+        } else {
+            alert('Error removing assessment: ' + (result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing assessment: ' + error.message);
+    });
 }
 
