@@ -281,57 +281,6 @@
             {% endif %}
         </section>
 
-        <!-- Modal for Adding Assessment -->
-        <div id="add-assessment-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h3>Add New Assessment</h3>
-                <form id="add-assessment-form" onsubmit="return false;">
-                    <div class="form-group">
-                        <label for="assessment-title">Title *</label>
-                        <input type="text" id="assessment-title" name="title" required placeholder="e.g., Assignment 1, Final Exam">
-                    </div>
-                    <div class="form-group">
-                        <label for="assessment-type">Type *</label>
-                        <select id="assessment-type" name="type" required>
-                            <option value="assignment">Assignment</option>
-                            <option value="lab_report">Lab Report</option>
-                            <option value="quiz">Quiz</option>
-                            <option value="midterm">Midterm</option>
-                            <option value="final">Final Exam</option>
-                            <option value="project">Project</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="assessment-weight">Weight (%)</label>
-                        <input type="number" id="assessment-weight" name="weight_percent" step="0.01" min="0" max="100" placeholder="e.g., 15.5">
-                    </div>
-                    <div class="form-group">
-                        <label for="assessment-due-date">Due Date & Time</label>
-                        <input type="datetime-local" id="assessment-due-date" name="due_datetime">
-                    </div>
-                    <div class="form-group">
-                        <label for="assessment-due-rule">Due Rule (if relative, e.g., '24 hours after lab')</label>
-                        <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g., 24 hours after lab">
-                    </div>
-                    <div class="form-group">
-                        <label for="assessment-rule-anchor">Rule Anchor (if using due rule)</label>
-                        <select id="assessment-rule-anchor" name="rule_anchor">
-                            <option value="">None</option>
-                            <option value="lab">Lab</option>
-                            <option value="tutorial">Tutorial</option>
-                            <option value="lecture">Lecture</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Add Assessment</button>
-                        <button type="button" class="btn btn-secondary cancel-add-assessment">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <!-- Lead Time Mapping -->
         <section class="review-section-item">
             <h3>Study Plan Lead Times</h3>
@@ -372,6 +321,57 @@
             <a href="{{ url_for('manual') }}" class="btn btn-secondary">Switch to Manual Mode</a>
         </div>
     </form>
+
+    <!-- Modal for Adding Assessment (outside form to prevent submission) -->
+    <div id="add-assessment-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Add New Assessment</h3>
+            <form id="add-assessment-form" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="assessment-title">Title *</label>
+                    <input type="text" id="assessment-title" name="title" required placeholder="e.g., Assignment 1, Final Exam">
+                </div>
+                <div class="form-group">
+                    <label for="assessment-type">Type *</label>
+                    <select id="assessment-type" name="type" required>
+                        <option value="assignment">Assignment</option>
+                        <option value="lab_report">Lab Report</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="midterm">Midterm</option>
+                        <option value="final">Final Exam</option>
+                        <option value="project">Project</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="assessment-weight">Weight (%)</label>
+                    <input type="number" id="assessment-weight" name="weight_percent" step="0.01" min="0" max="100" placeholder="e.g., 15.5">
+                </div>
+                <div class="form-group">
+                    <label for="assessment-due-date">Due Date & Time</label>
+                    <input type="datetime-local" id="assessment-due-date" name="due_datetime">
+                </div>
+                <div class="form-group">
+                    <label for="assessment-due-rule">Due Rule (if relative, e.g., '24 hours after lab')</label>
+                    <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g., 24 hours after lab">
+                </div>
+                <div class="form-group">
+                    <label for="assessment-rule-anchor">Rule Anchor (if using due rule)</label>
+                    <select id="assessment-rule-anchor" name="rule_anchor">
+                        <option value="">None</option>
+                        <option value="lab">Lab</option>
+                        <option value="tutorial">Tutorial</option>
+                        <option value="lecture">Lecture</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Add Assessment</button>
+                    <button type="button" class="btn btn-secondary cancel-add-assessment">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
