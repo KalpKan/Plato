@@ -1033,12 +1033,14 @@ function initAssessmentAddRemove() {
         });
     }
     
-    // Form submission
+    // Form submission - prevent default and stop propagation
     const form = document.getElementById('add-assessment-form');
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             addAssessment();
+            return false;
         });
     }
 }
