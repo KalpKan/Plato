@@ -336,6 +336,7 @@ class PDFExtractor:
                 for match in matches:
                     groups = match.groups()
                     # Determine assessment type and title
+                    if 'Quiz' in match.group(0):
                         assessment_type = 'quiz'
                         # Extract quiz number if available
                         quiz_num = groups[1] if len(groups) > 1 and groups[1].isdigit() else (groups[2] if len(groups) > 2 and groups[2].isdigit() else '')
