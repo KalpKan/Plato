@@ -1179,6 +1179,11 @@ class PDFExtractor:
     def _is_assessment_table(self, table: List[List]) -> bool:
         """Check if a table is an assessment/evaluation table.
         
+        This function recognizes multiple formats:
+        - Tables with "Assessment" in header (original format)
+        - Tables with "Evaluation" context (ECE format)
+        - Tables with weight/date columns even without explicit keywords
+        
         Args:
             table: List of rows, where each row is a list of cells
             
@@ -1192,19 +1197,43 @@ class PDFExtractor:
         header_row = table[0]
         header_text = ' '.join([str(cell) for cell in header_row if cell]).lower()
         
-        # Must have "assessment" keyword (more specific than "evaluation")
-        has_assessment = 'assessment' in header_text
-        if not has_assessment:
-            return False
+        # Check for assessment/evaluation keywords OR name column with weight/date
+        has_assessment_keyword = 'assessment' in header_text
+        has_evaluation_keyword = 'evaluation' in header_text
+        has_name_column = any('name' in str(cell).lower() for cell in header_row if cell)
         
         # Must have weight/percentage indicator
-        has_weight = any(w in header_text for w in ['weight', 'weighting', '%', 'percent'])
+        has_weight = any(w in header_text for w in ['weight', 'weighting', '%', 'percent', '% worth', 'worth'])
         
-        # Must have date/due indicator
-        has_date = any(d in header_text for d in ['due', 'date', 'deadline'])
+        # Must have date/due indicator OR "assigned" column (some formats use "Assigned" for dates)
+        has_date = any(d in header_text for d in ['due', 'date', 'deadline', 'assigned'])
+        
+        # For evaluation format: name + weight + date is sufficient (no keyword needed in header)
+        # This handles ECE format where "Evaluation" is the section title, not in table header
+        if has_name_column and has_weight and has_date:
+            # Additional validation: check data rows for assessment content
+            assessment_keywords = ['quiz', 'midterm', 'final', 'assignment', 'exam', 'report', 'lab', 'peerwise', 'project', 'pcb', 'labs', 'examination']
+            keyword_count = 0
+            percentage_count = 0
+            
+            for row in table[1:min(6, len(table))]:  # Check first 5 data rows
+                row_text = ' '.join([str(cell) for cell in row if cell]).lower()
+                if any(kw in row_text for kw in assessment_keywords):
+                    keyword_count += 1
+                # Check for percentage patterns
+                if re.search(r'\d+\.?\d*%', row_text):
+                    percentage_count += 1
+            
+            # Must have at least one assessment keyword and one percentage
+            # This ensures we're matching assessment tables, not other tables with name/weight/date
+            if keyword_count >= 1 and percentage_count >= 1:
+                return True
+        
+        # Original assessment format: must have assessment keyword
+        if not has_assessment_keyword:
+            return False
         
         # Both weight AND date should be present for a valid assessment table
-        # This ensures we don't match other tables that happen to have "assessment" in them
         if not (has_weight and has_date):
             return False
         
@@ -1238,7 +1267,8 @@ class PDFExtractor:
             return []
         
         # Map columns
-        column_map = self._map_table_columns(table[0])
+        header_row = table[0]  # Store header for reference
+        column_map = self._map_table_columns(header_row, table[1:min(6, len(table))])
         if not column_map:
             return []
         
@@ -1264,6 +1294,27 @@ class PDFExtractor:
             # Extract weight and date to check if this row has meaningful data
             row_weight = self._extract_weight_from_row(row, column_map)
             row_due_datetime = self._extract_date_from_row(row, column_map)
+            
+            # For formats with both "Assigned" and "Due Date" columns, prefer "Due Date"
+            # Check header row to see if both exist, then use "Due Date" if available
+            if 'date' in column_map:
+                date_idx = column_map['date']
+                # Check header to see if we mapped "Assigned" but "Due Date" exists
+                for idx, header_cell in enumerate(header_row):
+                    if header_cell and idx != date_idx:
+                        header_text = str(header_cell).lower()
+                        if 'due date' in header_text or ('due' in header_text and 'date' in header_text):
+                            # Found "Due Date" column, use it instead of "Assigned"
+                            if idx < len(row) and row[idx]:
+                                due_date_text = ' '.join(str(row[idx]).split('\n'))
+                                temp_date = self._parse_date_from_text(due_date_text)
+                                if temp_date:
+                                    row_due_datetime = temp_date
+                                    break
+                                # Also check for relative dates in Due Date column
+                                elif 'after' in due_date_text.lower() or 'hours' in due_date_text.lower():
+                                    # This is a relative date - will be handled below
+                                    pass
             
             # Check if this is a continuation row:
             # 1. Empty name but has date in date column (e.g., "Due Nov 21st")
@@ -1363,15 +1414,40 @@ class PDFExtractor:
                     continue
                 # If it has weight or date, keep it (might be a valid short-named assessment)
             
+            # Extract due rule if date is relative (e.g., "24 hours after lab")
+            due_rule = None
+            rule_anchor = None
+            if not due_datetime and 'date' in column_map:
+                date_idx = column_map['date']
+                if date_idx < len(row) and row[date_idx]:
+                    date_text = str(row[date_idx]).strip()
+                    date_text = ' '.join(date_text.split('\n'))
+                    # Check for relative date patterns
+                    if ('after' in date_text.lower() or 
+                        ('hours' in date_text.lower() and 'after' in date_text.lower()) or
+                        '24hrs' in date_text.lower() or
+                        '24 hrs' in date_text.lower() or
+                        '24 hours' in date_text.lower()):
+                        due_rule = date_text
+                        # Extract anchor (lab, tutorial, lecture)
+                        if 'lab' in date_text.lower():
+                            rule_anchor = 'lab'
+                        elif 'tutorial' in date_text.lower():
+                            rule_anchor = 'tutorial'
+                        elif 'lecture' in date_text.lower():
+                            rule_anchor = 'lecture'
+            
             # Create assessment
             assessment = AssessmentTask(
                 title=name.strip(),
                 type=assessment_type,
                 weight_percent=weight,
                 due_datetime=due_datetime,
+                due_rule=due_rule,
+                rule_anchor=rule_anchor,
                 confidence=confidence,
                 source_evidence=self._get_row_text(row, column_map),
-                needs_review=(weight is None or due_datetime is None)
+                needs_review=(weight is None and due_datetime is None and due_rule is None)
             )
             
             assessments.append(assessment)
@@ -1400,16 +1476,32 @@ class PDFExtractor:
             
             cell_text = str(cell).lower().strip()
             
-            # Assessment name column
+            # Assessment name column - multiple formats
             if 'assessment' in cell_text and 'name' not in column_map:
                 column_map['name'] = idx
+            elif ('name' in cell_text and 'name' not in column_map) or \
+                 (cell_text.strip() == 'name' and 'name' not in column_map):
+                # Some tables use "Name" instead of "Assessment" (e.g., ECE format)
+                column_map['name'] = idx
             
-            # Weight column
-            if ('weight' in cell_text or 'weighting' in cell_text or '%' in cell_text) and 'weight' not in column_map:
+            # Weight column - multiple formats
+            if ('weight' in cell_text or 'weighting' in cell_text or '%' in cell_text or 
+                '% worth' in cell_text or 'worth' in cell_text) and 'weight' not in column_map:
                 column_map['weight'] = idx
             
-            # Date column
-            if ('due' in cell_text or 'date' in cell_text or 'deadline' in cell_text) and 'date' not in column_map:
+            # Date column - multiple formats
+            # Some formats use "Assigned" for assignment date and "Due Date" for due date
+            # We'll prioritize "Due Date" but also accept "Assigned" if no due date found
+            # First pass: look for "Due Date" specifically
+            if 'due date' in cell_text and 'date' not in column_map:
+                column_map['date'] = idx
+            elif ('due' in cell_text and 'date' in cell_text) and 'date' not in column_map:
+                column_map['date'] = idx
+            # Second pass: look for other date indicators
+            elif ('date' in cell_text or 'deadline' in cell_text) and 'date' not in column_map:
+                column_map['date'] = idx
+            # Last resort: use "Assigned" if no explicit date column found
+            elif 'assigned' in cell_text and 'date' not in column_map:
                 column_map['date'] = idx
             
             # Format column (optional)
