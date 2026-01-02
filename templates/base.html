@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Course Outline to iCalendar Converter{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Course Outline to iCalendar Converter</h1>
-            <p class="subtitle">Convert Western University course outlines to calendar files</p>
+            <div class="header-content">
+                <i data-lucide="calendar" class="header-icon"></i>
+                <div class="header-text">
+                    <h1>Course Outline Converter</h1>
+                    <p class="subtitle">Transform Western University course outlines into calendar files</p>
+                </div>
+            </div>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -30,11 +36,15 @@
         </main>
 
         <footer>
-            <p>Course Outline to iCalendar Converter - Built for Western University</p>
+            <p>Built for Western University</p>
         </footer>
     </div>
 
     <script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

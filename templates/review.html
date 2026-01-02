@@ -10,7 +10,10 @@
     <!-- Extraction Completeness Section -->
     {% if completeness %}
     <section class="review-section-item completeness-section">
-        <h3>Extraction Completeness</h3>
+        <h3>
+            <i data-lucide="check-circle"></i>
+            Extraction Completeness
+        </h3>
         <div class="completeness-grid">
             <div class="completeness-item">
                 <label>Overall Completeness:</label>
@@ -87,7 +90,10 @@
     <form action="{{ url_for('review') }}" method="POST" class="review-form" id="review-form">
         <!-- Course Information -->
         <section class="review-section-item">
-            <h3>Course Information</h3>
+            <h3>
+                <i data-lucide="book"></i>
+                Course Information
+            </h3>
             <div class="info-grid">
                 <div>
                     <label>Course Code:</label>
@@ -161,7 +167,8 @@
             {% else %}
                 <p class="no-data">No lecture sections found in PDF. You can enter manually or proceed without lectures.</p>
                 <button type="button" class="btn btn-secondary" id="add-lecture-section" style="margin-top: 10px;">
-                    + Add Lecture Section Manually
+                    <i data-lucide="plus"></i>
+                    Add Lecture Section Manually
                 </button>
                 <input type="hidden" name="lecture_section" value="none">
             {% endif %}
@@ -198,7 +205,8 @@
             {% else %}
                 <p class="no-data">No lab sections found in PDF. You can enter manually or proceed without labs.</p>
                 <button type="button" class="btn btn-secondary" id="add-lab-section" style="margin-top: 10px;">
-                    + Add Lab Section Manually
+                    <i data-lucide="plus"></i>
+                    Add Lab Section Manually
                 </button>
                 <input type="hidden" name="lab_section" value="none">
             {% endif %}
@@ -206,10 +214,14 @@
 
         <!-- Assessments -->
         <section class="review-section-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0;">Assessments</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h3 style="margin: 0;">
+                    <i data-lucide="clipboard-list"></i>
+                    Assessments
+                </h3>
                 <button type="button" class="btn btn-secondary" id="add-assessment-btn" style="margin: 0;">
-                    + Add Assessment
+                    <i data-lucide="plus"></i>
+                    Add Assessment
                 </button>
             </div>
             {% if assessments %}
@@ -221,8 +233,9 @@
                                 {% if assessment.needs_review %}
                                     <span class="badge badge-warning">Needs Review</span>
                                 {% endif %}
-                                <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove this assessment" style="float: right; background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">
-                                    × Remove
+                                <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove this assessment">
+                                    <i data-lucide="trash-2"></i>
+                                    Remove
                                 </button>
                             </div>
                             <div class="assessment-details">
@@ -283,7 +296,10 @@
 
         <!-- Lead Time Mapping -->
         <section class="review-section-item">
-            <h3>Study Plan Lead Times</h3>
+            <h3>
+                <i data-lucide="clock"></i>
+                Study Plan Lead Times
+            </h3>
             <p>The system will create "start studying" reminders based on assessment weights:</p>
             <div class="lead-time-mapping">
                 <table>
@@ -316,20 +332,35 @@
 
         <!-- Form Actions -->
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="generate-calendar-btn">Generate Calendar</button>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Start Over</a>
-            <a href="{{ url_for('manual') }}" class="btn btn-secondary">Switch to Manual Mode</a>
+            <button type="submit" class="btn btn-primary" id="generate-calendar-btn">
+                <i data-lucide="download"></i>
+                Generate Calendar
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i data-lucide="refresh-cw"></i>
+                Start Over
+            </a>
+            <a href="{{ url_for('manual') }}" class="btn btn-secondary">
+                <i data-lucide="edit"></i>
+                Switch to Manual Mode
+            </a>
         </div>
     </form>
 
     <!-- Modal for Adding Assessment (outside form to prevent submission) -->
     <div id="add-assessment-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h3>Add New Assessment</h3>
-            <form id="add-assessment-form" onsubmit="return false;">
-                <div class="form-group">
-                    <label for="assessment-title">Title *</label>
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>
+                    <i data-lucide="plus-circle"></i>
+                    Add New Assessment
+                </h3>
+                <form id="add-assessment-form" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="assessment-title">
+                            <i data-lucide="file-text"></i>
+                            Title *
+                        </label>
                     <input type="text" id="assessment-title" name="title" required placeholder="e.g., Assignment 1, Final Exam">
                 </div>
                 <div class="form-group">
@@ -365,10 +396,16 @@
                         <option value="lecture">Lecture</option>
                     </select>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Add Assessment</button>
-                    <button type="button" class="btn btn-secondary cancel-add-assessment">Cancel</button>
-                </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="check"></i>
+                            Add Assessment
+                        </button>
+                        <button type="button" class="btn btn-secondary cancel-add-assessment">
+                            <i data-lucide="x"></i>
+                            Cancel
+                        </button>
+                    </div>
             </form>
         </div>
     </div>

@@ -9,7 +9,10 @@
 
     <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="upload-form">
         <div class="form-group">
-            <label for="pdf_file">Choose PDF File:</label>
+            <label for="pdf_file">
+                <i data-lucide="file-text"></i>
+                Choose PDF File
+            </label>
             <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required>
             <small>Maximum file size: 16MB</small>
         </div>
@@ -23,13 +26,22 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Upload and Extract</button>
-            <a href="{{ url_for('manual') }}" class="btn btn-secondary">Manual Mode</a>
+            <button type="submit" class="btn btn-primary">
+                <i data-lucide="upload"></i>
+                Upload and Extract
+            </button>
+            <a href="{{ url_for('manual') }}" class="btn btn-secondary">
+                <i data-lucide="edit"></i>
+                Manual Mode
+            </a>
         </div>
     </form>
 
     <div class="info-box">
-        <h3>What happens next?</h3>
+        <h3>
+            <i data-lucide="info"></i>
+            What happens next?
+        </h3>
         <ol>
             <li>The system will extract course information from your PDF</li>
             <li>You'll review and confirm the extracted data</li>
@@ -40,7 +52,10 @@
     </div>
 
     <div class="info-box">
-        <h3>Reference Document</h3>
+        <h3>
+            <i data-lucide="book-open"></i>
+            Reference Document
+        </h3>
         <p>This application is designed to work with Western University course outlines.</p>
         <p>For development and testing, refer to: <code>BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf</code></p>
     </div>
