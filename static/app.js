@@ -356,7 +356,16 @@ function startEditing(fieldElement) {
     }
     
     const fieldType = fieldElement.getAttribute('data-field-type');
-    const currentValue = fieldElement.getAttribute('data-current-value') || '';
+    let currentValue = fieldElement.getAttribute('data-current-value') || '';
+    
+    // For assessment_title, extract text from <strong> tag if data attribute is empty
+    if (fieldType === 'assessment_title' && !currentValue) {
+        const strongTag = fieldElement.querySelector('strong');
+        if (strongTag) {
+            currentValue = strongTag.textContent.trim();
+        }
+    }
+    
     const assessmentIndex = fieldElement.getAttribute('data-assessment-index');
     
     console.log('Field details:', { fieldType, currentValue, assessmentIndex });
@@ -400,6 +409,10 @@ function startEditing(fieldElement) {
         inputValue = currentValue;
         placeholder = 'Enter lead time (days)';
         min = 0;  // Lead time must be non-negative
+    } else if (fieldType === 'assessment_title') {
+        inputType = 'text';
+        inputValue = currentValue;
+        placeholder = 'Enter assessment title';
     } else {
         placeholder = 'Enter value';
     }
@@ -682,11 +695,22 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
         } else {
             displayValue = 'Not set';
         }
+    } else if (fieldType === 'assessment_title') {
+        displayValue = newValue || 'Untitled';
+    } else if (fieldType === 'course_code' || fieldType === 'course_name') {
+        displayValue = newValue || 'Not found';
     }
     
     // Update the field
     const isMissing = !newValue || newValue === '' || displayValue === 'Not found' || displayValue === 'Not set';
-    fieldElement.innerHTML = displayValue;
+    
+    // For assessment_title, preserve the <strong> tag structure
+    if (fieldType === 'assessment_title') {
+        fieldElement.innerHTML = `<strong>${displayValue}</strong>`;
+    } else {
+        fieldElement.innerHTML = displayValue;
+    }
+    
     fieldElement.setAttribute('data-current-value', newValue || '');
     
     if (isMissing) {
@@ -728,77 +752,82 @@ function initManualSectionAdders() {
  * @param {string} sectionType - 'lab' or 'lecture'
  */
 function showManualSectionForm(sectionType) {
-    // Create modal overlay
+    // Create modal overlay using existing modal class
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+    modal.className = 'modal';
+    modal.style.display = 'block';
     
-    // Create modal content
+    // Create modal content using existing modal-content class
     const modalContent = document.createElement('div');
     modalContent.className = 'modal-content';
-    modalContent.style.cssText = 'background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;';
     
     const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
     
     modalContent.innerHTML = `
-        <h2>Add ${sectionName} Section Manually</h2>
+        <span class="close-modal">&times;</span>
+        <h3>
+            <i data-lucide="plus-circle"></i>
+            Add ${sectionName} Section Manually
+        </h3>
         <form id="manual-section-form">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label for="section-days" style="display: block; margin-bottom: 5px; font-weight: 600;">Days of Week:</label>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="0" style="margin-right: 5px;"> Mon
+            <div class="form-group">
+                <label for="section-days">Days of Week:</label>
+                <div class="days-checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="0"> Mon
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="1" style="margin-right: 5px;"> Tue
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="1"> Tue
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="2" style="margin-right: 5px;"> Wed
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="2"> Wed
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="3" style="margin-right: 5px;"> Thu
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="3"> Thu
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="4" style="margin-right: 5px;"> Fri
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="4"> Fri
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="5" style="margin-right: 5px;"> Sat
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="5"> Sat
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" name="day" value="6" style="margin-right: 5px;"> Sun
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="day" value="6"> Sun
                     </label>
                 </div>
-                <small style="color: #666;">Select one or more days when this ${sectionName.toLowerCase()} meets</small>
+                <small>Select one or more days when this ${sectionName.toLowerCase()} meets</small>
             </div>
             
-            <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label for="section-start-time" style="display: block; margin-bottom: 5px; font-weight: 600;">Start Time:</label>
-                    <input type="time" id="section-start-time" name="start_time" required 
-                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="section-start-time">Start Time:</label>
+                    <input type="time" id="section-start-time" name="start_time" required class="form-control">
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label for="section-end-time" style="display: block; margin-bottom: 5px; font-weight: 600;">End Time:</label>
-                    <input type="time" id="section-end-time" name="end_time" required 
-                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <div class="form-group">
+                    <label for="section-end-time">End Time:</label>
+                    <input type="time" id="section-end-time" name="end_time" required class="form-control">
                 </div>
             </div>
             
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label for="section-location" style="display: block; margin-bottom: 5px; font-weight: 600;">Location (optional):</label>
-                <input type="text" id="section-location" name="location" placeholder="e.g., UC 202" 
-                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="form-group">
+                <label for="section-location">Location (optional):</label>
+                <input type="text" id="section-location" name="location" placeholder="e.g., UC 202" class="form-control">
             </div>
             
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" class="btn-cancel-modal" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                <button type="submit" class="btn-save-modal" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Add Section</button>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary btn-cancel-modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Section</button>
             </div>
         </form>
     `;
     
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
+    
+    // Initialize Lucide icons in modal
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
     
     // Handle form submission
     const form = modalContent.querySelector('#manual-section-form');
@@ -826,18 +855,32 @@ function showManualSectionForm(sectionType) {
         addManualSection(sectionType, days, startTime, endTime, location);
         
         // Close modal
+        modal.style.display = 'none';
         document.body.removeChild(modal);
     });
     
+    // Handle close button
+    const closeBtn = modalContent.querySelector('.close-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+            document.body.removeChild(modal);
+        });
+    }
+    
     // Handle cancel button
     const cancelBtn = modalContent.querySelector('.btn-cancel-modal');
-    cancelBtn.addEventListener('click', function() {
-        document.body.removeChild(modal);
-    });
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+            document.body.removeChild(modal);
+        });
+    }
     
     // Close on overlay click
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
+            modal.style.display = 'none';
             document.body.removeChild(modal);
         }
     });

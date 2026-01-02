@@ -181,7 +181,13 @@
                         {% set should_flag = assessment.needs_review or missing_date or not assessment.weight_percent %}
                         <div class="assessment-item {% if should_flag %}needs-review{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
                             <div class="assessment-header">
-                                <strong>{{ assessment.title }}</strong>
+                                <span class="editable-field assessment-title" 
+                                      data-field-type="assessment_title" 
+                                      data-assessment-index="{{ loop.index0 }}"
+                                      data-current-value="{{ assessment.title }}"
+                                      title="Click to edit title">
+                                    <strong>{{ assessment.title }}</strong>
+                                </span>
                                 {% if should_flag %}
                                     <span class="badge badge-warning">Needs Review</span>
                                 {% endif %}

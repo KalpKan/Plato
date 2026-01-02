@@ -846,6 +846,16 @@ section h4 {
     flex: 1;
 }
 
+.assessment-title.editable-field {
+    flex: 1;
+    cursor: pointer;
+}
+
+.assessment-title.editable-field:hover strong {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
 .badge {
     display: inline-flex;
     align-items: center;
@@ -1037,6 +1047,55 @@ details.review-section-item[open] .chevron {
     margin-top: 0;
     margin-bottom: var(--spacing-xl);
     font-weight: 300;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.modal-content h3 i {
+    width: 24px;
+    height: 24px;
+    color: var(--color-accent);
+}
+
+/* Form rows for side-by-side inputs */
+.form-row {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Days checkbox group */
+.days-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    transition: color var(--transition-base);
+}
+
+.checkbox-label:hover {
+    color: var(--color-text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
 }
 
 /* ============================================

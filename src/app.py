@@ -947,6 +947,20 @@ def update_field():
             else:
                 return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
                 
+        elif field_type == 'assessment_title':
+            if assessment_index is not None:
+                try:
+                    idx = int(assessment_index)
+                    if 0 <= idx < len(extracted_data.assessments):
+                        if value and value.strip():
+                            extracted_data.assessments[idx].title = value.strip()
+                        else:
+                            return jsonify({'success': False, 'error': 'Assessment title cannot be empty'}), 400
+                except (ValueError, IndexError):
+                    return jsonify({'success': False, 'error': 'Invalid assessment index'}), 400
+            else:
+                return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
+                
         elif field_type == 'assessment_weight':
             if assessment_index is not None:
                 try:
