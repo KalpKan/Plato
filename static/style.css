@@ -137,10 +137,22 @@ header {
     background-color: var(--color-bg-primary);
 }
 
+.header-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: opacity var(--transition-base);
+}
+
+.header-link:hover {
+    opacity: 0.8;
+}
+
 .header-content {
     display: flex;
     align-items: center;
     gap: var(--spacing-lg);
+    cursor: pointer;
 }
 
 .header-icon {
@@ -328,6 +340,89 @@ section h4 {
 .form-group input[type="number"],
 .form-group input[type="date"],
 .form-group input[type="datetime-local"],
+/* File Input Styling */
+.file-input-label {
+    cursor: pointer;
+    display: block;
+    margin-bottom: var(--spacing-xs);
+}
+
+.file-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xl) var(--spacing-lg);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-tertiary);
+    transition: all var(--transition-base);
+    min-height: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+.file-input-wrapper:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-bg-quaternary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.file-input-wrapper i {
+    width: 48px;
+    height: 48px;
+    color: var(--color-accent);
+    transition: transform var(--transition-base);
+}
+
+.file-input-wrapper:hover i {
+    transform: scale(1.1);
+}
+
+.file-input-text {
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    text-align: center;
+}
+
+.file-input-name {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-align: center;
+    font-style: italic;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-input-hidden {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.file-input-hidden:focus + .file-input-wrapper,
+.file-input-label:has(.file-input-hidden:focus) .file-input-wrapper {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light), var(--shadow-md);
+}
+
+.file-input-label:has(.file-input-hidden:valid) .file-input-wrapper {
+    border-color: var(--color-success-border);
+    border-style: solid;
+}
+
+.file-input-label:has(.file-input-hidden:valid) .file-input-wrapper i {
+    color: var(--color-success);
+}
+
 .form-group input[type="file"],
 .form-group select,
 .form-group textarea {

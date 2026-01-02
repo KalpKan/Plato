@@ -10,13 +10,15 @@
 <body>
     <div class="container">
         <header>
-            <div class="header-content">
-                <i data-lucide="calendar" class="header-icon"></i>
-                <div class="header-text">
-                    <h1>Course Outline Converter</h1>
-                    <p class="subtitle">Transform Western University course outlines into calendar files</p>
+            <a href="{{ url_for('index') }}" class="header-link">
+                <div class="header-content">
+                    <i data-lucide="calendar" class="header-icon"></i>
+                    <div class="header-text">
+                        <h1>Course Outline Converter</h1>
+                        <p class="subtitle">Transform Western University course outlines into calendar files</p>
+                    </div>
                 </div>
-            </div>
+            </a>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
