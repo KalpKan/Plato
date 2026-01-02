@@ -1069,7 +1069,7 @@ function addAssessment() {
         rule_anchor: formData.get('rule_anchor') || null,
         confidence: 0.8,  // Default confidence for manually added assessments
         source_evidence: 'Manual entry',  // Default source for manually added assessments
-        needs_review: formData.has('needs_review')
+        needs_review: false  // Default to false for manually added assessments
     };
     
     // Remove null/empty values (but keep confidence and source_evidence)
