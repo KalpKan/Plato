@@ -543,8 +543,37 @@ def review():
         
         # Generate calendar
         try:
+            # Get custom lead time mapping from session
+            user_choices_dict = session.get('user_choices', {})
+            custom_lead_time_mapping = user_choices_dict.get('custom_lead_time_mapping', {})
+            
+            # Convert custom mapping to StudyPlanGenerator format if provided
+            # The generator expects a dict mapping weight thresholds to days
+            # We need to convert range strings like "0-5%" to the appropriate threshold
+            # Also merge with defaults for ranges not customized
+            if custom_lead_time_mapping:
+                # Convert range strings to weight thresholds
+                range_to_threshold = {
+                    "0-5%": 5,
+                    "6-10%": 10,
+                    "11-20%": 20,
+                    "21-30%": 30,
+                    "31%+": 50,
+                    "Finals": 50  # Finals use the same as 31%+
+                }
+                # Start with default mapping
+                default_gen = StudyPlanGenerator()
+                lead_time_mapping_for_gen = default_gen.lead_time_mapping.copy()
+                # Override with custom values
+                for range_key, days in custom_lead_time_mapping.items():
+                    threshold = range_to_threshold.get(range_key)
+                    if threshold:
+                        lead_time_mapping_for_gen[threshold] = days
+                study_plan_gen = StudyPlanGenerator(lead_time_mapping=lead_time_mapping_for_gen)
+            else:
+                study_plan_gen = StudyPlanGenerator()
+            
             # Generate study plan (pass lead time overrides)
-            study_plan_gen = StudyPlanGenerator()
             study_plan = study_plan_gen.generate_study_plan(
                 extracted_data.assessments,
                 user_lead_times=lead_time_overrides if lead_time_overrides else None
@@ -617,14 +646,21 @@ def review():
     
     # Get study plan mapping for display
     study_plan_gen = StudyPlanGenerator()
-    lead_time_mapping = study_plan_gen.get_default_mapping_display()
+    default_lead_time_mapping = study_plan_gen.get_default_mapping_display()
+    
+    # Get user lead time overrides and custom mappings from session
+    user_choices_dict = session.get('user_choices', {})
+    lead_time_overrides = user_choices_dict.get('lead_time_overrides', {})
+    custom_lead_time_mapping = user_choices_dict.get('custom_lead_time_mapping', {})
+    
+    # Merge custom mappings with default (custom takes precedence)
+    lead_time_mapping = default_lead_time_mapping.copy()
+    for range_key, days in custom_lead_time_mapping.items():
+        if range_key in lead_time_mapping:
+            lead_time_mapping[range_key] = days
     
     # Calculate completeness metrics (do this for both GET and POST)
     completeness = calculate_completeness(extracted_data)
-    
-    # Get user lead time overrides from session
-    user_choices_dict = session.get('user_choices', {})
-    lead_time_overrides = user_choices_dict.get('lead_time_overrides', {})
     
     # Prepare assessments list for template
     # Calculate current lead time for each assessment
@@ -883,6 +919,60 @@ def update_field():
                     return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
             else:
                 return jsonify({'success': False, 'error': 'assessment_index required for assessment updates'}), 400
+        
+        elif field_type == 'lead_time_mapping':
+            # Get weight range from request
+            weight_range = request.json.get('weight_range')
+            if not weight_range:
+                return jsonify({'success': False, 'error': 'weight_range required for lead_time_mapping updates'}), 400
+            
+            # Get or create custom_lead_time_mapping in user_choices
+            user_choices_dict = session.get('user_choices', {})
+            if 'custom_lead_time_mapping' not in user_choices_dict:
+                user_choices_dict['custom_lead_time_mapping'] = {}
+            
+            if value:
+                try:
+                    lead_time = int(value)
+                    if lead_time < 0:
+                        return jsonify({'success': False, 'error': 'Lead time must be non-negative'}), 400
+                    # Store custom mapping
+                    user_choices_dict['custom_lead_time_mapping'][weight_range] = lead_time
+                except ValueError:
+                    return jsonify({'success': False, 'error': 'Invalid lead time value (must be an integer)'}), 400
+            else:
+                # Remove custom mapping (use default)
+                if weight_range in user_choices_dict['custom_lead_time_mapping']:
+                    del user_choices_dict['custom_lead_time_mapping'][weight_range]
+            
+            # Update session
+            session['user_choices'] = user_choices_dict
+            
+            # Also update cache
+            pdf_hash = session.get('pdf_hash')
+            if pdf_hash:
+                # Get existing user selections or create new
+                user_selections = cache_manager.lookup_user_choices(pdf_hash, session.get('session_id'))
+                if user_selections is None:
+                    from .models import UserSelections
+                    user_selections = UserSelections()
+                
+                # Update custom lead time mapping
+                if not hasattr(user_selections, 'custom_lead_time_mapping') or user_selections.custom_lead_time_mapping is None:
+                    user_selections.custom_lead_time_mapping = {}
+                else:
+                    # Convert from dict if needed
+                    if isinstance(user_selections.custom_lead_time_mapping, dict):
+                        pass  # Already a dict
+                    else:
+                        user_selections.custom_lead_time_mapping = {}
+                
+                if value:
+                    user_selections.custom_lead_time_mapping[weight_range] = int(value)
+                elif weight_range in user_selections.custom_lead_time_mapping:
+                    del user_selections.custom_lead_time_mapping[weight_range]
+                
+                cache_manager.store_user_choices(pdf_hash, user_selections, session.get('session_id'))
         
         else:
             return jsonify({'success': False, 'error': f'Unknown field_type: {field_type}'}), 400

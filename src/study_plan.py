@@ -99,29 +99,46 @@ class StudyPlanGenerator:
         Returns:
             Lead time in days, or None if cannot determine (requires user review)
         """
-        # Check user-specified lead times first
+        # Check user-specified lead times first (individual overrides)
         if user_lead_times and assessment.title in user_lead_times:
             return user_lead_times[assessment.title]
         
         # Handle finals specially
         if assessment.type == "final":
-            return 28  # Finals: 28 days unless shorter window indicated
+            # Check if custom mapping has Finals override
+            if self.lead_time_mapping and 50 in self.lead_time_mapping:
+                return self.lead_time_mapping[50]
+            return 28  # Default: Finals: 28 days
         
         # Use weight-based mapping
         if assessment.weight_percent is not None:
             weight = assessment.weight_percent
             
-            # Map to appropriate range
-            if weight <= 5:
-                return 3
-            elif weight <= 10:
-                return 7
-            elif weight <= 20:
-                return 14
-            elif weight <= 30:
-                return 21
-            else:  # 31%+
-                return 28
+            # Use custom mapping if available, otherwise use defaults
+            if self.lead_time_mapping:
+                # Map to appropriate threshold
+                if weight <= 5:
+                    return self.lead_time_mapping.get(5, 3)
+                elif weight <= 10:
+                    return self.lead_time_mapping.get(10, 7)
+                elif weight <= 20:
+                    return self.lead_time_mapping.get(20, 14)
+                elif weight <= 30:
+                    return self.lead_time_mapping.get(30, 21)
+                else:  # 31%+
+                    return self.lead_time_mapping.get(50, 28)
+            else:
+                # Use default mapping
+                if weight <= 5:
+                    return 3
+                elif weight <= 10:
+                    return 7
+                elif weight <= 20:
+                    return 14
+                elif weight <= 30:
+                    return 21
+                else:  # 31%+
+                    return 28
         
         # Missing weight: return None to require user review
         # Per CLARIFYING_QUESTIONS.md: "Always require user review"

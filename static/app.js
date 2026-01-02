@@ -385,6 +385,11 @@ function startEditing(fieldElement) {
         inputValue = currentValue;
         placeholder = 'Enter lead time (days)';
         min = 0;  // Lead time must be non-negative
+    } else if (fieldType === 'lead_time_mapping') {
+        inputType = 'number';
+        inputValue = currentValue;
+        placeholder = 'Enter lead time (days)';
+        min = 0;  // Lead time must be non-negative
     } else {
         placeholder = 'Enter value';
     }
@@ -407,7 +412,7 @@ function startEditing(fieldElement) {
     if (inputType === 'number') {
         if (fieldType === 'assessment_weight') {
             numberAttrs = 'min="0" max="100" step="0.1"';
-        } else if (fieldType === 'assessment_lead_time') {
+        } else if (fieldType === 'assessment_lead_time' || fieldType === 'lead_time_mapping') {
             numberAttrs = 'min="0" step="1"';
         } else {
             numberAttrs = 'min="0"';
@@ -574,6 +579,14 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
         requestData.assessment_index = parseInt(assessmentIndex);
     }
     
+    // For lead time mapping, include the weight range
+    if (fieldType === 'lead_time_mapping') {
+        const weightRange = fieldElement.getAttribute('data-weight-range');
+        if (weightRange) {
+            requestData.weight_range = weightRange;
+        }
+    }
+    
     // Send update request
     fetch('/api/update-field', {
         method: 'POST',
@@ -648,6 +661,12 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     } else if (fieldType === 'assessment_lead_time') {
         if (newValue) {
             displayValue = newValue + ' days';
+        } else {
+            displayValue = 'Not set';
+        }
+    } else if (fieldType === 'lead_time_mapping') {
+        if (newValue) {
+            displayValue = newValue + ' days before due';
         } else {
             displayValue = 'Not set';
         }

@@ -292,7 +292,15 @@
                         {% for range, days in lead_time_mapping.items() %}
                             <tr>
                                 <td>{{ range }}</td>
-                                <td>{{ days }} days before due</td>
+                                <td>
+                                    <span class="editable-field lead-time-value" 
+                                          data-field-type="lead_time_mapping" 
+                                          data-weight-range="{{ range }}"
+                                          data-current-value="{{ days }}"
+                                          title="Click to edit lead time (days)">
+                                        {{ days }} days before due
+                                    </span>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
