@@ -430,15 +430,17 @@ function startEditing(fieldElement) {
     }
     
     editForm.innerHTML = `
-        <input type="${inputType}" 
-               class="inline-edit-input" 
-               value="${inputValue}" 
-               placeholder="${placeholder}"
-               ${numberAttrs}
-               autofocus>
-        <div class="inline-edit-actions">
-            <button type="submit" class="btn-save" style="pointer-events: auto; z-index: 1001;">Save</button>
-            <button type="button" class="btn-cancel" style="pointer-events: auto; z-index: 1001;">Cancel</button>
+        <div class="inline-edit-container">
+            <input type="${inputType}" 
+                   class="inline-edit-input" 
+                   value="${inputValue}" 
+                   placeholder="${placeholder}"
+                   ${numberAttrs}
+                   autofocus>
+            <div class="inline-edit-buttons">
+                <button type="submit" class="btn-save save-btn" style="pointer-events: auto; z-index: 1001;">Save</button>
+                <button type="button" class="btn-cancel cancel-btn" style="pointer-events: auto; z-index: 1001;">Cancel</button>
+            </div>
         </div>
     `;
     

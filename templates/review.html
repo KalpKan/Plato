@@ -177,10 +177,12 @@
             {% if assessments %}
                 <div class="assessments-list">
                     {% for assessment in assessments %}
-                        <div class="assessment-item {% if assessment.needs_review %}needs-review{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
+                        {% set missing_date = not assessment.due_datetime and not assessment.due_rule %}
+                        {% set should_flag = assessment.needs_review or missing_date or not assessment.weight_percent %}
+                        <div class="assessment-item {% if should_flag %}needs-review{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
                             <div class="assessment-header">
                                 <strong>{{ assessment.title }}</strong>
-                                {% if assessment.needs_review %}
+                                {% if should_flag %}
                                     <span class="badge badge-warning">Needs Review</span>
                                 {% endif %}
                                 <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove this assessment">

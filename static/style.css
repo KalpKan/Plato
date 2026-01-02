@@ -697,6 +697,112 @@ section h4 {
     box-shadow: 0 0 0 2px var(--color-accent-light);
 }
 
+/* Inline Edit Container */
+.inline-edit-container {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    background-color: var(--color-bg-tertiary);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-accent);
+    box-shadow: var(--shadow-md);
+}
+
+/* Inline Edit Inputs */
+.inline-edit-container input[type="number"],
+.inline-edit-container input[type="text"],
+.inline-edit-container input[type="date"],
+.inline-edit-container input[type="datetime-local"] {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    min-width: 120px;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.inline-edit-container input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.inline-edit-container input::placeholder {
+    color: var(--color-text-tertiary);
+}
+
+/* Style the datetime-local input calendar icon */
+.inline-edit-container input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.inline-edit-container input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.inline-edit-container input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+.inline-edit-container input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Style number input spinner */
+.inline-edit-container input[type="number"]::-webkit-inner-spin-button,
+.inline-edit-container input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    filter: invert(1);
+}
+
+/* Inline Edit Buttons */
+.inline-edit-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.inline-edit-buttons button {
+    background-color: var(--color-bg-quaternary);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inline-edit-buttons button:hover {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
+}
+
+.inline-edit-buttons button.save-btn {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+    border-color: var(--color-success-border);
+}
+
+.inline-edit-buttons button.save-btn:hover {
+    background-color: var(--color-success);
+    color: var(--color-bg-primary);
+}
+
+.inline-edit-buttons button.cancel-btn {
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+    border-color: var(--color-error-border);
+}
+
+.inline-edit-buttons button.cancel-btn:hover {
+    background-color: var(--color-error);
+    color: var(--color-bg-primary);
+}
+
 /* ============================================
    Assessments
    ============================================ */
@@ -938,11 +1044,25 @@ details.review-section-item[open] .chevron {
    ============================================ */
 footer {
     margin-top: var(--spacing-3xl);
-    padding-top: var(--spacing-xl);
+    padding: var(--spacing-xl) var(--spacing-lg);
     border-top: 1px solid var(--color-border);
     text-align: center;
     color: var(--color-text-tertiary);
     font-size: var(--font-size-sm);
+}
+
+footer .footer-credit {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+}
+
+footer .footer-disclaimer {
+    color: var(--color-text-quaternary);
+    font-size: var(--font-size-xs);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: var(--line-height-relaxed);
 }
 
 /* ============================================
