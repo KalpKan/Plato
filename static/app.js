@@ -53,14 +53,14 @@ function initFileUpload() {
         fileInput.addEventListener('change', function(e) {
             // Update file name display
             if (fileNameDisplay && this.files && this.files.length > 0) {
-                fileNameDisplay.textContent = this.files[0].name;
+                const fileName = this.files[0].name;
+                fileNameDisplay.textContent = fileName.length > 40 ? fileName.substring(0, 40) + '...' : fileName;
                 fileNameDisplay.style.color = 'var(--color-success)';
                 fileNameDisplay.style.fontStyle = 'normal';
-            }
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                // You could add a label or display element to show the selected file name
-                console.log('File selected:', fileName);
+            } else if (fileNameDisplay) {
+                fileNameDisplay.textContent = 'No file selected';
+                fileNameDisplay.style.color = 'var(--color-text-secondary)';
+                fileNameDisplay.style.fontStyle = 'italic';
             }
         });
     }
