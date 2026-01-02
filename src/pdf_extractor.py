@@ -1664,9 +1664,20 @@ class PDFExtractor:
             name_idx = column_map['name']
             if name_idx < len(row) and row[name_idx]:
                 name_text = str(row[name_idx]).lower().strip()
-                # Check for summary keywords
-                if any(keyword in name_text for keyword in ['total', 'course total', 'sum', 'subtotal']):
-                    return True
+                # Check for summary keywords - be more specific to avoid false positives
+                # Only match if "total" is the main word, not part of another word/phrase
+                # Examples: "Total", "COURSE TOTAL", "Subtotal" = summary row
+                # Examples: "Labs (Total = 8)", "Total Marks" = NOT summary row
+                summary_patterns = [
+                    r'^(course\s+)?total$',  # "Total" or "Course Total" as standalone
+                    r'^subtotal$',  # "Subtotal" as standalone
+                    r'^sum$',  # "Sum" as standalone
+                    r'^grand\s+total$',  # "Grand Total" as standalone
+                ]
+                import re
+                for pattern in summary_patterns:
+                    if re.match(pattern, name_text, re.IGNORECASE):
+                        return True
         
         # Check weight column for sum-like values
         if 'weight' in column_map:
