@@ -1208,9 +1208,9 @@ footer .footer-disclaimer {
 
     .review-section-item {
         padding: var(--spacing-lg);
-    }
+}
 
-    .completeness-grid {
+.completeness-grid {
         grid-template-columns: 1fr;
     }
 
@@ -1259,9 +1259,9 @@ footer .footer-disclaimer {
 
     section h3 {
         font-size: var(--font-size-xl);
-    }
+}
 
-    .completeness-details ul {
+.completeness-details ul {
         grid-template-columns: 1fr;
     }
 }
@@ -1296,7 +1296,10 @@ footer .footer-disclaimer {
     padding: 0;
 }
 
-.landing-page header,
+.landing-page header {
+    display: none;
+}
+
 .landing-page footer {
     display: none;
 }
@@ -1504,14 +1507,54 @@ footer .footer-disclaimer {
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-sm);
-    opacity: 0;
-    transform: translateX(-20px);
-    transition: all var(--transition-slow);
 }
 
-.workflow-step.active {
-    opacity: 1;
-    transform: translateX(0);
+/* Step 1: Document Icon - smooth fade in/out */
+.workflow-step[data-step="1"] {
+    animation: step1Animation 7s infinite;
+}
+
+@keyframes step1Animation {
+    0% { opacity: 0; transform: translateX(-20px); }
+    11% { opacity: 1; transform: translateX(0); }
+    40% { opacity: 1; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(0); }
+    60% { opacity: 1; transform: translateX(0); }
+    70% { opacity: 1; transform: translateX(0); }
+    85% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(-20px); }
+}
+
+/* Step 2: Processing Icon - scale and fade */
+.workflow-step[data-step="2"] {
+    animation: step2Animation 7s infinite;
+}
+
+@keyframes step2Animation {
+    0% { opacity: 0; transform: scale(0.8); }
+    11% { opacity: 0; transform: scale(0.8); }
+    23% { opacity: 0; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1); }
+    60% { opacity: 1; transform: scale(1); }
+    85% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+
+/* Step 3: Calendar Icon - fade in from right */
+.workflow-step[data-step="3"] {
+    animation: step3Animation 7s infinite;
+}
+
+@keyframes step3Animation {
+    0% { opacity: 0; transform: translateX(20px); }
+    23% { opacity: 0; transform: translateX(20px); }
+    37% { opacity: 0; transform: translateX(20px); }
+    44% { opacity: 0; transform: translateX(20px); }
+    52% { opacity: 0; transform: translateX(20px); }
+    63% { opacity: 0; transform: translateX(20px); }
+    74% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(20px); }
 }
 
 .workflow-icon {
@@ -1535,13 +1578,41 @@ footer .footer-disclaimer {
     position: relative;
 }
 
-.workflow-icon.processing.active i {
-    animation: rotate 2s linear infinite;
+.workflow-icon.processing i {
+    animation: processingRotate 7s infinite linear;
 }
 
-@keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@keyframes processingRotate {
+    0% { transform: rotate(0deg); }
+    11% { transform: rotate(0deg); }
+    23% { transform: rotate(0deg); }
+    44% { transform: rotate(360deg); }
+    60% { transform: rotate(720deg); }
+    70% { transform: rotate(720deg); }
+    85% { transform: rotate(720deg); }
+    100% { transform: rotate(0deg); }
+}
+
+/* Processing border pulse */
+.workflow-icon.processing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgb(59, 130, 246);
+    opacity: 0;
+    animation: processingPulse 7s infinite;
+}
+
+@keyframes processingPulse {
+    0% { opacity: 0; }
+    11% { opacity: 0; }
+    23% { opacity: 0; }
+    37% { opacity: 0.5; }
+    44% { opacity: 0; }
+    52% { opacity: 0.5; }
+    60% { opacity: 0; }
+    100% { opacity: 0; }
 }
 
 .workflow-label {
@@ -1559,13 +1630,69 @@ footer .footer-disclaimer {
     width: 100%;
     height: 100%;
     background: linear-gradient(to right, rgb(59, 130, 246), transparent);
-    transform: scaleX(0);
     transform-origin: left;
-    transition: transform var(--transition-slow);
 }
 
-.workflow-arrow.active .arrow-line {
-    transform: scaleX(1);
+/* Arrow 1 animation */
+.workflow-arrow:nth-of-type(1) .arrow-line {
+    animation: arrow1Line 7s infinite;
+}
+
+@keyframes arrow1Line {
+    0% { transform: scaleX(0); }
+    11% { transform: scaleX(0); }
+    23% { transform: scaleX(1); }
+    40% { transform: scaleX(1); }
+    50% { transform: scaleX(1); }
+    60% { transform: scaleX(1); }
+    85% { transform: scaleX(1); }
+    100% { transform: scaleX(0); }
+}
+
+.workflow-arrow:nth-of-type(1) .arrow-particle {
+    animation: arrow1Particle 7s infinite;
+}
+
+@keyframes arrow1Particle {
+    0% { left: 0; opacity: 0; }
+    11% { left: 0; opacity: 0; }
+    23% { left: 96px; opacity: 1; }
+    40% { left: 96px; opacity: 1; }
+    50% { left: 96px; opacity: 1; }
+    60% { left: 96px; opacity: 1; }
+    85% { left: 96px; opacity: 0; }
+    100% { left: 0; opacity: 0; }
+}
+
+/* Arrow 2 animation */
+.workflow-arrow:nth-of-type(2) .arrow-line {
+    animation: arrow2Line 7s infinite;
+}
+
+@keyframes arrow2Line {
+    0% { transform: scaleX(0); }
+    23% { transform: scaleX(0); }
+    37% { transform: scaleX(0); }
+    44% { transform: scaleX(0); }
+    52% { transform: scaleX(0); }
+    63% { transform: scaleX(1); }
+    85% { transform: scaleX(1); }
+    100% { transform: scaleX(0); }
+}
+
+.workflow-arrow:nth-of-type(2) .arrow-particle {
+    animation: arrow2Particle 7s infinite;
+}
+
+@keyframes arrow2Particle {
+    0% { left: 0; opacity: 0; }
+    23% { left: 0; opacity: 0; }
+    37% { left: 0; opacity: 0; }
+    44% { left: 0; opacity: 0; }
+    52% { left: 0; opacity: 0; }
+    63% { left: 96px; opacity: 1; }
+    85% { left: 96px; opacity: 0; }
+    100% { left: 0; opacity: 0; }
 }
 
 .arrow-particle {
@@ -1577,13 +1704,6 @@ footer .footer-disclaimer {
     border-radius: 50%;
     background-color: rgb(96, 165, 250); /* blue-400 */
     transform: translateY(-50%);
-    opacity: 0;
-    transition: all var(--transition-slow);
-}
-
-.workflow-arrow.active .arrow-particle {
-    opacity: 1;
-    left: 96px;
 }
 
 .features-grid {
@@ -1596,6 +1716,9 @@ footer .footer-disclaimer {
 
 .feature-item {
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .feature-icon {
@@ -1621,11 +1744,15 @@ footer .footer-disclaimer {
     font-weight: 500;
     margin-bottom: var(--spacing-sm);
     color: var(--color-text-primary);
+    text-align: center;
+    width: 100%;
 }
 
 .feature-item p {
     color: #a1a1aa; /* zinc-400 */
     font-size: var(--font-size-base);
+    text-align: center;
+    width: 100%;
 }
 
 /* Upload Section */
@@ -1811,7 +1938,7 @@ footer .footer-disclaimer {
     .features-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .upload-actions {
         flex-direction: column;
     }

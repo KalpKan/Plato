@@ -266,29 +266,6 @@
         });
     });
     
-    // Workflow animation
-    document.addEventListener('DOMContentLoaded', () => {
-        const steps = document.querySelectorAll('.workflow-step');
-        const arrows = document.querySelectorAll('.workflow-arrow');
-        
-        function animateWorkflow() {
-            steps.forEach((step, index) => {
-                setTimeout(() => {
-                    step.classList.add('active');
-                    if (index < arrows.length) {
-                        arrows[index].classList.add('active');
-                    }
-                }, index * 2000);
-            });
-            
-            setTimeout(() => {
-                steps.forEach(step => step.classList.remove('active'));
-                arrows.forEach(arrow => arrow.classList.remove('active'));
-                setTimeout(animateWorkflow, 1000);
-            }, 7000);
-        }
-        
-        animateWorkflow();
-    });
+    // Workflow animation is now handled by CSS keyframes
 </script>
 {% endblock %}
