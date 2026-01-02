@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initFormValidation();
     initDynamicForms();
     initEditableFields();
+    initManualSectionAdders();
     
     // Re-enable form submission for the generate calendar button
     const generateBtn = document.getElementById('generate-calendar-btn');
@@ -686,5 +687,258 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     // Update completeness metrics without full page reload
     // The field display has been updated, so we're done
     // User can continue editing other fields
+}
+
+/**
+ * Initialize manual section adders (for lecture and lab sections)
+ * Handles the "Add Section Manually" buttons
+ */
+function initManualSectionAdders() {
+    // Handle "Add Lab Section Manually" button
+    const addLabBtn = document.getElementById('add-lab-section');
+    if (addLabBtn) {
+        addLabBtn.addEventListener('click', function() {
+            showManualSectionForm('lab');
+        });
+    }
+    
+    // Handle "Add Lecture Section Manually" button
+    const addLectureBtn = document.getElementById('add-lecture-section');
+    if (addLectureBtn) {
+        addLectureBtn.addEventListener('click', function() {
+            showManualSectionForm('lecture');
+        });
+    }
+}
+
+/**
+ * Show form modal for adding a manual section
+ * 
+ * @param {string} sectionType - 'lab' or 'lecture'
+ */
+function showManualSectionForm(sectionType) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.style.cssText = 'background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;';
+    
+    const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
+    
+    modalContent.innerHTML = `
+        <h2>Add ${sectionName} Section Manually</h2>
+        <form id="manual-section-form">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="section-days" style="display: block; margin-bottom: 5px; font-weight: 600;">Days of Week:</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="0" style="margin-right: 5px;"> Mon
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="1" style="margin-right: 5px;"> Tue
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="2" style="margin-right: 5px;"> Wed
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="3" style="margin-right: 5px;"> Thu
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="4" style="margin-right: 5px;"> Fri
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="5" style="margin-right: 5px;"> Sat
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" name="day" value="6" style="margin-right: 5px;"> Sun
+                    </label>
+                </div>
+                <small style="color: #666;">Select one or more days when this ${sectionName.toLowerCase()} meets</small>
+            </div>
+            
+            <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="section-start-time" style="display: block; margin-bottom: 5px; font-weight: 600;">Start Time:</label>
+                    <input type="time" id="section-start-time" name="start_time" required 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="section-end-time" style="display: block; margin-bottom: 5px; font-weight: 600;">End Time:</label>
+                    <input type="time" id="section-end-time" name="end_time" required 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="section-location" style="display: block; margin-bottom: 5px; font-weight: 600;">Location (optional):</label>
+                <input type="text" id="section-location" name="location" placeholder="e.g., UC 202" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn-cancel-modal" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button type="submit" class="btn-save-modal" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Add Section</button>
+            </div>
+        </form>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    const form = modalContent.querySelector('#manual-section-form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get selected days
+        const dayCheckboxes = form.querySelectorAll('input[name="day"]:checked');
+        if (dayCheckboxes.length === 0) {
+            alert('Please select at least one day of the week.');
+            return;
+        }
+        
+        const days = Array.from(dayCheckboxes).map(cb => parseInt(cb.value)).sort();
+        const startTime = form.querySelector('#section-start-time').value;
+        const endTime = form.querySelector('#section-end-time').value;
+        const location = form.querySelector('#section-location').value || null;
+        
+        if (!startTime || !endTime) {
+            alert('Please enter both start and end times.');
+            return;
+        }
+        
+        // Add the section to the page
+        addManualSection(sectionType, days, startTime, endTime, location);
+        
+        // Close modal
+        document.body.removeChild(modal);
+    });
+    
+    // Handle cancel button
+    const cancelBtn = modalContent.querySelector('.btn-cancel-modal');
+    cancelBtn.addEventListener('click', function() {
+        document.body.removeChild(modal);
+    });
+    
+    // Close on overlay click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+/**
+ * Add a manually created section to the page
+ * 
+ * @param {string} sectionType - 'lab' or 'lecture'
+ * @param {Array<number>} days - Array of day numbers (0=Mon, 6=Sun)
+ * @param {string} startTime - Start time (HH:MM format)
+ * @param {string} endTime - End time (HH:MM format)
+ * @param {string|null} location - Location (optional)
+ */
+function addManualSection(sectionType, days, startTime, endTime, location) {
+    const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
+    const sectionId = sectionType === 'lab' ? 'lab_section' : 'lecture_section';
+    const sectionContainer = document.querySelector(`#${sectionId}`)?.closest('.review-section-item');
+    
+    if (!sectionContainer) {
+        console.error(`Could not find ${sectionName} section container`);
+        return;
+    }
+    
+    // Day names for display
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayDisplay = days.map(d => dayNames[d]).join('/');
+    
+    // Format time for display (convert 24h to 12h)
+    const formatTime = (timeStr) => {
+        const [hours, minutes] = timeStr.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${ampm}`;
+    };
+    
+    // Create the select dropdown if it doesn't exist
+    let selectElement = document.getElementById(sectionId);
+    if (!selectElement) {
+        // Remove the "no data" message and button
+        const noDataMsg = sectionContainer.querySelector('.no-data');
+        const addButton = sectionContainer.querySelector(`#add-${sectionType}-section`);
+        const hiddenInput = sectionContainer.querySelector('input[type="hidden"]');
+        
+        if (noDataMsg) noDataMsg.remove();
+        if (addButton) addButton.remove();
+        if (hiddenInput) hiddenInput.remove();
+        
+        // Create form group and select
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+        formGroup.innerHTML = `
+            <label for="${sectionId}">Select your ${sectionName.toLowerCase()} section:</label>
+            <select name="${sectionId}" id="${sectionId}" class="form-control" ${sectionType === 'lecture' ? 'required' : ''}>
+                <option value="none">-- ${sectionType === 'lab' ? 'No Lab Section' : 'Select Lecture Section'} --</option>
+            </select>
+        `;
+        
+        // Insert before the section ends
+        sectionContainer.appendChild(formGroup);
+        selectElement = document.getElementById(sectionId);
+    }
+    
+    // Store manual sections in a hidden input for form submission
+    let manualSectionsInput = document.getElementById(`manual_${sectionType}_sections`);
+    if (!manualSectionsInput) {
+        manualSectionsInput = document.createElement('input');
+        manualSectionsInput.type = 'hidden';
+        manualSectionsInput.id = `manual_${sectionType}_sections`;
+        manualSectionsInput.name = `manual_${sectionType}_sections`;
+        sectionContainer.appendChild(manualSectionsInput);
+    }
+    
+    // Get existing manual sections
+    const manualSections = [];
+    const allOptions = selectElement.querySelectorAll('option[data-manual="true"]');
+    allOptions.forEach(opt => {
+        manualSections.push({
+            days: JSON.parse(opt.getAttribute('data-days')),
+            start_time: opt.getAttribute('data-start-time'),
+            end_time: opt.getAttribute('data-end-time'),
+            location: opt.getAttribute('data-location')
+        });
+    });
+    
+    // Add the new section
+    manualSections.push({
+        days: days,
+        start_time: startTime,
+        end_time: endTime,
+        location: location || ''
+    });
+    
+    // Update hidden input
+    manualSectionsInput.value = JSON.stringify(manualSections);
+    
+    // Add option to select - use index as value for proper matching
+    const option = document.createElement('option');
+    const manualIndex = manualSections.length - 1; // Index in the manual sections array
+    option.value = `manual_${manualIndex}`;
+    option.textContent = `${dayDisplay} ${formatTime(startTime)}-${formatTime(endTime)}${location ? ` (${location})` : ''}`;
+    option.setAttribute('data-days', JSON.stringify(days));
+    option.setAttribute('data-start-time', startTime);
+    option.setAttribute('data-end-time', endTime);
+    option.setAttribute('data-location', location || '');
+    option.setAttribute('data-manual', 'true');
+    option.setAttribute('data-manual-index', manualIndex);
+    
+    selectElement.appendChild(option);
+    
+    // Select the newly added option
+    option.selected = true;
 }
 

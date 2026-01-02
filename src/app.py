@@ -506,6 +506,56 @@ def review():
     
     if request.method == 'POST':
         # Process form submission
+        # Handle manual sections first (add them to extracted_data)
+        manual_lecture_sections = request.form.get('manual_lecture_sections')
+        manual_lab_sections = request.form.get('manual_lab_sections')
+        
+        if manual_lecture_sections:
+            try:
+                from .models import SectionOption
+                from datetime import time as dt_time
+                
+                sections_data = json.loads(manual_lecture_sections)
+                for section_data in sections_data:
+                    # Parse time strings to time objects
+                    start_hour, start_min = map(int, section_data['start_time'].split(':'))
+                    end_hour, end_min = map(int, section_data['end_time'].split(':'))
+                    
+                    section = SectionOption(
+                        section_type="Lecture",
+                        section_id="",  # Manual sections don't have IDs
+                        days_of_week=section_data['days'],
+                        start_time=dt_time(start_hour, start_min),
+                        end_time=dt_time(end_hour, end_min),
+                        location=section_data.get('location') or None
+                    )
+                    extracted_data.lecture_sections.append(section)
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                flash(f'Error parsing manual lecture sections: {str(e)}', 'warning')
+        
+        if manual_lab_sections:
+            try:
+                from .models import SectionOption
+                from datetime import time as dt_time
+                
+                sections_data = json.loads(manual_lab_sections)
+                for section_data in sections_data:
+                    # Parse time strings to time objects
+                    start_hour, start_min = map(int, section_data['start_time'].split(':'))
+                    end_hour, end_min = map(int, section_data['end_time'].split(':'))
+                    
+                    section = SectionOption(
+                        section_type="Lab",
+                        section_id="",  # Manual sections don't have IDs
+                        days_of_week=section_data['days'],
+                        start_time=dt_time(start_hour, start_min),
+                        end_time=dt_time(end_hour, end_min),
+                        location=section_data.get('location') or None
+                    )
+                    extracted_data.lab_sections.append(section)
+            except (json.JSONDecodeError, ValueError, KeyError) as e:
+                flash(f'Error parsing manual lab sections: {str(e)}', 'warning')
+        
         # Get selected sections
         lecture_idx = request.form.get('lecture_section')
         lab_idx = request.form.get('lab_section')
@@ -515,19 +565,47 @@ def review():
         # Set selected lecture section
         if lecture_idx and lecture_idx != 'none':
             try:
-                idx = int(lecture_idx)
-                if 0 <= idx < len(extracted_data.lecture_sections):
-                    user_selections.selected_lecture_section = extracted_data.lecture_sections[idx]
-            except (ValueError, IndexError):
+                # Check if it's a manual section (starts with "manual_")
+                if lecture_idx.startswith('manual_'):
+                    # Extract index from "manual_X"
+                    manual_idx = int(lecture_idx.split('_')[1])
+                    # Manual sections are added at the end, so we need to find them
+                    # Count how many manual sections we added
+                    manual_count = len(json.loads(manual_lecture_sections)) if manual_lecture_sections else 0
+                    # The manual sections are the last N sections in the list
+                    # Find the section at the correct position
+                    original_count = len(extracted_data.lecture_sections) - manual_count
+                    section_idx = original_count + manual_idx
+                    if 0 <= section_idx < len(extracted_data.lecture_sections):
+                        user_selections.selected_lecture_section = extracted_data.lecture_sections[section_idx]
+                else:
+                    idx = int(lecture_idx)
+                    if 0 <= idx < len(extracted_data.lecture_sections):
+                        user_selections.selected_lecture_section = extracted_data.lecture_sections[idx]
+            except (ValueError, IndexError, AttributeError):
                 pass
         
         # Set selected lab section
         if lab_idx and lab_idx != 'none':
             try:
-                idx = int(lab_idx)
-                if 0 <= idx < len(extracted_data.lab_sections):
-                    user_selections.selected_lab_section = extracted_data.lab_sections[idx]
-            except (ValueError, IndexError):
+                # Check if it's a manual section (starts with "manual_")
+                if lab_idx.startswith('manual_'):
+                    # Extract index from "manual_X"
+                    manual_idx = int(lab_idx.split('_')[1])
+                    # Manual sections are added at the end, so we need to find them
+                    # Count how many manual sections we added
+                    manual_count = len(json.loads(manual_lab_sections)) if manual_lab_sections else 0
+                    # The manual sections are the last N sections in the list
+                    # Find the section at the correct position
+                    original_count = len(extracted_data.lab_sections) - manual_count
+                    section_idx = original_count + manual_idx
+                    if 0 <= section_idx < len(extracted_data.lab_sections):
+                        user_selections.selected_lab_section = extracted_data.lab_sections[section_idx]
+                else:
+                    idx = int(lab_idx)
+                    if 0 <= idx < len(extracted_data.lab_sections):
+                        user_selections.selected_lab_section = extracted_data.lab_sections[idx]
+            except (ValueError, IndexError, AttributeError):
                 pass
         
         # Get lead time overrides from session
