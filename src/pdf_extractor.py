@@ -287,48 +287,118 @@ class PDFExtractor:
         """Extract assessment information from PDF.
         
         This function searches for the "Assessment and Evaluation" section and extracts
-        assessment information. It supports two formats:
-        - Table format: Structured tables with columns (Assessment, Format, Weight, Due Date, Flexibility)
-        - Text format: Numbered/bulleted lists in prose (fallback)
+        assessment information from the table. It handles various formats including:
+        - Table format with columns: Assessment, Format, Weight, Due Date, Flexibility
+        - Multiple due dates (e.g., PeerWise assignments)
+        - Date ranges (e.g., "December exam period")
+        - Relative dates (e.g., "24 hours after lab")
         
         Returns:
             List of AssessmentTask objects with extracted information
         """
         assessments = []
-        
-        # Get full text for fallback extraction
+        # Search entire PDF for assessments
         full_text = "\n".join([text for _, text in self.pages_text])
         
-        # First, try table-based extraction (more reliable for structured PDFs)
-        table_assessments = self._extract_assessments_from_table_structured()
-        if table_assessments and len(table_assessments) > 0:
-            # Validate that we got meaningful assessments (not just empty ones)
-            valid_assessments = [a for a in table_assessments if a.title and len(a.title.strip()) > 2]
-            if len(valid_assessments) > 0:
-                assessments.extend(valid_assessments)
-                # If we found valid assessments in table, return early (avoid duplicates)
-                return assessments
+        # First, try to extract from assessment table (more reliable)
+        table_assessments = self._extract_assessments_from_table(full_text)
+        if table_assessments:
+            assessments.extend(table_assessments)
+            # If we found assessments in table, skip pattern matching (avoid duplicates)
+            # But still check for relative rules
+            use_pattern_matching = False
+        else:
+            use_pattern_matching = True
         
-        # Fallback to text-based extraction (for PDFs without structured tables)
-        text_assessments = self._extract_assessments_from_table(full_text)
-        if text_assessments:
-            assessments.extend(text_assessments)
-        
-        # Also search for relative rules
-        if assessments:
-            relative_rules = self._extract_relative_rules(full_text)
-            for rule_text, anchor in relative_rules:
-                # Create assessment with rule
+        if use_pattern_matching:
+            # Fallback to pattern matching if table extraction didn't work
+            # Pattern for assessments with due dates
+            assessment_patterns = [
+                r'(Assignment|ASSIGNMENT|HW|Homework)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Quiz|QUIZ|Test)\s+(\d+)[^\n]*(?:due|Due|DUE|on|On)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Lab\s+Report|Laboratory\s+Report|Lab\s+Assignment)\s+(\d+)[^\n]*(?:due|Due|DUE)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Final\s+Exam|FINAL|Final\s+Examination)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+                r'(Midterm|MIDTERM|Mid-term)[^\n]*?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})',
+            ]
+            
+            for pattern in assessment_patterns:
+                matches = re.finditer(pattern, full_text, re.IGNORECASE)
+                for match in matches:
+                    groups = match.groups()
+                # Determine assessment type and title
+                if 'Quiz' in match.group(0):
+                    assessment_type = 'quiz'
+                    # Extract quiz number if available
+                    quiz_num = groups[1] if len(groups) > 1 and groups[1].isdigit() else (groups[2] if len(groups) > 2 and groups[2].isdigit() else '')
+                    title = f"Quiz {quiz_num}" if quiz_num else "Quiz"
+                elif 'Midterm' in match.group(0):
+                    assessment_type = 'midterm'
+                    title = "Midterm Exam"
+                elif 'Final' in match.group(0):
+                    assessment_type = 'final'
+                    title = "Final Exam"
+                elif 'Assignment' in match.group(0) or 'HW' in match.group(0):
+                    assessment_type = 'assignment'
+                    title = match.group(0)[:50]
+                else:
+                    assessment_type = 'other'
+                    title = match.group(0)[:50]
+                
+                # Try to extract due date - look for month and day in the match
+                due_date_str = None
+                # Check last groups for date info
+                for i in range(len(groups) - 1, -1, -1):
+                    if groups[i] and (groups[i].isdigit() or any(month in groups[i] for month in ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'])):
+                        # Try to construct date string
+                        if i > 0 and groups[i-1]:
+                            # Month name and day
+                            due_date_str = f"{groups[i-1]} {groups[i]}, 2025"
+                        elif groups[i].isdigit() and i > 0:
+                            # Look for month before this group
+                            context = match.group(0)[:match.start() + match.end()]
+                            month_match = re.search(r'(Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|September|October|November|December|January|February|March|April|May|June|July|August)', context, re.IGNORECASE)
+                            if month_match:
+                                due_date_str = f"{month_match.group(0)} {groups[i]}, 2025"
+                        break
+                
+                due_datetime = None
+                if due_date_str:
+                    parsed_date = dateparser.parse(due_date_str)
+                    if parsed_date:
+                        # Default to 11:59 PM if no time specified
+                        due_datetime = datetime.combine(
+                            parsed_date.date(),
+                            time(23, 59)
+                        )
+                
+                # Try to extract weight from surrounding text
+                weight = self._extract_weight(match.group(0))
+                
                 assessment = AssessmentTask(
-                    title=f"Assessment (rule: {rule_text[:30]})",
-                    type="other",
-                    due_rule=rule_text,
-                    rule_anchor=anchor,
-                    confidence=0.5,
-                    source_evidence=f"Relative rule: {rule_text}",
-                    needs_review=True
+                    title=title,
+                    type=assessment_type,
+                    weight_percent=weight,
+                    due_datetime=due_datetime,
+                    confidence=0.7 if due_datetime else 0.4,
+                    source_evidence=f"Found: {match.group(0)[:100]}",
+                    needs_review=(due_datetime is None or weight is None)
                 )
                 assessments.append(assessment)
+        
+        # Also search for relative rules
+        relative_rules = self._extract_relative_rules(full_text)
+        for rule_text, anchor in relative_rules:
+            # Create assessment with rule
+            assessment = AssessmentTask(
+                title=f"Assessment (rule: {rule_text[:30]})",
+                type="other",
+                due_rule=rule_text,
+                rule_anchor=anchor,
+                confidence=0.5,
+                source_evidence=f"Relative rule: {rule_text}",
+                needs_review=True
+            )
+            assessments.append(assessment)
         
         # Deduplicate: Remove assessments with same title but no date/weight if we have a better version
         # Normalize titles for comparison (remove "In Class", case-insensitive, extract core name)
@@ -458,23 +528,18 @@ class PDFExtractor:
         return course_code, course_name
     
     def _parse_days_of_week(self, days_str: str) -> List[int]:
-        """Parse day abbreviations from text like "MWF", "TTh", "M/W/F", or "Mon/Wed/Fri".
+        """Parse day abbreviations from text like "MWF" or "TTh".
         
         This function converts day abbreviations (like "MWF" for Monday/Wednesday/Friday)
         into a list of weekday numbers. The numbers follow Python's weekday convention:
         0 = Monday, 1 = Tuesday, 2 = Wednesday, 3 = Thursday, 4 = Friday, 5 = Saturday, 6 = Sunday.
         
-        Handles multiple formats:
-        - Slash-separated: "M/W/F", "T/Th", "Mon/Wed/Fri"
-        - Concatenated: "MWF", "TTh", "MTWThF"
-        - Full names: "Monday/Wednesday/Friday"
-        
         Args:
-            days_str: String containing day abbreviations (e.g., "MWF", "TTh", "Mon/Wed/Fri", "M/W/F")
+            days_str: String containing day abbreviations (e.g., "MWF", "TTh", "Mon/Wed/Fri")
         
         Returns:
             List of weekday numbers (0=Monday, 6=Sunday), sorted and with duplicates removed.
-            Example: "MWF" or "M/W/F" returns [0, 2, 4]
+            Example: "MWF" returns [0, 2, 4]
         """
         # Map of day abbreviations to weekday numbers
         # Python uses 0=Monday, 1=Tuesday, etc.
@@ -489,687 +554,39 @@ class PDFExtractor:
         }
         
         days = []
-        days_str = days_str.strip()
+        days_str_upper = days_str.upper()  # Convert to uppercase for case-insensitive matching
         
-        # Step 1: If contains "/", split by "/" and parse each part
-        if '/' in days_str:
-            parts = [part.strip() for part in days_str.split('/')]
-            for part in parts:
-                if not part:
-                    continue
-                # Try to match the part to a day
-                part_lower = part.lower()
-                # Check full names first (longest match)
-                matched = False
-                for day_name, day_num in sorted(day_map.items(), key=lambda x: -len(x[0])):
-                    if part_lower == day_name.lower() or part_lower.startswith(day_name.lower()):
-                        days.append(day_num)
-                        matched = True
-                        break
-                if not matched:
-                    # Try single character or abbreviation
-                    if len(part) == 1:
-                        # Single character: M, T, W, F, S
-                        if part.upper() in day_map:
-                            days.append(day_map[part.upper()])
-                    elif part.upper() in ['TH', 'THU']:
-                        days.append(3)  # Thursday
-                    elif part.upper() in day_map:
-                        days.append(day_map[part.upper()])
-        else:
-            # Step 2: Handle concatenated format (MWF, TTh, etc.)
-            # Need to handle "Th" as a special case (two characters for Thursday)
-            days_str_upper = days_str.upper()
-            i = 0
-            while i < len(days_str_upper):
-                # Check for full day names first (longest matches)
-                if days_str_upper[i:i+8] == 'THURSDAY':
-                    days.append(3)  # Thursday
-                    i += 8
-                elif days_str_upper[i:i+8] == 'WEDNESDAY':
-                    days.append(2)  # Wednesday
-                    i += 8
-                elif days_str_upper[i:i+7] == 'SATURDAY':
-                    days.append(5)  # Saturday
-                    i += 7
-                elif days_str_upper[i:i+6] == 'TUESDAY':
-                    days.append(1)  # Tuesday
-                    i += 6
-                elif days_str_upper[i:i+6] == 'MONDAY':
-                    days.append(0)  # Monday
-                    i += 6
-                elif days_str_upper[i:i+6] == 'FRIDAY':
-                    days.append(4)  # Friday
-                    i += 6
-                elif days_str_upper[i:i+6] == 'SUNDAY':
-                    days.append(6)  # Sunday
-                    i += 6
-                # Check for Thursday abbreviation (Th, TH, Thu, THU) - must come before single 'T'
-                elif i < len(days_str_upper) - 1 and days_str_upper[i:i+2] == 'TH':
-                    days.append(3)  # Thursday
-                    i += 2
-                    # Check if there's 'U' after (THU)
-                    if i < len(days_str_upper) and days_str_upper[i] == 'U':
-                        i += 1
-                else:
-                    # Single character match
-                    char = days_str_upper[i]
-                    if char in day_map:
-                        # Special handling: T could be Tuesday or part of Thursday
-                        if char == 'T':
-                            # Check if next char is 'H' (Thursday)
-                            if i + 1 < len(days_str_upper) and days_str_upper[i+1] == 'H':
-                                # This is Thursday - handle it here
-                                days.append(3)  # Thursday
-                                i += 2  # Skip both T and H
-                                # Check if there's 'U' after (THU)
-                                if i < len(days_str_upper) and days_str_upper[i] == 'U':
-                                    i += 1
-                            else:
-                                # Just Tuesday
-                                days.append(1)  # Tuesday
-                                i += 1
-                        else:
-                            days.append(day_map[char])
-                            i += 1
-                    else:
-                        i += 1  # Skip unknown character
+        # Handle common patterns found in course outlines
+        # Check for Monday (M) - but make sure it's not part of "MT" or "MW"
+        if 'M' in days_str_upper and days_str_upper.index('M') < len(days_str_upper) - 1:
+            # Make sure the next character isn't 'T' (which would be part of "MT" or "MW")
+            if days_str_upper[days_str_upper.index('M') + 1] != 'T':
+                days.append(0)  # Monday
+        
+        # Check for Tuesday (T) or Thursday (TH)
+        if 'T' in days_str_upper:
+            idx = days_str_upper.index('T')
+            # If next character is 'H', it's Thursday
+            if idx + 1 < len(days_str_upper) and days_str_upper[idx + 1] == 'H':
+                days.append(3)  # Thursday
+            else:
+                days.append(1)  # Tuesday
+        
+        # Check for Wednesday (W)
+        if 'W' in days_str_upper:
+            days.append(2)  # Wednesday
+        
+        # Check for Thursday (TH or THU) - in case it wasn't caught above
+        if 'TH' in days_str_upper or 'THU' in days_str_upper:
+            days.append(3)  # Thursday
+        
+        # Check for Friday (F)
+        if 'F' in days_str_upper:
+            days.append(4)  # Friday
         
         # Remove duplicates and sort the list
-        # This ensures we return a clean, sorted list like [0, 2, 4] for "MWF" or "M/W/F"
+        # This ensures we return a clean, sorted list like [0, 2, 4] for "MWF"
         return sorted(list(set(days)))
-    
-    def _extract_assessments_from_table_structured(self) -> List[AssessmentTask]:
-        """Extract assessments from structured tables using pdfplumber.
-        
-        This method uses pdfplumber's table extraction to get structured data,
-        which is more reliable than text parsing for table-based PDFs.
-        
-        Returns:
-            List of AssessmentTask objects extracted from tables
-        """
-        assessments = []
-        
-        with pdfplumber.open(self.pdf_path) as pdf:
-            # Find pages that might contain assessment tables
-            # Usually in the middle-to-end of the document
-            for page_num, page in enumerate(pdf.pages, 1):
-                tables = page.extract_tables()
-                
-                for table in tables:
-                    if not table or len(table) < 2:
-                        continue
-                    
-                    # Check if this is an assessment table
-                    if self._is_assessment_table(table):
-                        # Extract assessments from this table
-                        table_assessments = self._extract_from_table(table)
-                        if table_assessments:
-                            assessments.extend(table_assessments)
-                            # Found assessment table, can stop searching
-                            return assessments
-        
-        return assessments
-    
-    def _is_assessment_table(self, table: List[List]) -> bool:
-        """Check if a table is an assessment/evaluation table.
-        
-        Args:
-            table: List of rows, where each row is a list of cells
-            
-        Returns:
-            True if this appears to be an assessment table
-        """
-        if not table or len(table) < 2:
-            return False
-        
-        # Check header row
-        header_row = table[0]
-        header_text = ' '.join([str(cell) for cell in header_row if cell]).lower()
-        
-        # Must have "assessment" keyword (more specific than "evaluation")
-        has_assessment = 'assessment' in header_text
-        if not has_assessment:
-            return False
-        
-        # Must have weight/percentage indicator
-        has_weight = any(w in header_text for w in ['weight', 'weighting', '%', 'percent'])
-        
-        # Must have date/due indicator
-        has_date = any(d in header_text for d in ['due', 'date', 'deadline'])
-        
-        # Both weight AND date should be present for a valid assessment table
-        # This ensures we don't match other tables that happen to have "assessment" in them
-        if not (has_weight and has_date):
-            return False
-        
-        # Additional validation: Check if data rows contain assessment-like content
-        # Look at first few data rows for assessment keywords and percentages
-        assessment_keywords = ['quiz', 'midterm', 'final', 'assignment', 'exam', 'report', 'lab', 'peerwise']
-        keyword_count = 0
-        percentage_count = 0
-        
-        for row in table[1:min(6, len(table))]:  # Check first 5 data rows
-            row_text = ' '.join([str(cell) for cell in row if cell]).lower()
-            if any(kw in row_text for kw in assessment_keywords):
-                keyword_count += 1
-            # Check for percentage patterns
-            if re.search(r'\d+\.?\d*%', row_text):
-                percentage_count += 1
-        
-        # Must have at least one assessment keyword and one percentage in data rows
-        return keyword_count >= 1 and percentage_count >= 1
-    
-    def _extract_from_table(self, table: List[List]) -> List[AssessmentTask]:
-        """Extract assessments from a structured table.
-        
-        Args:
-            table: List of rows, where each row is a list of cells
-            
-        Returns:
-            List of AssessmentTask objects
-        """
-        if not table or len(table) < 2:
-            return []
-        
-        # Map columns
-        column_map = self._map_table_columns(table[0])
-        if not column_map:
-            return []
-        
-        assessments = []
-        current_assessment = None
-        
-        # Process data rows (skip header)
-        for row_idx, row in enumerate(table[1:], 1):
-            # Skip empty rows
-            if not row or not any(cell for cell in row if cell):
-                continue
-            
-            # Check if this is a summary row (Total, COURSE TOTAL, etc.)
-            if self._is_summary_row(row, column_map):
-                continue
-            
-            # Extract assessment name
-            name = self._extract_name_from_row(row, column_map)
-            
-            # Extract weight and date to check if this row has meaningful data
-            row_weight = self._extract_weight_from_row(row, column_map)
-            row_due_datetime = self._extract_date_from_row(row, column_map)
-            
-            # Check if this is a continuation row:
-            # 1. Empty name but has date in date column (e.g., "Due Nov 21st")
-            # 2. Empty name and empty weight but has date
-            # 3. Very short name (< 3 chars) with no weight and no date
-            # 4. Short name that looks like a fragment AND previous assessment name suggests continuation
-            is_continuation = False
-            
-            if not name or name.strip() == '':
-                # Empty name - check if it has date (likely continuation)
-                if row_due_datetime:
-                    is_continuation = True
-                # Or if it has no weight but previous assessment exists
-                elif row_weight is None and current_assessment:
-                    is_continuation = True
-            elif len(name.strip()) < 3:
-                # Very short name with no weight/date - likely continuation
-                if row_weight is None and not row_due_datetime:
-                    is_continuation = True
-            elif current_assessment:
-                # Check if this looks like a continuation based on previous assessment
-                prev_name = current_assessment.title.lower()
-                name_lower = name.lower().strip()
-                
-                # If name is just a single word and previous name ends with incomplete phrase
-                if ' ' not in name_lower or len(name_lower) < 15:
-                    # Check if previous name suggests continuation
-                    if any(prev_name.endswith(word) for word in ['short', 'intro', 'methods', 'results', 'assignment', 'long', 'rotation 1:', 'rotation 1: short']):
-                        # And this name is a common continuation word
-                        if name_lower in ['report', 'assignment', 'quiz', 'methods', 'results', 'intro', 'references']:
-                            # Also check: if current row has no weight and no date, it's likely continuation
-                            if row_weight is None and not row_due_datetime:
-                                is_continuation = True
-            
-            if is_continuation and current_assessment:
-                # Merge with previous assessment
-                current_assessment = self._merge_continuation_row(current_assessment, row, column_map)
-                # Update the last assessment in the list
-                if assessments:
-                    assessments[-1] = current_assessment
-                continue
-            
-            # Use the extracted weight and date for this row
-            weight = row_weight
-            due_datetime = row_due_datetime
-            
-            # Extract format (optional)
-            format_type = self._extract_format_from_row(row, column_map)
-            
-            # Classify assessment type
-            assessment_type = self._classify_assessment_type(name)
-            
-            # Determine confidence
-            confidence = 0.8
-            if weight is None and due_datetime is None:
-                confidence = 0.3
-            elif weight is None or due_datetime is None:
-                confidence = 0.6
-            
-            # Skip if name is empty or too short (likely not a real assessment)
-            if not name or len(name.strip()) < 2:
-                continue
-            
-            # Create assessment
-            assessment = AssessmentTask(
-                title=name.strip(),
-                type=assessment_type,
-                weight_percent=weight,
-                due_datetime=due_datetime,
-                confidence=confidence,
-                source_evidence=self._get_row_text(row, column_map),
-                needs_review=(weight is None or due_datetime is None)
-            )
-            
-            assessments.append(assessment)
-            current_assessment = assessment
-        
-        return assessments
-    
-    def _map_table_columns(self, header_row: List, sample_rows: List[List] = None) -> dict:
-        """Map table columns to their purpose.
-        
-        Handles both dense tables (all columns used) and sparse tables (columns with None/empty cells).
-        
-        Args:
-            header_row: First row of the table (header)
-            sample_rows: Optional sample data rows to help infer column positions in sparse tables
-            
-        Returns:
-            Dictionary mapping column purpose to index, e.g. {'name': 0, 'weight': 2, 'date': 3}
-        """
-        column_map = {}
-        
-        # First pass: map by header text
-        for idx, cell in enumerate(header_row):
-            if not cell:
-                continue
-            
-            cell_text = str(cell).lower().strip()
-            
-            # Assessment name column
-            if 'assessment' in cell_text and 'name' not in column_map:
-                column_map['name'] = idx
-            
-            # Weight column
-            if ('weight' in cell_text or 'weighting' in cell_text or '%' in cell_text) and 'weight' not in column_map:
-                column_map['weight'] = idx
-            
-            # Date column
-            if ('due' in cell_text or 'date' in cell_text or 'deadline' in cell_text) and 'date' not in column_map:
-                column_map['date'] = idx
-            
-            # Format column (optional)
-            if 'format' in cell_text and 'format' not in column_map:
-                column_map['format'] = idx
-        
-        # If we have name and at least weight or date, we're good
-        if 'name' in column_map and ('weight' in column_map or 'date' in column_map):
-            return column_map
-        
-        # Second pass: for sparse tables, try to infer column positions from data
-        # Look at sample rows to find where weight and date actually appear
-        if sample_rows and 'name' in column_map:
-            # Find weight column by looking for percentages
-            if 'weight' not in column_map:
-                for row in sample_rows:
-                    for idx, cell in enumerate(row):
-                        if cell and re.search(r'\d+\.?\d*%', str(cell)):
-                            column_map['weight'] = idx
-                            break
-                    if 'weight' in column_map:
-                        break
-            
-            # Find date column by looking for date patterns
-            if 'date' not in column_map:
-                for row in sample_rows:
-                    for idx, cell in enumerate(row):
-                        if cell:
-                            cell_text = str(cell).lower()
-                            # Look for date indicators
-                            if any(indicator in cell_text for indicator in ['oct', 'nov', 'dec', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'due', 'at 6:', 'at 11:', 'pm', 'am']):
-                                column_map['date'] = idx
-                                break
-                    if 'date' in column_map:
-                        break
-        
-        # Return mapping if we have name and at least one other column
-        if 'name' in column_map and ('weight' in column_map or 'date' in column_map):
-            return column_map
-        
-        return {}
-    
-    def _extract_name_from_row(self, row: List, column_map: dict) -> str:
-        """Extract assessment name from a table row.
-        
-        Args:
-            row: Table row (list of cells)
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Assessment name, or empty string if not found
-        """
-        if 'name' not in column_map:
-            return ''
-        
-        name_idx = column_map['name']
-        if name_idx >= len(row) or not row[name_idx]:
-            return ''
-        
-        name_cell = row[name_idx]
-        # Handle multi-line cell content (join with spaces)
-        if isinstance(name_cell, str):
-            name = ' '.join(name_cell.split('\n'))
-        else:
-            name = str(name_cell)
-        
-        return name.strip()
-    
-    def _extract_weight_from_row(self, row: List, column_map: dict) -> Optional[float]:
-        """Extract weight percentage from a table row.
-        
-        Args:
-            row: Table row (list of cells)
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Weight as float (percentage), or None if not found or completion-based
-        """
-        if 'weight' not in column_map:
-            return None
-        
-        weight_idx = column_map['weight']
-        if weight_idx >= len(row) or not row[weight_idx]:
-            return None
-        
-        weight_cell = row[weight_idx]
-        weight_text = str(weight_cell).strip() if weight_cell else ''
-        
-        # Check for completion-based assessments
-        if 'completion' in weight_text.lower() or weight_text.endswith('#'):
-            return None  # Mark for review
-        
-        # Extract percentage
-        match = re.search(r'(\d+\.?\d*)%', weight_text)
-        if match:
-            return float(match.group(1))
-        
-        return None
-    
-    def _extract_date_from_row(self, row: List, column_map: dict) -> Optional[datetime]:
-        """Extract due date from a table row.
-        
-        Args:
-            row: Table row (list of cells)
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Due date as datetime, or None if not found
-        """
-        if 'date' not in column_map:
-            return None
-        
-        date_idx = column_map['date']
-        if date_idx >= len(row) or not row[date_idx]:
-            return None
-        
-        date_cell = row[date_idx]
-        date_text = str(date_cell).strip() if date_cell else ''
-        
-        # Handle multi-line cell content
-        date_text = ' '.join(date_text.split('\n'))
-        
-        # Try to parse date using various patterns
-        return self._parse_date_from_text(date_text)
-    
-    def _extract_format_from_row(self, row: List, column_map: dict) -> Optional[str]:
-        """Extract format/type from a table row (optional).
-        
-        Args:
-            row: Table row (list of cells)
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Format string, or None if not found
-        """
-        if 'format' not in column_map:
-            return None
-        
-        format_idx = column_map['format']
-        if format_idx >= len(row) or not row[format_idx]:
-            return None
-        
-        format_cell = row[format_idx]
-        format_text = str(format_cell).strip() if format_cell else ''
-        
-        return format_text if format_text else None
-    
-    def _is_summary_row(self, row: List, column_map: dict) -> bool:
-        """Check if a row is a summary row (Total, COURSE TOTAL, etc.).
-        
-        Args:
-            row: Table row (list of cells)
-            column_map: Column mapping dictionary
-            
-        Returns:
-            True if this is a summary row
-        """
-        # Check name column
-        if 'name' in column_map:
-            name_idx = column_map['name']
-            if name_idx < len(row) and row[name_idx]:
-                name_text = str(row[name_idx]).lower().strip()
-                # Check for summary keywords
-                if any(keyword in name_text for keyword in ['total', 'course total', 'sum', 'subtotal']):
-                    return True
-        
-        # Check weight column for sum-like values
-        if 'weight' in column_map:
-            weight_idx = column_map['weight']
-            if weight_idx < len(row) and row[weight_idx]:
-                weight_text = str(row[weight_idx]).strip()
-                # If weight is a large round number (like 100%, 25.00%), might be a total
-                if re.match(r'^\d{2,3}(\.00)?%$', weight_text):
-                    # But only if name suggests it's a total
-                    if 'name' in column_map:
-                        name_idx = column_map['name']
-                        if name_idx < len(row) and row[name_idx]:
-                            name_text = str(row[name_idx]).lower().strip()
-                            if 'rotation' in name_text or 'total' in name_text or 'course' in name_text:
-                                return True
-        
-        return False
-    
-    def _merge_continuation_row(self, assessment: AssessmentTask, row: List, column_map: dict) -> AssessmentTask:
-        """Merge a continuation row into an existing assessment.
-        
-        Args:
-            assessment: Existing assessment to merge into
-            row: Continuation row
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Updated assessment with merged information
-        """
-        # Merge name if continuation row has name fragments
-        if 'name' in column_map:
-            name_idx = column_map['name']
-            if name_idx < len(row) and row[name_idx]:
-                continuation_name = str(row[name_idx]).strip()
-                if continuation_name and continuation_name.lower() not in assessment.title.lower():
-                    # Only add if it's not already in the title
-                    # Add space if title doesn't end with punctuation
-                    if not assessment.title.endswith((':', '-', '&')):
-                        assessment.title += " "
-                    assessment.title += continuation_name
-        
-        # Update weight if not already set (continuation rows usually don't have weight)
-        if assessment.weight_percent is None and 'weight' in column_map:
-            weight_idx = column_map['weight']
-            if weight_idx < len(row) and row[weight_idx]:
-                weight = self._extract_weight_from_row(row, column_map)
-                if weight is not None:
-                    assessment.weight_percent = weight
-        
-        # Update date - continuation rows often have the actual due date
-        # Prefer date from continuation row if it exists
-        if 'date' in column_map:
-            date_idx = column_map['date']
-            if date_idx < len(row) and row[date_idx]:
-                date_text = str(row[date_idx]).strip()
-                parsed_date = self._parse_date_from_text(date_text)
-                if parsed_date:
-                    # Use continuation row date if current date is None or if continuation date is more specific
-                    if not assessment.due_datetime or ('due' in date_text.lower() and 'opens' not in date_text.lower()):
-                        assessment.due_datetime = parsed_date
-        
-        # Update source evidence
-        row_text = self._get_row_text(row, column_map)
-        if row_text:
-            assessment.source_evidence = (assessment.source_evidence or '') + " " + row_text
-        
-        return assessment
-    
-    def _get_row_text(self, row: List, column_map: dict) -> str:
-        """Get all text from a row for source evidence.
-        
-        Args:
-            row: Table row
-            column_map: Column mapping dictionary
-            
-        Returns:
-            Combined text from all cells
-        """
-        texts = []
-        for cell in row:
-            if cell:
-                cell_text = str(cell).strip()
-                if cell_text:
-                    texts.append(cell_text)
-        return ' '.join(texts)
-    
-    def _parse_date_from_text(self, date_text: str) -> Optional[datetime]:
-        """Parse date from text using various patterns.
-        
-        Args:
-            date_text: Text containing date information
-            
-        Returns:
-            Parsed datetime, or None if not found
-        """
-        if not date_text or not date_text.strip():
-            return None
-        
-        # Clean up text - handle multi-line and common OCR errors
-        date_text = ' '.join(date_text.split('\n'))
-        date_text = date_text.replace('S ept', 'Sept').replace('S eptember', 'September')
-        
-        # Handle "Opens X... Due Y" format - use the Due date
-        opens_due_match = re.search(r'Opens\s+[^D]*Due\s+([^\.]+)', date_text, re.IGNORECASE)
-        if opens_due_match:
-            date_text = opens_due_match.group(1).strip()
-        
-        # Handle date ranges like "Dec 2nd/3rd" - use the later date
-        date_range_match = re.search(r'(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?\s*[/-]\s*(\d{1,2})(?:st|nd|rd|th)?', date_text, re.IGNORECASE)
-        if date_range_match:
-            month_str = date_range_match.group(1)
-            day1 = int(date_range_match.group(2))
-            day2 = int(date_range_match.group(3))
-            # Use the later day
-            day = max(day1, day2)
-            month = self._month_name_to_num(month_str)
-            if month:
-                year = 2025 if month >= 9 else 2026
-                return datetime(year, month, day, 23, 59)
-        
-        # Try dateparser first (handles many formats)
-        parsed = dateparser.parse(date_text, settings={'PREFER_DATES_FROM': 'future'})
-        if parsed:
-            # Extract time if present
-            time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM|am|pm)', date_text, re.IGNORECASE)
-            if time_match:
-                hour = int(time_match.group(1))
-                minute = int(time_match.group(2)) if time_match.group(2) else 0
-                if time_match.group(3).upper() == 'PM' and hour != 12:
-                    hour += 12
-                elif time_match.group(3).upper() == 'AM' and hour == 12:
-                    hour = 0
-                return datetime.combine(parsed.date(), time(hour, minute))
-            else:
-                # Default to end of day if no time specified
-                return datetime.combine(parsed.date(), time(23, 59))
-        
-        # Fallback to regex patterns
-        patterns = [
-            r'(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?',
-            r'(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?',
-            r'Due\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+)\s+(\d{1,2})',
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, date_text, re.IGNORECASE)
-            if match:
-                month_str = match.group(1)
-                day = int(match.group(2))
-                
-                # Determine year (default to 2025, adjust based on month)
-                year = 2025
-                if any(m in month_str.lower() for m in ['jan', 'feb', 'mar', 'apr']):
-                    year = 2026
-                
-                # Convert month name to number
-                month = self._month_name_to_num(month_str)
-                if month:
-                    # Extract time if present
-                    time_match = re.search(r'(\d{1,2})(?:[:–-](\d{2}))?\s*(AM|PM|am|pm)', date_text, re.IGNORECASE)
-                    if time_match:
-                        hour = int(time_match.group(1))
-                        minute = int(time_match.group(2)) if time_match.group(2) else 0
-                        if time_match.group(3).upper() == 'PM' and hour != 12:
-                            hour += 12
-                        elif time_match.group(3).upper() == 'AM' and hour == 12:
-                            hour = 0
-                        return datetime(year, month, day, hour, minute)
-                    else:
-                        return datetime(year, month, day, 23, 59)
-        
-        return None
-    
-    def _month_name_to_num(self, month_str: str) -> Optional[int]:
-        """Convert month name/abbreviation to number.
-        
-        Args:
-            month_str: Month name or abbreviation
-            
-        Returns:
-            Month number (1-12), or None if invalid
-        """
-        month_map = {
-            'jan': 1, 'january': 1,
-            'feb': 2, 'february': 2,
-            'mar': 3, 'march': 3,
-            'apr': 4, 'april': 4,
-            'may': 5,
-            'jun': 6, 'june': 6,
-            'jul': 7, 'july': 7,
-            'aug': 8, 'august': 8,
-            'sep': 9, 'sept': 9, 'september': 9,
-            'oct': 10, 'october': 10,
-            'nov': 11, 'november': 11,
-            'dec': 12, 'december': 12,
-        }
-        
-        month_lower = month_str.lower().rstrip('.')
-        return month_map.get(month_lower)
     
     def _extract_assessments_from_table(self, text: str) -> List[AssessmentTask]:
         """Extract assessments from the assessment table in the PDF.
@@ -1184,8 +601,6 @@ class PDFExtractor:
             List of AssessmentTask objects extracted from the table
         """
         assessments = []
-        # Initialize match variable to avoid UnboundLocalError
-        match = None
         
         # Find the assessment section - look for "Assessment and Evaluation" title
         # Try multiple patterns to find the section
@@ -1210,9 +625,9 @@ class PDFExtractor:
         if not section_text:
             # Fallback: search for any mention of assessment table
             assessment_mentions = re.finditer(r'Assessment[^\n]*(?:\n[^\n]*){0,200}', text, re.IGNORECASE)
-            for assessment_match in assessment_mentions:
-                if 'weight' in assessment_match.group(0).lower() or 'due' in assessment_match.group(0).lower():
-                    section_text = assessment_match.group(0)
+            for match in assessment_mentions:
+                if 'weight' in match.group(0).lower() or 'due' in match.group(0).lower():
+                    section_text = match.group(0)
                     break
         
         if not section_text:
