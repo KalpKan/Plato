@@ -48,6 +48,30 @@ MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
+# Custom Jinja2 filter for 12-hour time format
+@app.template_filter('time_12h')
+def time_12h_filter(time_obj):
+    """Convert time object to 12-hour format with AM/PM."""
+    if not time_obj:
+        return 'N/A'
+    if isinstance(time_obj, time):
+        hour = time_obj.hour
+        minute = time_obj.minute
+        ampm = 'AM' if hour < 12 else 'PM'
+        display_hour = hour % 12
+        if display_hour == 0:
+            display_hour = 12
+        return f"{display_hour}:{minute:02d} {ampm}"
+    elif isinstance(time_obj, datetime):
+        hour = time_obj.hour
+        minute = time_obj.minute
+        ampm = 'AM' if hour < 12 else 'PM'
+        display_hour = hour % 12
+        if display_hour == 0:
+            display_hour = 12
+        return f"{display_hour}:{minute:02d} {ampm}"
+    return str(time_obj)
+
 # Initialize cache manager (auto-selects SQLite or Supabase)
 cache_manager = get_cache_manager()
 

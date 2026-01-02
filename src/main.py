@@ -43,8 +43,17 @@ def prompt_section_selection(sections: list, section_type: str) -> Optional[Sect
             for d in section.days_of_week
         ])
         location_str = f" ({section.location})" if section.location else ""
+        # Format times in 12-hour format
+        def format_time_12h(t):
+            hour = t.hour
+            minute = t.minute
+            ampm = 'AM' if hour < 12 else 'PM'
+            display_hour = hour % 12
+            if display_hour == 0:
+                display_hour = 12
+            return f"{display_hour}:{minute:02d} {ampm}"
         print(f"  {i}. Section {section.section_id or 'N/A'}: {days_str} "
-              f"{section.start_time.strftime('%H:%M')}-{section.end_time.strftime('%H:%M')}"
+              f"{format_time_12h(section.start_time)}-{format_time_12h(section.end_time)}"
               f"{location_str}")
     
     while True:
@@ -144,24 +153,24 @@ def prompt_missing_section(section_type: str) -> Optional[SectionOption]:
         print("Could not parse days. Using Monday as default.")
         days_of_week = [0]
     
-    # Get time
+    # Get time (input is 24-hour format, but will be displayed in 12-hour format)
     while True:
-        time_str = input("Start time (HH:MM, 24-hour format): ").strip()
+        time_str = input("Start time (HH:MM, 24-hour format, e.g., 14:30 for 2:30 PM): ").strip()
         try:
             hour, minute = map(int, time_str.split(':'))
             start_time = time(hour, minute)
             break
         except ValueError:
-            print("Please enter time in HH:MM format")
+            print("Please enter time in HH:MM format (24-hour)")
     
     while True:
-        time_str = input("End time (HH:MM, 24-hour format): ").strip()
+        time_str = input("End time (HH:MM, 24-hour format, e.g., 16:00 for 4:00 PM): ").strip()
         try:
             hour, minute = map(int, time_str.split(':'))
             end_time = time(hour, minute)
             break
         except ValueError:
-            print("Please enter time in HH:MM format")
+            print("Please enter time in HH:MM format (24-hour)")
     
     location = input("Location (optional, press Enter to skip): ").strip() or None
     

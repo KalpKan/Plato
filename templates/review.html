@@ -105,7 +105,7 @@
                                 {% else %}
                                     N/A
                                 {% endif %}
-                                {{ section.start_time.strftime('%H:%M') }}-{{ section.end_time.strftime('%H:%M') }}
+                                {{ section.start_time|time_12h }}-{{ section.end_time|time_12h }}
                                 {% if section.location %} ({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
@@ -144,9 +144,9 @@
                                 {% else %}
                                     N/A
                                 {% endif %}
-                                {% if section.start_time %} {{ section.start_time.strftime('%H:%M') }}{% else %}N/A{% endif %}
+                                {% if section.start_time %}{{ section.start_time|time_12h }}{% else %}N/A{% endif %}
                                 -
-                                {% if section.end_time %}{{ section.end_time.strftime('%H:%M') }}{% else %}N/A{% endif %}
+                                {% if section.end_time %}{{ section.end_time|time_12h }}{% else %}N/A{% endif %}
                                 {% if section.location %} ({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
