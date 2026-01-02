@@ -1613,7 +1613,8 @@ footer .footer-disclaimer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    width: 100%;
 }
 
 .feature-icon {
@@ -1626,6 +1627,7 @@ footer .footer-disclaimer {
     background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 */
     border: 1px solid rgba(59, 130, 246, 0.2); /* blue-500/20 */
     margin-bottom: var(--spacing-md);
+    flex-shrink: 0;
 }
 
 .feature-icon i {
@@ -1637,25 +1639,22 @@ footer .footer-disclaimer {
 .feature-item h3 {
     font-size: var(--font-size-lg);
     font-weight: 500;
-    margin-bottom: var(--spacing-sm);
+    margin: 0 0 var(--spacing-sm) 0;
+    padding: 0;
     color: var(--color-text-primary);
     text-align: center;
     width: 100%;
-    max-width: 100%;
-    padding: 0;
-    margin-left: 0;
-    margin-right: 0;
+    box-sizing: border-box;
 }
 
 .feature-item p {
     color: #a1a1aa; /* zinc-400 */
     font-size: var(--font-size-base);
     text-align: center;
-    width: 100%;
-    max-width: 100%;
+    margin: 0;
     padding: 0;
-    margin-left: 0;
-    margin-right: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Upload Section */
