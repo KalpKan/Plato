@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Course Outline to iCalendar Converter{% endblock %}</title>
+    <title>{% block title %}Plato{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -12,10 +12,10 @@
         <header>
             <a href="{{ url_for('index') }}" class="header-link">
                 <div class="header-content">
-                    <i data-lucide="calendar" class="header-icon"></i>
+                    <i data-lucide="calendar-check" class="header-icon"></i>
                     <div class="header-text">
-                        <h1>Course Outline Converter</h1>
-                        <p class="subtitle">Transform Western University course outlines into calendar files</p>
+                        <h1>Plato</h1>
+                        <p class="subtitle">Course outline to calendar</p>
                     </div>
                 </div>
             </a>
@@ -38,7 +38,7 @@
         </main>
 
         <footer>
-            <p>Built for Western University</p>
+            <p>Western University</p>
         </footer>
     </div>
 

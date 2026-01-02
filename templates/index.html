@@ -1,66 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Upload PDF - Course Outline Converter{% endblock %}
+{% block title %}Plato - Upload{% endblock %}
 
 {% block content %}
 <div class="upload-section">
-    <h2>Upload Course Outline PDF</h2>
-    <p>Select a Western University course outline PDF to convert to an iCalendar file.</p>
+    <h2>Upload Course Outline</h2>
+    <p>Upload your Western University course outline to generate a calendar file with all your deadlines.</p>
 
     <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="upload-form">
         <div class="form-group">
             <label for="pdf_file" class="file-input-label">
                 <div class="file-input-wrapper">
-                    <i data-lucide="upload"></i>
-                    <span class="file-input-text">Choose PDF File</span>
+                    <i data-lucide="file-up"></i>
+                    <span class="file-input-text">Select PDF</span>
                     <span class="file-input-name" id="file-name">No file selected</span>
                 </div>
                 <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required class="file-input-hidden">
             </label>
-            <small>Maximum file size: 16MB</small>
         </div>
 
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="force_refresh" id="force_refresh">
-                Force refresh (re-extract even if cached)
-            </label>
-            <small>Check this to re-extract the PDF even if it was previously processed</small>
-        </div>
+        <input type="hidden" name="force_refresh" value="">
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
-                <i data-lucide="upload"></i>
-                Upload and Extract
+                <i data-lucide="arrow-right"></i>
+                Continue
             </button>
-            <a href="{{ url_for('manual') }}" class="btn btn-secondary">
-                <i data-lucide="edit"></i>
-                Manual Mode
-            </a>
         </div>
     </form>
 
     <div class="info-box">
         <h3>
             <i data-lucide="info"></i>
-            What happens next?
+            How it works
         </h3>
         <ol>
-            <li>The system will extract course information from your PDF</li>
-            <li>You'll review and confirm the extracted data</li>
-            <li>Select your lecture and lab sections (if multiple exist)</li>
-            <li>Review and edit any assessments that need attention</li>
-            <li>Download your .ics calendar file</li>
+            <li>Upload your course outline PDF</li>
+            <li>Review the extracted assessments and schedule</li>
+            <li>Download your calendar file (.ics)</li>
+            <li>Import into Google Calendar, Apple Calendar, or Outlook</li>
         </ol>
-    </div>
-
-    <div class="info-box">
-        <h3>
-            <i data-lucide="book-open"></i>
-            Reference Document
-        </h3>
-        <p>This application is designed to work with Western University course outlines.</p>
-        <p>For development and testing, refer to: <code>BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf</code></p>
     </div>
 </div>
 {% endblock %}

@@ -1,88 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Review Extraction - Course Outline Converter{% endblock %}
+{% block title %}Plato - Review{% endblock %}
 
 {% block content %}
 <div class="review-section">
     <h2>Review Extracted Data</h2>
     <p>Please review the extracted information and make any necessary corrections.</p>
 
-    <!-- Extraction Completeness Section -->
+    <!-- Summary Section -->
     {% if completeness %}
-    <section class="review-section-item completeness-section">
-        <h3>
-            <i data-lucide="check-circle"></i>
-            Extraction Completeness
-        </h3>
-        <div class="completeness-grid">
-            <div class="completeness-item">
-                <label>Overall Completeness:</label>
-                <span class="value completeness-{{ 'high' if completeness.overall_completeness >= 80 else 'medium' if completeness.overall_completeness >= 50 else 'low' }}">
-                    {{ "%.1f"|format(completeness.overall_completeness) }}%
-                </span>
+    <section class="review-section-item summary-section">
+        <div class="summary-stats">
+            <div class="stat-item">
+                <span class="stat-value">{{ completeness.num_assessments }}</span>
+                <span class="stat-label">Assessments</span>
             </div>
-            <div class="completeness-item">
-                <label>Assessment Data Quality:</label>
-                <span class="value completeness-{{ 'high' if completeness.assessment_completeness >= 80 else 'medium' if completeness.assessment_completeness >= 50 else 'low' }}">
-                    {{ "%.1f"|format(completeness.assessment_completeness) }}%
-                </span>
-                <small>(Quality of extracted assessments)</small>
+            <div class="stat-item">
+                <span class="stat-value completeness-{{ 'high' if completeness.total_weight >= 95 else 'medium' if completeness.total_weight >= 70 else 'low' }}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
+                <span class="stat-label">Weight Found</span>
             </div>
-            <div class="completeness-item">
-                <label>Weight Coverage:</label>
-                <span class="value completeness-{{ 'high' if completeness.weight_coverage_percent >= 90 else 'medium' if completeness.weight_coverage_percent >= 70 else 'low' }}">
-                    {{ "%.1f"|format(completeness.weight_coverage_percent) }}%
-                </span>
-                <small>(Of expected 100% weight)</small>
+            <div class="stat-item">
+                <span class="stat-value">{{ completeness.num_lecture_sections }}</span>
+                <span class="stat-label">Lectures</span>
             </div>
-        </div>
-        
-        <div class="completeness-details">
-            <h4>Extracted Information:</h4>
-            <ul>
-                <li class="{{ 'found' if completeness.course_code_found else 'missing' }}">
-                    Course Code: {{ 'Found' if completeness.course_code_found else 'Missing' }}
-                </li>
-                <li class="{{ 'found' if completeness.course_name_found else 'missing' }}">
-                    Course Name: {{ 'Found' if completeness.course_name_found else 'Missing' }}
-                </li>
-                <li class="{{ 'found' if completeness.term_found else 'missing' }}">
-                    Term: {{ 'Found' if completeness.term_found else 'Missing' }}
-                </li>
-                <li class="{{ 'found' if completeness.lecture_sections_found else 'missing' }}">
-                    Lecture Sections: {{ completeness.num_lecture_sections }} found
-                </li>
-                <li class="{{ 'found' if completeness.lab_sections_found else 'missing' }}">
-                    Lab Sections: {{ completeness.num_lab_sections }} found
-                </li>
-                <li class="{{ 'found' if completeness.num_assessments > 0 else 'missing' }}">
-                    Assessments: {{ completeness.num_assessments }} found
-                </li>
-            </ul>
-            
-            <h4>Assessment Details:</h4>
-            <ul>
-                <li>Total Assessments: {{ completeness.num_assessments }}</li>
-                <li>With Weight: {{ completeness.assessments_with_weight }}</li>
-                <li>With Due Date: {{ completeness.assessments_with_date }}</li>
-                <li>Complete (Weight + Date): {{ completeness.assessments_complete }}</li>
-                <li>
-                    Total Weight: 
-                    <strong>{{ "%.1f"|format(completeness.total_weight) }}%</strong>
-                    {% if completeness.has_extra_credit %}
-                        <span class="extra-credit-badge">(Includes Extra Credit)</span>
-                    {% elif completeness.total_weight < 100.0 and completeness.total_weight > 0 %}
-                        <span class="warning-badge">(Missing {{ "%.1f"|format(completeness.weight_missing_percent) }}% - assessments may not be extracted)</span>
-                    {% elif completeness.total_weight == 100.0 %}
-                        <span class="success-badge">(Complete)</span>
-                    {% endif %}
-                </li>
-                {% if completeness.total_weight_without_dates > 0 %}
-                <li class="missing">
-                    Weight Missing Dates: {{ "%.1f"|format(completeness.total_weight_without_dates) }}%
-                </li>
-                {% endif %}
-            </ul>
+            <div class="stat-item">
+                <span class="stat-value">{{ completeness.num_lab_sections }}</span>
+                <span class="stat-label">Labs</span>
+            </div>
         </div>
     </section>
     {% endif %}
@@ -245,13 +189,13 @@
                                 </button>
                             </div>
                             <div class="assessment-details">
-                                <span>Type: {{ assessment.type }}</span>
                                 <span class="editable-field assessment-weight {% if not assessment.weight_percent %}missing-field{% endif %}" 
                                       data-field-type="assessment_weight" 
                                       data-assessment-index="{{ loop.index0 }}"
                                       data-current-value="{{ assessment.weight_percent or '' }}"
                                       title="Click to edit weight (%)">
-                                    Weight: {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Not set{% endif %}
+                                    <i data-lucide="percent"></i>
+                                    {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}No weight{% endif %}
                                 </span>
                                 {% if assessment.due_datetime %}
                                     <span class="editable-field assessment-due-date" 
@@ -259,39 +203,29 @@
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
                                           title="Click to edit due date">
-                                        Due: {{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') }}
+                                        <i data-lucide="calendar"></i>
+                                        {{ assessment.due_datetime.strftime('%b %d, %Y') }}
                                     </span>
                                 {% elif assessment.due_rule %}
                                     <span class="editable-field assessment-due-date missing-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
-                                          title="Click to add due date (YYYY-MM-DD HH:MM)">
-                                        Due: {{ assessment.due_rule }} <em>(click to set date)</em>
+                                          title="Click to add due date">
+                                        <i data-lucide="calendar"></i>
+                                        {{ assessment.due_rule[:30] }}
                                     </span>
                                 {% else %}
                                     <span class="editable-field assessment-due-date missing-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
-                                          title="Click to add due date (YYYY-MM-DD HH:MM)">
-                                        Due date not found <em>(click to add)</em>
+                                          title="Click to add due date">
+                                        <i data-lucide="calendar"></i>
+                                        Add date
                                     </span>
                                 {% endif %}
-                                <span>Confidence: {{ (assessment.confidence * 100)|int }}%</span>
-                                <span class="editable-field assessment-lead-time" 
-                                      data-field-type="assessment_lead_time" 
-                                      data-assessment-index="{{ loop.index0 }}"
-                                      data-current-value="{{ assessment.lead_time_days or '' }}"
-                                      title="Click to edit lead time (days)">
-                                    Lead Time: {% if assessment.lead_time_days is not none %}{{ assessment.lead_time_days }} days{% else %}Not set{% endif %}
-                                </span>
                             </div>
-                            {% if assessment.source_evidence %}
-                                <div class="assessment-source">
-                                    <small>Source: {{ assessment.source_evidence[:100] }}</small>
-                                </div>
-                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
@@ -300,55 +234,53 @@
             {% endif %}
         </section>
 
-        <!-- Lead Time Mapping -->
-        <section class="review-section-item">
-            <h3>
+        <!-- Lead Time Mapping - Collapsible -->
+        <details class="review-section-item">
+            <summary class="lead-time-summary">
                 <i data-lucide="clock"></i>
-                Study Plan Lead Times
-            </h3>
-            <p>The system will create "start studying" reminders based on assessment weights:</p>
-            <div class="lead-time-mapping">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Assessment Weight</th>
-                            <th>Lead Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for range, days in lead_time_mapping.items() %}
+                <span>Study Reminders</span>
+                <i data-lucide="chevron-down" class="chevron"></i>
+            </summary>
+            <div class="lead-time-content">
+                <p>Reminders will be created based on assessment weight:</p>
+                <div class="lead-time-mapping">
+                    <table>
+                        <thead>
                             <tr>
-                                <td>{{ range }}</td>
-                                <td>
-                                    <span class="editable-field lead-time-value" 
-                                          data-field-type="lead_time_mapping" 
-                                          data-weight-range="{{ range }}"
-                                          data-current-value="{{ days }}"
-                                          title="Click to edit lead time (days)">
-                                        {{ days }} days before due
-                                    </span>
-                                </td>
+                                <th>Weight</th>
+                                <th>Reminder</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% for range, days in lead_time_mapping.items() %}
+                                <tr>
+                                    <td>{{ range }}</td>
+                                    <td>
+                                        <span class="editable-field lead-time-value" 
+                                              data-field-type="lead_time_mapping" 
+                                              data-weight-range="{{ range }}"
+                                              data-current-value="{{ days }}"
+                                              title="Click to edit">
+                                            {{ days }} days before
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <p class="info-text">This mapping will be used for all assessments. You can override individual assessments if needed.</p>
-        </section>
+        </details>
 
         <!-- Form Actions -->
         <div class="form-actions">
             <button type="submit" class="btn btn-primary" id="generate-calendar-btn">
                 <i data-lucide="download"></i>
-                Generate Calendar
+                Download Calendar
             </button>
             <a href="{{ url_for('index') }}" class="btn btn-secondary">
-                <i data-lucide="refresh-cw"></i>
-                Start Over
-            </a>
-            <a href="{{ url_for('manual') }}" class="btn btn-secondary">
-                <i data-lucide="edit"></i>
-                Switch to Manual Mode
+                <i data-lucide="arrow-left"></i>
+                Back
             </a>
         </div>
     </form>
