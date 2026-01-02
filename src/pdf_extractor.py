@@ -1489,24 +1489,50 @@ class PDFExtractor:
                 '% worth' in cell_text or 'worth' in cell_text) and 'weight' not in column_map:
                 column_map['weight'] = idx
             
-            # Date column - multiple formats
-            # Some formats use "Assigned" for assignment date and "Due Date" for due date
-            # We'll prioritize "Due Date" but also accept "Assigned" if no due date found
-            # First pass: look for "Due Date" specifically
-            if 'due date' in cell_text and 'date' not in column_map:
-                column_map['date'] = idx
-            elif ('due' in cell_text and 'date' in cell_text) and 'date' not in column_map:
-                column_map['date'] = idx
-            # Second pass: look for other date indicators
-            elif ('date' in cell_text or 'deadline' in cell_text) and 'date' not in column_map:
-                column_map['date'] = idx
-            # Last resort: use "Assigned" if no explicit date column found
-            elif 'assigned' in cell_text and 'date' not in column_map:
-                column_map['date'] = idx
-            
             # Format column (optional)
             if 'format' in cell_text and 'format' not in column_map:
                 column_map['format'] = idx
+        
+        # Multi-pass date column mapping to prioritize "Due Date" over "Assigned"
+        # Pass 1: Look specifically for "Due Date" (highest priority)
+        if 'date' not in column_map:
+            for idx, cell in enumerate(header_row):
+                if not cell:
+                    continue
+                cell_text = str(cell).lower().strip()
+                if 'due date' in cell_text:
+                    column_map['date'] = idx
+                    break
+        
+        # Pass 2: Look for other "due...date" patterns
+        if 'date' not in column_map:
+            for idx, cell in enumerate(header_row):
+                if not cell:
+                    continue
+                cell_text = str(cell).lower().strip()
+                if 'due' in cell_text and 'date' in cell_text:
+                    column_map['date'] = idx
+                    break
+        
+        # Pass 3: Look for generic date/deadline
+        if 'date' not in column_map:
+            for idx, cell in enumerate(header_row):
+                if not cell:
+                    continue
+                cell_text = str(cell).lower().strip()
+                if 'date' in cell_text or 'deadline' in cell_text:
+                    column_map['date'] = idx
+                    break
+        
+        # Pass 4: Last resort - use "Assigned" if no explicit date column found
+        if 'date' not in column_map:
+            for idx, cell in enumerate(header_row):
+                if not cell:
+                    continue
+                cell_text = str(cell).lower().strip()
+                if 'assigned' in cell_text:
+                    column_map['date'] = idx
+                    break
         
         # If we have name and at least weight or date, we're good
         if 'name' in column_map and ('weight' in column_map or 'date' in column_map):
