@@ -410,6 +410,31 @@ class PDFExtractor:
             )
             assessments.append(assessment)
         
+        # Filter out unwanted assessments (e.g., those starting with "#" or other patterns)
+        filtered_assessments = []
+        excluded_patterns = [
+            r'^#',  # Assessments starting with #
+            r'^completion#?$',  # Just "Completion" or "Completion#"
+            r'^#completion',  # "#Completion"
+        ]
+        
+        for assessment in assessments:
+            should_exclude = False
+            title_lower = assessment.title.lower().strip()
+            
+            # Check against exclusion patterns
+            for pattern in excluded_patterns:
+                if re.match(pattern, title_lower, re.IGNORECASE):
+                    should_exclude = True
+                    break
+            
+            # Also exclude if title is just "#" or very short with special characters
+            if len(title_lower) <= 2 and '#' in title_lower:
+                should_exclude = True
+            
+            if not should_exclude:
+                filtered_assessments.append(assessment)
+        
         # Deduplicate: Remove assessments with same title but no date/weight if we have a better version
         # Normalize titles for comparison (remove "In Class", case-insensitive, extract core name)
         def normalize_title(title):
@@ -431,7 +456,7 @@ class PDFExtractor:
         
         seen_titles = {}
         deduplicated = []
-        for assessment in assessments:
+        for assessment in filtered_assessments:
             title_normalized = normalize_title(assessment.title)
             # Check if we already have a better version (with date and weight)
             if title_normalized in seen_titles:
@@ -1260,15 +1285,28 @@ class PDFExtractor:
                 prev_name = current_assessment.title.lower()
                 name_lower = name.lower().strip()
                 
-                # If name is just a single word and previous name ends with incomplete phrase
-                if ' ' not in name_lower or len(name_lower) < 15:
-                    # Check if previous name suggests continuation
-                    if any(prev_name.endswith(word) for word in ['short', 'intro', 'methods', 'results', 'assignment', 'long', 'rotation 1:', 'rotation 1: short']):
-                        # And this name is a common continuation word
-                        if name_lower in ['report', 'assignment', 'quiz', 'methods', 'results', 'intro', 'references']:
+                # If name is just a single word or short phrase and previous name exists
+                # Check if it looks like a continuation of the previous assessment name
+                if len(name_lower) < 20:  # Short name might be continuation
+                    # Check if previous name suggests continuation (ends with incomplete phrase)
+                    if any(prev_name.endswith(word) for word in ['short', 'intro', 'methods', 'results', 'assignment', 'long', 'rotation 1:', 'rotation 1: short', 'time']):
+                        # And this name is a common continuation word or phrase
+                        if name_lower in ['report', 'assignment', 'quiz', 'methods', 'results', 'intro', 'references', 'in lab', 'in person']:
                             # Also check: if current row has no weight and no date, it's likely continuation
                             if row_weight is None and not row_due_datetime:
                                 is_continuation = True
+                    
+                    # Special case: if previous name is "Practicum Time" and this is "in lab", merge them
+                    if prev_name.strip() == 'practicum time' and name_lower == 'in lab':
+                        is_continuation = True
+                    
+                    # If previous assessment has no weight and no date, and this row also has no weight,
+                    # it might be a continuation (especially if name is short)
+                    if (current_assessment.weight_percent is None and 
+                        current_assessment.due_datetime is None and
+                        row_weight is None and not row_due_datetime and
+                        len(name_lower) < 10):
+                        is_continuation = True
             
             if is_continuation and current_assessment:
                 # Merge with previous assessment
