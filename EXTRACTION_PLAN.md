@@ -117,7 +117,9 @@ For each assessment, extract:
 
 ### 2.3 Lecture/Lab Section Extraction
 
-**Current Issue**: Only extracting first day (Monday) instead of all days (M/W/F)
+**Status**: ✅ FIXED - Now correctly parses all day formats (M/W/F, MWF, Mon/Wed/Fri, etc.)
+
+**Previous Issue**: Only extracting first day (Monday) instead of all days (M/W/F)
 
 **Patterns to handle:**
 1. **Slash-separated**: "M/W/F", "T/Th", "Mon/Wed/Fri"
@@ -155,7 +157,9 @@ Output: [0, 2, 4] (Monday=0, Wednesday=2, Friday=4)
 
 ### 2.4 Assessment Extraction
 
-**Current Issue**: Not extracting assessments at all
+**Status**: ✅ IMPLEMENTED - Comprehensive extraction for both table-based and text-based formats
+
+**Previous Issue**: Not extracting assessments at all
 
 **Assessment Table Structure:**
 Both PDFs have a table with columns:
@@ -382,10 +386,10 @@ Example: `PHYS3140A_Fall2025_Lec001_LabNone_3fa21c9b.ics`
 ## 5. Implementation Priorities
 
 ### Phase 1: Critical Fixes (Current Issues)
-1. **Fix lecture day extraction**: Parse "M/W/F" correctly to get all days
-2. **Extract assessments**: Implement table parsing for assessment section
-3. **Extract assessment weights**: Parse percentage values
-4. **Extract assessment dates**: Handle multiple date formats
+1. ✅ **Fix lecture day extraction**: Parse "M/W/F" correctly to get all days - COMPLETED
+2. ✅ **Extract assessments**: Implement table parsing for assessment section - COMPLETED
+3. ✅ **Extract assessment weights**: Parse percentage values - COMPLETED
+4. ✅ **Extract assessment dates**: Handle multiple date formats - COMPLETED
 
 ### Phase 2: Enhanced Extraction
 1. **Improve course code extraction**: Handle department name variations
@@ -446,4 +450,3 @@ Example: `PHYS3140A_Fall2025_Lec001_LabNone_3fa21c9b.ics`
 - Provide clear error messages
 
 This plan provides a comprehensive roadmap for extracting, understanding, and converting course outline information into a useful calendar with study plans.
-
