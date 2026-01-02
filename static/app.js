@@ -1051,8 +1051,6 @@ function showAddAssessmentModal() {
         const form = document.getElementById('add-assessment-form');
         if (form) {
             form.reset();
-            // Set default values
-            document.getElementById('assessment-confidence').value = '0.8';
         }
     }
 }
@@ -1069,14 +1067,14 @@ function addAssessment() {
         due_datetime: formData.get('due_datetime') || null,
         due_rule: formData.get('due_rule') || null,
         rule_anchor: formData.get('rule_anchor') || null,
-        confidence: parseFloat(formData.get('confidence')) || 0.8,
-        source_evidence: formData.get('source_evidence') || 'Manual entry',
+        confidence: 0.8,  // Default confidence for manually added assessments
+        source_evidence: 'Manual entry',  // Default source for manually added assessments
         needs_review: formData.has('needs_review')
     };
     
-    // Remove null/empty values
+    // Remove null/empty values (but keep confidence and source_evidence)
     Object.keys(data).forEach(key => {
-        if (data[key] === null || data[key] === '') {
+        if (key !== 'confidence' && key !== 'source_evidence' && (data[key] === null || data[key] === '')) {
             delete data[key];
         }
     });
