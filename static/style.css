@@ -1296,15 +1296,14 @@ footer .footer-disclaimer {
     padding: 0;
 }
 
-.landing-page header {
+/* Hide header and footer on landing page */
+.landing-page-body header,
+.landing-page-container header {
     display: none !important;
 }
 
-.landing-page footer {
-    display: none !important;
-}
-
-.landing-page .container > header {
+.landing-page-body footer,
+.landing-page-container footer {
     display: none !important;
 }
 
@@ -1642,8 +1641,10 @@ footer .footer-disclaimer {
     color: var(--color-text-primary);
     text-align: center;
     width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 100%;
+    padding: 0;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .feature-item p {
@@ -1651,8 +1652,10 @@ footer .footer-disclaimer {
     font-size: var(--font-size-base);
     text-align: center;
     width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 100%;
+    padding: 0;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* Upload Section */
