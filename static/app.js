@@ -844,7 +844,24 @@ function showManualSectionForm(sectionType) {
 function addManualSection(sectionType, days, startTime, endTime, location) {
     const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
     const sectionId = sectionType === 'lab' ? 'lab_section' : 'lecture_section';
-    const sectionContainer = document.querySelector(`#${sectionId}`)?.closest('.review-section-item');
+    
+    // Find the section container - look for the h3 with the section name
+    const sectionHeaders = document.querySelectorAll('.review-section-item h3');
+    let sectionContainer = null;
+    for (const header of sectionHeaders) {
+        if (header.textContent.trim() === `${sectionName} Section`) {
+            sectionContainer = header.closest('.review-section-item');
+            break;
+        }
+    }
+    
+    // Fallback: find by button ID
+    if (!sectionContainer) {
+        const addButton = document.getElementById(`add-${sectionType}-section`);
+        if (addButton) {
+            sectionContainer = addButton.closest('.review-section-item');
+        }
+    }
     
     if (!sectionContainer) {
         console.error(`Could not find ${sectionName} section container`);
@@ -870,11 +887,17 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
         // Remove the "no data" message and button
         const noDataMsg = sectionContainer.querySelector('.no-data');
         const addButton = sectionContainer.querySelector(`#add-${sectionType}-section`);
-        const hiddenInput = sectionContainer.querySelector('input[type="hidden"]');
+        const hiddenInput = sectionContainer.querySelector('input[type="hidden"][name="' + sectionId + '"]');
         
-        if (noDataMsg) noDataMsg.remove();
-        if (addButton) addButton.remove();
-        if (hiddenInput) hiddenInput.remove();
+        if (noDataMsg) {
+            noDataMsg.remove();
+        }
+        if (addButton) {
+            addButton.remove();
+        }
+        if (hiddenInput) {
+            hiddenInput.remove();
+        }
         
         // Create form group and select
         const formGroup = document.createElement('div');
@@ -886,9 +909,31 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
             </select>
         `;
         
-        // Insert before the section ends
-        sectionContainer.appendChild(formGroup);
+        // Find the h3 header to insert after it
+        const header = sectionContainer.querySelector('h3');
+        if (header && header.nextSibling) {
+            // Insert after the header, before any existing content
+            sectionContainer.insertBefore(formGroup, header.nextSibling);
+        } else {
+            // Fallback: append to container
+            sectionContainer.appendChild(formGroup);
+        }
+        
         selectElement = document.getElementById(sectionId);
+        
+        // Also add the button back (so user can add more sections)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.marginTop = '10px';
+        const addMoreButton = document.createElement('button');
+        addMoreButton.type = 'button';
+        addMoreButton.className = 'btn btn-secondary';
+        addMoreButton.id = `add-${sectionType}-section`;
+        addMoreButton.textContent = `+ Add Another ${sectionName} Section`;
+        addMoreButton.addEventListener('click', function() {
+            showManualSectionForm(sectionType);
+        });
+        buttonContainer.appendChild(addMoreButton);
+        sectionContainer.appendChild(buttonContainer);
     }
     
     // Store manual sections in a hidden input for form submission
