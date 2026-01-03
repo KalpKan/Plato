@@ -815,19 +815,30 @@ class PDFExtractor:
             'peerwise', 'pcb', 'bonus'
         ]
         
-        # Look for lines with percentages
+        # Look for lines with percentages or standalone numbers (in % of total grade context)
         for line in lines[:60]:
             if len(line.strip()) < 5 or len(line.strip()) > 200:
                 continue
             
-            # Check for percentage pattern
+            # Check for percentage pattern (with or without % sign)
             weight_match = re.search(r'(\d+(?:\.\d+)?)\s*%', line)
-            if not weight_match:
+            weight = None
+            
+            if weight_match:
+                weight = float(weight_match.group(1))
+            else:
+                # Look for standalone numbers at end of line (common in grade tables)
+                number_match = re.search(r'\s(\d{1,2}(?:\.\d+)?)\s*$', line.strip())
+                if number_match:
+                    potential_weight = float(number_match.group(1))
+                    if 5 <= potential_weight <= 60:  # Reasonable weight range
+                        weight = potential_weight
+                        weight_match = number_match
+            
+            if weight is None:
                 continue
             
-            weight = float(weight_match.group(1))
-            
-            # Skip if weight is too high
+            # Skip if weight is too high (likely not a percentage)
             if weight > 60:
                 continue
             
@@ -837,9 +848,13 @@ class PDFExtractor:
                 continue
             
             # Extract assessment name
-            name_text = line[:weight_match.start()].strip()
+            if weight_match:
+                name_text = line[:weight_match.start()].strip()
+            else:
+                name_text = line.strip()
             name_text = re.sub(r'^[\s\-•·]+', '', name_text)
             name_text = re.sub(r'\([^)]*\)$', '', name_text).strip()
+            name_text = re.sub(r'\s+\d+$', '', name_text).strip()  # Remove trailing number
             
             if len(name_text) < 3:
                 continue
