@@ -7,6 +7,7 @@ gunicorn>=21.2.0
 
 # PDF text extraction
 pdfplumber>=0.10.0
+PyMuPDF>=1.23.0  # For layout extraction (font sizes, bounding boxes)
 
 # Date parsing
 dateparser>=1.2.0

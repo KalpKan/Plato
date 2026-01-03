@@ -3,6 +3,8 @@ PDF extraction module for course outlines.
 
 Extracts term information, lecture/lab sections, and assessments from PDF files.
 Uses a multi-layered extraction approach for maximum compatibility.
+
+Version 2.0: Now uses document structure layer for improved extraction.
 """
 
 import os
@@ -17,8 +19,17 @@ from .models import (
     CourseTerm, SectionOption, AssessmentTask, ExtractedCourseData
 )
 
+# Try to import new extraction modules
+try:
+    from .document_structure import DocumentStructureExtractor, DocumentStructure
+    from .assessment_extractor import AssessmentExtractor
+    from .course_extractor import CourseInfoExtractor
+    HAS_NEW_EXTRACTORS = True
+except ImportError:
+    HAS_NEW_EXTRACTORS = False
+
 # Constants
-MAX_FILE_SIZE_MB = 2.0
+MAX_FILE_SIZE_MB = 5.0  # Increased from 2.0MB to 5.0MB
 MAX_PAGES_TO_SEARCH = 8
 
 
@@ -59,6 +70,142 @@ class PDFExtractor:
         Returns:
             ExtractedCourseData with term, sections, and assessments
         """
+        # Try new document structure-based extraction first
+        if HAS_NEW_EXTRACTORS:
+            try:
+                return self._extract_with_document_structure()
+            except Exception as e:
+                # Fall back to legacy extraction if new method fails
+                print(f"Document structure extraction failed, using legacy: {e}")
+        
+        # Legacy extraction
+        return self._extract_legacy()
+    
+    def _extract_with_document_structure(self) -> ExtractedCourseData:
+        """Extract using the new document structure layer.
+        
+        This method:
+        1. Builds a structured representation of the PDF
+        2. Segments into sections (Evaluation, Course Info, etc.)
+        3. Scopes extraction to relevant sections
+        4. Uses candidate generation + scoring + selection for assessments
+        5. Falls back to legacy methods when new methods underperform
+        
+        Returns:
+            ExtractedCourseData with improved accuracy
+        """
+        # Build document structure
+        doc_extractor = DocumentStructureExtractor(self.pdf_path)
+        doc_structure = doc_extractor.extract()
+        
+        # Store for debugging
+        self._doc_structure = doc_structure
+        
+        # Extract term (still using legacy method - works well)
+        term = self.extract_term()
+        
+        # Extract lecture/lab sections (still using legacy - schedules not in PDFs)
+        lecture_sections = self.extract_lecture_sections()
+        lab_sections = self.extract_lab_sections()
+        
+        # Extract assessments using BOTH methods, pick best result
+        # New pipeline (pass pdf_path for raw text extraction fallback)
+        assessment_extractor = AssessmentExtractor(doc_structure, pdf_path=self.pdf_path)
+        new_assessments = assessment_extractor.extract()
+        new_weight = sum(a.weight_percent or 0 for a in new_assessments)
+        
+        # Store debug info
+        self._assessment_debug = assessment_extractor.get_debug_info()
+        
+        # Legacy pipeline
+        legacy_assessments = self.extract_assessments()
+        legacy_weight = sum(a.weight_percent or 0 for a in legacy_assessments)
+        
+        # Choose best result based on:
+        # 1. Weight closest to 100
+        # 2. Number of assessments (more is better if weights are similar)
+        new_score = self._score_assessment_quality(new_assessments, new_weight)
+        legacy_score = self._score_assessment_quality(legacy_assessments, legacy_weight)
+        
+        if new_score >= legacy_score:
+            assessments = new_assessments
+            self._assessment_source = "new"
+        else:
+            assessments = legacy_assessments
+            self._assessment_source = "legacy"
+        
+        # Extract course info using new layout-based method
+        course_extractor = CourseInfoExtractor(doc_structure)
+        course_code, course_name = course_extractor.extract()
+        
+        # Store debug info
+        self._course_debug = course_extractor.get_debug_info()
+        
+        # Fallback for course code if new method didn't find it
+        if not course_code:
+            legacy_code, _ = self.extract_course_info()
+            course_code = legacy_code
+        
+        # Fallback for course name
+        if not course_name:
+            _, legacy_name = self.extract_course_info()
+            course_name = legacy_name
+        
+        return ExtractedCourseData(
+            term=term,
+            lecture_sections=lecture_sections,
+            lab_sections=lab_sections,
+            assessments=assessments,
+            course_code=course_code,
+            course_name=course_name
+        )
+    
+    def _score_assessment_quality(self, assessments: List[AssessmentTask], total_weight: float) -> float:
+        """Score the quality of assessment extraction.
+        
+        Higher score = better extraction.
+        
+        Factors:
+        - Weight close to 100 (best)
+        - Weight in 90-110 range (good)
+        - Having multiple assessments
+        - Having named assessments (not garbage)
+        """
+        if not assessments:
+            return 0.0
+        
+        score = 0.0
+        
+        # Weight score: best if 95-105, good if 90-110, ok if 80-120
+        if 95 <= total_weight <= 105:
+            score += 50
+        elif 90 <= total_weight <= 110:
+            score += 40
+        elif 80 <= total_weight <= 120:
+            score += 25
+        elif total_weight > 0:
+            # Penalty for being far from 100
+            distance = abs(100 - total_weight)
+            score += max(0, 20 - distance * 0.3)
+        
+        # Count of valid assessments (those with weights)
+        valid_count = sum(1 for a in assessments if a.weight_percent and a.weight_percent > 0)
+        score += min(valid_count * 5, 25)  # Up to 25 points for 5+ assessments
+        
+        # Bonus for having common assessment types
+        common_types = {'exam', 'midterm', 'final', 'quiz', 'assignment', 'lab', 'test'}
+        type_matches = sum(1 for a in assessments 
+                          if any(t in a.title.lower() for t in common_types))
+        score += min(type_matches * 3, 15)  # Up to 15 points
+        
+        return score
+    
+    def _extract_legacy(self) -> ExtractedCourseData:
+        """Legacy extraction method (fallback).
+        
+        Returns:
+            ExtractedCourseData with term, sections, and assessments
+        """
         term = self.extract_term()
         lecture_sections = self.extract_lecture_sections()
         lab_sections = self.extract_lab_sections()
@@ -75,6 +222,38 @@ class PDFExtractor:
             course_code=course_code,
             course_name=course_name
         )
+    
+    def get_extraction_debug(self) -> Dict[str, Any]:
+        """Get debug information about the extraction process.
+        
+        Returns:
+            Dictionary with debug info about sections, candidates, etc.
+        """
+        debug = {
+            'has_new_extractors': HAS_NEW_EXTRACTORS,
+        }
+        
+        if hasattr(self, '_doc_structure'):
+            ds = self._doc_structure
+            debug['document_structure'] = {
+                'num_pages': len(ds.pages),
+                'num_blocks': len(ds.blocks),
+                'num_tables': len(ds.tables),
+                'num_sections': len(ds.sections),
+                'sections': [
+                    {'name': s.name, 'heading': s.heading_text, 
+                     'pages': f"{s.start_page}-{s.end_page}"}
+                    for s in ds.sections
+                ]
+            }
+        
+        if hasattr(self, '_assessment_debug'):
+            debug['assessment_extraction'] = self._assessment_debug
+        
+        if hasattr(self, '_course_debug'):
+            debug['course_extraction'] = self._course_debug
+        
+        return debug
     
     def extract_term(self) -> CourseTerm:
         """Extract term information from PDF.
