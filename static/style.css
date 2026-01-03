@@ -400,15 +400,15 @@ header h1 {
 }
 
 .editable-field.missing-field {
-    color: var(--color-text-tertiary);
-    font-style: italic;
-    border: 1px dashed var(--color-border-light);
-    background: transparent;
+    color: var(--color-warning);
+    font-style: normal;
+    border: 1px solid var(--color-warning-border);
+    background: var(--color-warning-bg);
 }
 
 .editable-field.missing-field:hover {
     border-color: var(--color-warning);
-    background: var(--color-warning-bg);
+    background: rgba(234, 179, 8, 0.2);
 }
 
 .editable-field.editing {
@@ -736,21 +736,60 @@ header h1 {
 .assessment-details {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md);
     font-size: var(--font-size-sm);
 }
 
-.assessment-details span {
-    display: flex;
+.assessment-details > span {
+    display: inline-flex;
     align-items: center;
     gap: var(--spacing-xs);
     color: var(--color-text-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.assessment-details > span:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.assessment-details > span.editable-field {
+    cursor: pointer;
+}
+
+.assessment-details > span.editable-field:hover {
+    background: var(--color-accent-muted);
+    color: var(--color-accent-hover);
+}
+
+.assessment-details > span.editable-field:hover i {
+    color: var(--color-accent-hover);
+}
+
+/* Missing field - Yellow highlight like "Review" badge */
+.assessment-details > span.missing-field {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning);
+}
+
+.assessment-details > span.missing-field i {
+    color: var(--color-warning);
+}
+
+.assessment-details > span.missing-field:hover {
+    background: rgba(234, 179, 8, 0.2);
+    border-color: var(--color-warning);
 }
 
 .assessment-details i {
     width: 14px;
     height: 14px;
     color: var(--color-text-quaternary);
+    flex-shrink: 0;
 }
 
 /* ============================================
@@ -1015,8 +1054,8 @@ footer .footer-disclaimer {
 }
 
 .missing-field {
-    color: var(--color-text-tertiary);
-    font-style: italic;
+    color: var(--color-warning) !important;
+    font-style: normal;
 }
 
 /* ============================================
