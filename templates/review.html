@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="review-section">
-    <h2>Review Extracted Data</h2>
-    <p>Please review the extracted information and make any necessary corrections.</p>
+    <h2>Review & Confirm</h2>
+    <p>Review the extracted information below. Click any highlighted field to edit it.</p>
 
     <!-- Summary Section -->
     {% if completeness %}
@@ -35,12 +35,12 @@
         <!-- Course Information -->
         <section class="review-section-item">
             <h3>
-                <i data-lucide="book"></i>
+                <i data-lucide="book-open"></i>
                 Course Information
             </h3>
             <div class="info-grid">
                 <div>
-                    <label>Course Name:</label>
+                    <label>Course Name</label>
                     <span class="value editable-field {% if course_name == 'Not found' %}missing-field{% endif %}" 
                           data-field-type="course_name" 
                           data-current-value="{{ course_name }}"
@@ -49,25 +49,25 @@
                     </span>
                 </div>
                 <div>
-                    <label>Term:</label>
+                    <label>Term</label>
                     <span class="value">{{ term.term_name }}</span>
                 </div>
                 <div>
-                    <label>Start Date:</label>
+                    <label>Start Date</label>
                     <span class="value editable-field {% if not term.start_date %}missing-field{% endif %}" 
                           data-field-type="term_start" 
                           data-current-value="{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else '' }}"
-                          title="Click to edit (YYYY-MM-DD)">
-                        {{ term.start_date.strftime('%Y-%m-%d') if term.start_date else 'Not found' }}
+                          title="Click to edit">
+                        {{ term.start_date.strftime('%b %d, %Y') if term.start_date else 'Not found' }}
                     </span>
                 </div>
                 <div>
-                    <label>End Date:</label>
+                    <label>End Date</label>
                     <span class="value editable-field {% if not term.end_date %}missing-field{% endif %}" 
                           data-field-type="term_end" 
                           data-current-value="{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else '' }}"
-                          title="Click to edit (YYYY-MM-DD)">
-                        {{ term.end_date.strftime('%Y-%m-%d') if term.end_date else 'Not found' }}
+                          title="Click to edit">
+                        {{ term.end_date.strftime('%b %d, %Y') if term.end_date else 'Not found' }}
                     </span>
                 </div>
             </div>
@@ -77,13 +77,13 @@
         <section class="review-section-item">
             <h3>
                 <i data-lucide="users"></i>
-                Lecture Section Selection
+                Lecture Section
             </h3>
             {% if lecture_sections %}
                 <div class="form-group">
-                    <label for="lecture_section">Select your lecture section:</label>
+                    <label for="lecture_section">Select your section</label>
                     <select name="lecture_section" id="lecture_section" class="form-control" required>
-                        <option value="none">-- Select Lecture Section --</option>
+                        <option value="none">Select a section</option>
                         {% for section in lecture_sections %}
                             <option value="{{ loop.index0 }}" 
                                 {% if user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id %}selected{% endif %}>
@@ -94,19 +94,19 @@
                                         {{ day_names[day_num] }}{% if not loop.last %}/{% endif %}
                                     {% endfor %}
                                 {% else %}
-                                    N/A
+                                    Days N/A
                                 {% endif %}
-                                {{ section.start_time|time_12h }}-{{ section.end_time|time_12h }}
-                                {% if section.location %} ({{ section.location }}){% endif %}
+                                {{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}
+                                {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
                     </select>
                 </div>
             {% else %}
-                <p class="no-data">No lecture sections found in PDF. You can enter manually or proceed without lectures.</p>
-                <button type="button" class="btn btn-secondary" id="add-lecture-section" style="margin-top: 10px;">
+                <p class="no-data">No lecture sections found. Add one manually if needed.</p>
+                <button type="button" class="btn btn-tertiary btn-sm" id="add-lecture-section">
                     <i data-lucide="plus"></i>
-                    Add Lecture Section Manually
+                    Add Section
                 </button>
                 <input type="hidden" name="lecture_section" value="none">
             {% endif %}
@@ -116,13 +116,13 @@
         <section class="review-section-item">
             <h3>
                 <i data-lucide="flask-conical"></i>
-                Lab Section Selection
+                Lab Section
             </h3>
             {% if lab_sections %}
                 <div class="form-group">
-                    <label for="lab_section">Select your lab section:</label>
+                    <label for="lab_section">Select your section</label>
                     <select name="lab_section" id="lab_section" class="form-control">
-                        <option value="none">-- No Lab Section --</option>
+                        <option value="none">No lab section</option>
                         {% for section in lab_sections %}
                             <option value="{{ loop.index0 }}"
                                 {% if user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id %}selected{% endif %}>
@@ -130,24 +130,24 @@
                                 {% if section.days_of_week %}
                                     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
                                     {% for day_num in section.days_of_week %}
-                                        {{ day_names[day_num] }}{% if not loop.last %}, {% endif %}
+                                        {{ day_names[day_num] }}{% if not loop.last %}/{% endif %}
                                     {% endfor %}
                                 {% else %}
-                                    N/A
+                                    Days N/A
                                 {% endif %}
-                                {% if section.start_time %}{{ section.start_time|time_12h }}{% else %}N/A{% endif %}
+                                {% if section.start_time %}{{ section.start_time|time_12h }}{% else %}Time N/A{% endif %}
                                 -
-                                {% if section.end_time %}{{ section.end_time|time_12h }}{% else %}N/A{% endif %}
-                                {% if section.location %} ({{ section.location }}){% endif %}
+                                {% if section.end_time %}{{ section.end_time|time_12h }}{% else %}Time N/A{% endif %}
+                                {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
                     </select>
                 </div>
             {% else %}
-                <p class="no-data">No lab sections found in PDF. You can enter manually or proceed without labs.</p>
-                <button type="button" class="btn btn-secondary" id="add-lab-section" style="margin-top: 10px;">
+                <p class="no-data">No lab sections found. Add one manually if needed.</p>
+                <button type="button" class="btn btn-tertiary btn-sm" id="add-lab-section">
                     <i data-lucide="plus"></i>
-                    Add Lab Section Manually
+                    Add Section
                 </button>
                 <input type="hidden" name="lab_section" value="none">
             {% endif %}
@@ -160,9 +160,9 @@
                     <i data-lucide="clipboard-list"></i>
                     Assessments
                 </h3>
-                <button type="button" class="btn btn-secondary" id="add-assessment-btn" style="margin: 0;">
+                <button type="button" class="btn btn-tertiary btn-sm" id="add-assessment-btn">
                     <i data-lucide="plus"></i>
-                    Add Assessment
+                    Add
                 </button>
             </div>
             {% if assessments %}
@@ -176,50 +176,49 @@
                                       data-field-type="assessment_title" 
                                       data-assessment-index="{{ loop.index0 }}"
                                       data-current-value="{{ assessment.title }}"
-                                      title="Click to edit title">
+                                      title="Click to edit">
                                     <strong>{{ assessment.title }}</strong>
                                 </span>
                                 {% if should_flag %}
-                                    <span class="badge badge-warning">Needs Review</span>
+                                    <span class="badge badge-warning">Review</span>
                                 {% endif %}
-                                <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove this assessment">
+                                <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove">
                                     <i data-lucide="trash-2"></i>
-                                    Remove
                                 </button>
                             </div>
                             <div class="assessment-details">
-                                <span class="editable-field assessment-weight {% if not assessment.weight_percent %}missing-field{% endif %}" 
+                                <span class="editable-field {% if not assessment.weight_percent %}missing-field{% endif %}" 
                                       data-field-type="assessment_weight" 
                                       data-assessment-index="{{ loop.index0 }}"
                                       data-current-value="{{ assessment.weight_percent or '' }}"
-                                      title="Click to edit weight (%)">
+                                      title="Click to edit weight">
                                     <i data-lucide="percent"></i>
-                                    {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}No weight{% endif %}
+                                    {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Add weight{% endif %}
                                 </span>
                                 {% if assessment.due_datetime %}
-                                    <span class="editable-field assessment-due-date" 
+                                    <span class="editable-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
-                                          title="Click to edit due date">
+                                          title="Click to edit date">
                                         <i data-lucide="calendar"></i>
                                         {{ assessment.due_datetime.strftime('%b %d, %Y') }}
                                     </span>
                                 {% elif assessment.due_rule %}
-                                    <span class="editable-field assessment-due-date missing-field" 
+                                    <span class="editable-field missing-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
-                                          title="Click to add due date">
+                                          title="Click to add date">
                                         <i data-lucide="calendar"></i>
-                                        {{ assessment.due_rule[:30] }}
+                                        {{ assessment.due_rule[:25] }}{% if assessment.due_rule|length > 25 %}...{% endif %}
                                     </span>
                                 {% else %}
-                                    <span class="editable-field assessment-due-date missing-field" 
+                                    <span class="editable-field missing-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
-                                          title="Click to add due date">
+                                          title="Click to add date">
                                         <i data-lucide="calendar"></i>
                                         Add date
                                     </span>
@@ -229,24 +228,24 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="no-data">No assessments found in PDF. You may need to add them manually.</p>
+                <p class="no-data">No assessments found. Add them manually using the button above.</p>
             {% endif %}
         </section>
 
         <!-- Lead Time Mapping - Collapsible -->
         <details class="review-section-item">
             <summary class="lead-time-summary">
-                <i data-lucide="clock"></i>
+                <i data-lucide="bell"></i>
                 <span>Study Reminders</span>
                 <i data-lucide="chevron-down" class="chevron"></i>
             </summary>
             <div class="lead-time-content">
-                <p>Reminders will be created based on assessment weight:</p>
+                <p>Reminders will be created based on assessment weight. Click to customize.</p>
                 <div class="lead-time-mapping">
                     <table>
                         <thead>
                             <tr>
-                                <th>Weight</th>
+                                <th>Weight Range</th>
                                 <th>Reminder</th>
                             </tr>
                         </thead>
@@ -283,25 +282,24 @@
             </a>
         </div>
     </form>
+</div>
 
-    <!-- Modal for Adding Assessment (outside form to prevent submission) -->
-    <div id="add-assessment-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h3>
-                    <i data-lucide="plus-circle"></i>
-                    Add New Assessment
-                </h3>
-                <form id="add-assessment-form" onsubmit="return false;">
-                    <div class="form-group">
-                        <label for="assessment-title">
-                            <i data-lucide="file-text"></i>
-                            Title *
-                        </label>
-                    <input type="text" id="assessment-title" name="title" required placeholder="e.g., Assignment 1, Final Exam">
-                </div>
+<!-- Modal for Adding Assessment -->
+<div id="add-assessment-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>
+            <i data-lucide="plus-circle"></i>
+            Add Assessment
+        </h3>
+        <form id="add-assessment-form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="assessment-title">Title</label>
+                <input type="text" id="assessment-title" name="title" required placeholder="e.g., Midterm Exam, Assignment 1">
+            </div>
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="assessment-type">Type *</label>
+                    <label for="assessment-type">Type</label>
                     <select id="assessment-type" name="type" required>
                         <option value="assignment">Assignment</option>
                         <option value="lab_report">Lab Report</option>
@@ -314,38 +312,28 @@
                 </div>
                 <div class="form-group">
                     <label for="assessment-weight">Weight (%)</label>
-                    <input type="number" id="assessment-weight" name="weight_percent" step="0.01" min="0" max="100" placeholder="e.g., 15.5">
+                    <input type="number" id="assessment-weight" name="weight_percent" step="0.1" min="0" max="100" placeholder="15">
                 </div>
-                <div class="form-group">
-                    <label for="assessment-due-date">Due Date & Time</label>
-                    <input type="datetime-local" id="assessment-due-date" name="due_datetime">
-                </div>
-                <div class="form-group">
-                    <label for="assessment-due-rule">Due Rule (if relative, e.g., '24 hours after lab')</label>
-                    <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g., 24 hours after lab">
-                </div>
-                <div class="form-group">
-                    <label for="assessment-rule-anchor">Rule Anchor (if using due rule)</label>
-                    <select id="assessment-rule-anchor" name="rule_anchor">
-                        <option value="">None</option>
-                        <option value="lab">Lab</option>
-                        <option value="tutorial">Tutorial</option>
-                        <option value="lecture">Lecture</option>
-                    </select>
-                </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i data-lucide="check"></i>
-                            Add Assessment
-                        </button>
-                        <button type="button" class="btn btn-secondary cancel-add-assessment">
-                            <i data-lucide="x"></i>
-                            Cancel
-                        </button>
-                    </div>
-            </form>
-        </div>
+            </div>
+            <div class="form-group">
+                <label for="assessment-due-date">Due Date & Time</label>
+                <input type="datetime-local" id="assessment-due-date" name="due_datetime">
+            </div>
+            <div class="form-group">
+                <label for="assessment-due-rule">Relative Date (optional)</label>
+                <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g., During final exam period">
+                <small>Use this if you don't know the exact date yet</small>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="check"></i>
+                    Add
+                </button>
+                <button type="button" class="btn btn-secondary cancel-add-assessment">
+                    Cancel
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
-
