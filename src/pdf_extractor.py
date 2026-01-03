@@ -424,7 +424,7 @@ class PDFExtractor:
                     weight = self._extract_weight(match.group(0))
                     
                     assessment = AssessmentTask(
-                        title=title,
+                        title=self._clean_assessment_title(title),
                         type=assessment_type,
                         weight_percent=weight,
                         due_datetime=due_datetime,
@@ -522,80 +522,85 @@ class PDFExtractor:
     def extract_course_info(self) -> Tuple[Optional[str], Optional[str]]:
         """Extract course code and name from the PDF.
         
-        This function searches the first page of the PDF for the course code
-        (like "CS 101" or "MATH 120") and the course name. Course codes typically
-        follow the pattern of 2-4 uppercase letters followed by 3-4 digits.
-        
         Returns:
             Tuple of (course_code, course_name). Both can be None if not found.
-            Example: ("CS 101", "Introduction to Computer Science")
         """
-        # Search first page for course code (e.g., "CS 101", "MATH 120")
-        # Course codes are almost always on the first page
         first_page = self.pages_text[0][1] if self.pages_text else ""
-        
-        # Pattern for course code: Can be "PHYS 3140A" or "Physiology 3140A" or "Phys 3140A"
-        # Try multiple patterns to catch different formats - order matters!
-        course_code_patterns = [
-            r'(Physiology|Physics|Phys)\s+(\d{3,4}[A-Z]?)',  # "Physiology 3140A" - check this first!
-            r'([A-Z]{2,4})\s+(\d{3,4}[A-Z]?)',  # "PHYS 3140A" or "CS 101"
-        ]
+        first_lines = first_page.split('\n')[:15]  # Check first 15 lines
         
         course_code = None
-        for pattern in course_code_patterns:
-            match = re.search(pattern, first_page, re.IGNORECASE)
-            if match:
-                dept_raw = match.group(1).upper()
-                number = match.group(2)
-                
-                # Map common department names to abbreviations
-                dept_map = {
-                    'PHYSIOLOGY': 'PHYS',
-                    'PHYSICS': 'PHYS',
-                    'PHYS': 'PHYS',
-                    'COMPUTER SCIENCE': 'CS',
-                    'MATHEMATICS': 'MATH',
-                    'MATH': 'MATH',
-                    'CHEMISTRY': 'CHEM',
-                    'BIOLOGY': 'BIO',
-                }
-                
-                # Try to find abbreviation in map, otherwise use first 4 chars
-                dept = dept_map.get(dept_raw, dept_raw[:4])
-                course_code = f"{dept} {number}"
-                break
-        
-        # Course name is usually on first page, often on the same line as course code
-        # Look for patterns like "Cellular Physiology-Physiology 3140A" or "Introduction to..."
         course_name = None
         
-        # Try to find course name - look for text before or after course code
-        # Pattern: Look for line with course code, extract descriptive text
-        name_patterns = [
-            r'([A-Z][^-\n]+?)[-–]\s*(?:Physiology|Physics|Phys)\s+\d+',  # "Cellular Physiology-Physiology 3140A"
-            r'(?:Physiology|Physics|Phys)\s+\d+[A-Z]?\s*[-–]\s*([^\n]+)',  # "Physiology 3140A - Course Name"
-            r'([A-Z][^.\n]{10,80}?)(?:\s+Physiology|\s+Physics|\s+Phys)\s+\d+',  # Text before "Physiology 3140A"
+        # Common department patterns (full and abbreviated)
+        dept_patterns = [
+            # Full names with course numbers
+            r'(Microbiology\s*[&]\s*Immunology|Chemistry|Physiology|Physics|Biology|Computer\s+Science|Classical\s+Studies|Psychology|Economics|Mathematics|Engineering|Biochemistry)\s+(\d{3,4}[A-Z]?)',
+            # Abbreviated forms
+            r'(Chem|Phys|Bio|CS|CHEM|PHYS|BIO|BIOCHEM|ECE|MIC|PSY|ECON|MATH|ENG)\s+(\d{3,4}[A-Z]?)',
+            # Generic 2-4 letter code + number
+            r'([A-Z]{2,4})\s+(\d{3,4}[A-Z]?)',
         ]
         
-        for pattern in name_patterns:
+        for pattern in dept_patterns:
             match = re.search(pattern, first_page, re.IGNORECASE)
             if match:
-                course_name = match.group(1).strip()
-                # Clean up common prefixes/suffixes
-                course_name = re.sub(r'^(Course|Outline|Department of)\s+', '', course_name, flags=re.IGNORECASE)
-                course_name = course_name.strip(' -–')
-                if len(course_name) > 5:  # Only use if it's substantial
-                    break
+                dept_raw = match.group(1).strip()
+                number = match.group(2)
+                course_code = f"{dept_raw} {number}"
+                break
         
-        # Fallback: if we found course code but not name, look for text on same line
-        if not course_name and course_code:
-            # Find line containing course code
-            for line in first_page.split('\n'):
-                if re.search(r'\d{3,4}[A-Z]?', line):  # Line has course number
-                    # Extract descriptive text from that line
-                    cleaned = re.sub(r'Physiology\s+\d+[A-Z]?.*', '', line, flags=re.IGNORECASE)
-                    cleaned = cleaned.strip(' -–')
-                    if len(cleaned) > 5:
+        # Look for course name - usually a descriptive title
+        name_patterns = [
+            # "Course Name: Something" or "Title: Something"
+            r'(?:Course\s+Name|Title|Subject)[\s:]+([A-Z][^.\n]{10,80})',
+            # Line with course code followed by descriptive text
+            r'[A-Z]{2,4}\s+\d{3,4}[A-Z]?[\s:–-]+([A-Z][^.\n]{10,80})',
+            # All caps title line
+            r'^([A-Z][A-Z\s&]+)$',
+            # Title case line at start (not "Department of..." or "Course...")
+            r'^(?!Department|Course|Outline|Syllabus|University)([A-Z][a-z]+(?:\s+[A-Za-z&]+){1,6})\s*$',
+        ]
+        
+        for line in first_lines:
+            line = line.strip()
+            if not line or len(line) < 5:
+                continue
+            
+            # Skip lines that are clearly not titles
+            skip_patterns = ['www.', 'http', '@', 'email:', 'phone:', 'office:', 'instructor:', 'contact']
+            if any(p in line.lower() for p in skip_patterns):
+                continue
+            
+            for pattern in name_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    candidate = match.group(1).strip()
+                    # Clean up
+                    candidate = re.sub(r'^(Preliminary\s+)?Course\s+Outline\s+(for\s+)?', '', candidate, flags=re.IGNORECASE)
+                    candidate = re.sub(r'^\s*Course\s+Syllabus\s+(for\s+)?', '', candidate, flags=re.IGNORECASE)
+                    candidate = re.sub(r'\s+\d{3,4}[A-Z]?\s*$', '', candidate)  # Remove trailing course numbers
+                    candidate = candidate.strip(' -–:')
+                    
+                    if len(candidate) > 8 and not candidate.lower().startswith('department'):
+                        course_name = candidate
+                        break
+            if course_name:
+                break
+        
+        # Fallback: use first substantial line that looks like a title
+        if not course_name:
+            for line in first_lines:
+                line = line.strip()
+                # Look for title-like lines (capitalized, reasonable length)
+                if len(line) > 15 and len(line) < 100:
+                    # Skip obvious non-titles
+                    if any(x in line.lower() for x in ['university', 'department', 'www.', 'http', 'email', 'phone', 'office', 'instructor']):
+                        continue
+                    # Clean up
+                    cleaned = re.sub(r'^(Preliminary\s+)?Course\s+Outline\s+(for\s+)?', '', line, flags=re.IGNORECASE)
+                    cleaned = re.sub(r'^\s*Course\s+Syllabus\s+(for\s+)?', '', cleaned, flags=re.IGNORECASE)
+                    cleaned = cleaned.strip(' -–:')
+                    if len(cleaned) > 8:
                         course_name = cleaned[:100]
                         break
         
@@ -855,7 +860,7 @@ class PDFExtractor:
             due_datetime = self._parse_date_from_text(line)
             
             assessment = AssessmentTask(
-                title=name_text[:80],
+                title=self._clean_assessment_title(name_text[:80]),
                 type=atype,
                 weight_percent=weight,
                 due_datetime=due_datetime,
@@ -1344,7 +1349,7 @@ class PDFExtractor:
                             
                             # Create single assessment with the Answer date
                             assessment = AssessmentTask(
-                                title=assessment_name,
+                                title=self._clean_assessment_title(assessment_name),
                                 type=assessment_type,
                                 weight_percent=weight,
                                 due_datetime=due_datetime,
@@ -1378,7 +1383,7 @@ class PDFExtractor:
                                 due_datetime = datetime.combine(parsed_date.date(), time(hour, minute))
                                 
                                 assessment = AssessmentTask(
-                                    title=assessment_name,
+                                    title=self._clean_assessment_title(assessment_name),
                                     type=assessment_type,
                                     weight_percent=weight,
                                     due_datetime=due_datetime,
@@ -1390,7 +1395,7 @@ class PDFExtractor:
                 else:
                     # If no dates found, still create assessment without date
                     assessment = AssessmentTask(
-                        title=assessment_name,
+                        title=self._clean_assessment_title(assessment_name),
                         type=assessment_type,
                         weight_percent=weight,
                         due_datetime=None,
@@ -1751,9 +1756,11 @@ class PDFExtractor:
                         elif 'lecture' in date_text.lower():
                             rule_anchor = 'lecture'
             
-            # Create assessment
+            # Create assessment with cleaned title
+            cleaned_title = self._clean_assessment_title(name.strip())
+            
             assessment = AssessmentTask(
-                title=name.strip(),
+                title=cleaned_title,
                 type=assessment_type,
                 weight_percent=weight,
                 due_datetime=due_datetime,
@@ -1768,6 +1775,30 @@ class PDFExtractor:
             current_assessment = assessment
         
         return assessments
+    
+    def _clean_assessment_title(self, title: str) -> str:
+        """Clean up assessment title by removing numbering and extra punctuation.
+        
+        Args:
+            title: Raw assessment title
+            
+        Returns:
+            Cleaned title
+        """
+        if not title:
+            return title
+        
+        # Remove leading numbers and punctuation like "1. ", "2) ", "1: "
+        cleaned = re.sub(r'^\d+[\.\)\:]\s*', '', title)
+        
+        # Remove trailing colons and extra punctuation
+        cleaned = re.sub(r':+\s*$', '', cleaned)
+        cleaned = re.sub(r'\s*:+\s*:', ':', cleaned)  # Multiple colons to single
+        
+        # Clean up whitespace
+        cleaned = ' '.join(cleaned.split())
+        
+        return cleaned.strip()
     
     def _map_table_columns(self, header_row: List, sample_rows: List[List] = None) -> dict:
         """Map table columns to their purpose.
@@ -1887,6 +1918,8 @@ class PDFExtractor:
     def _extract_name_from_row(self, row: List, column_map: dict) -> str:
         """Extract assessment name from a table row.
         
+        Handles sparse tables where data might be at offset from header column.
+        
         Args:
             row: Table row (list of cells)
             column_map: Column mapping dictionary
@@ -1895,23 +1928,57 @@ class PDFExtractor:
             Assessment name, or empty string if not found
         """
         if 'name' not in column_map:
+            # Fallback: try first non-empty cell
+            for cell in row:
+                if cell and str(cell).strip():
+                    text = str(cell).strip()
+                    # Skip if it looks like a weight or date
+                    if re.search(r'^\d+\.?\d*%$', text) or re.match(r'^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', text.lower()):
+                        continue
+                    return text
             return ''
         
         name_idx = column_map['name']
-        if name_idx >= len(row) or not row[name_idx]:
-            return ''
         
-        name_cell = row[name_idx]
+        # Try mapped column first
+        if name_idx < len(row) and row[name_idx] and str(row[name_idx]).strip():
+            name_cell = row[name_idx]
+        else:
+            # Handle sparse tables: if mapped column is None, check adjacent columns
+            # Especially check index 0 which often has the name in sparse tables
+            name_cell = None
+            
+            # Priority order: index 0, then nearby columns
+            check_order = [0] + [name_idx - 1, name_idx + 1] if name_idx > 0 else [0, name_idx + 1]
+            for idx in check_order:
+                if 0 <= idx < len(row) and row[idx] and str(row[idx]).strip():
+                    candidate = str(row[idx]).strip()
+                    # Skip if it looks like ONLY a weight, format keyword, or metadata
+                    # But allow "Test 1", "Quiz 2", etc. (assessment names with numbers)
+                    if (re.search(r'^\d+\.?\d*%$', candidate) or  # Just a percentage
+                        candidate.lower() in ['mixed', 'online', 'in-person', 'none', 'n/a', 'not applicable']):
+                        continue
+                    name_cell = row[idx]
+                    break
+            
+            if not name_cell:
+                return ''
+        
         # Handle multi-line cell content (join with spaces)
         if isinstance(name_cell, str):
             name = ' '.join(name_cell.split('\n'))
         else:
             name = str(name_cell)
         
+        # Clean up common prefixes like "1. " or "2. "
+        name = re.sub(r'^\d+\.\s*', '', name)
+        
         return name.strip()
     
     def _extract_weight_from_row(self, row: List, column_map: dict) -> Optional[float]:
         """Extract weight percentage from a table row.
+        
+        Handles sparse tables where data might be at offset from header column.
         
         Args:
             row: Table row (list of cells)
@@ -1920,15 +1987,35 @@ class PDFExtractor:
         Returns:
             Weight as float (percentage), or None if not found or completion-based
         """
-        if 'weight' not in column_map:
-            return None
+        weight_text = ''
         
-        weight_idx = column_map['weight']
-        if weight_idx >= len(row) or not row[weight_idx]:
-            return None
+        if 'weight' in column_map:
+            weight_idx = column_map['weight']
+            
+            # Try mapped column first
+            if weight_idx < len(row) and row[weight_idx]:
+                weight_text = str(row[weight_idx]).strip()
+            else:
+                # Handle sparse tables: search for percentage in adjacent columns
+                check_order = [weight_idx - 1, weight_idx + 1, weight_idx - 2, weight_idx + 2]
+                for idx in check_order:
+                    if 0 <= idx < len(row) and row[idx]:
+                        cell_text = str(row[idx]).strip()
+                        if re.search(r'\d+\.?\d*%', cell_text):
+                            weight_text = cell_text
+                            break
         
-        weight_cell = row[weight_idx]
-        weight_text = str(weight_cell).strip() if weight_cell else ''
+        # Fallback: search entire row for percentage
+        if not weight_text:
+            for cell in row:
+                if cell:
+                    cell_text = str(cell).strip()
+                    if re.search(r'\d+\.?\d*%', cell_text):
+                        weight_text = cell_text
+                        break
+        
+        if not weight_text:
+            return None
         
         # Check for completion-based assessments
         if 'completion' in weight_text.lower() or weight_text.endswith('#'):
