@@ -205,11 +205,11 @@
                                         {{ assessment.due_datetime.strftime('%b %d, %Y') }}
                                     </span>
                                 {% elif assessment.due_rule %}
-                                    <span class="editable-field missing-field" 
+                                    <span class="editable-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value=""
-                                          title="Click to add date">
+                                          title="Click to set exact date">
                                         <i data-lucide="calendar"></i>
                                         {{ assessment.due_rule[:25] }}{% if assessment.due_rule|length > 25 %}...{% endif %}
                                     </span>
