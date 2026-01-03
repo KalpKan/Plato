@@ -810,7 +810,40 @@ class PDFExtractor:
             name_text = re.sub(r'\([^)]*\)$', '', name_text).strip()
             name_text = re.sub(r'\s+\d+$', '', name_text).strip()  # Remove trailing number
             
-            if len(name_text) < 3:
+            # CRITICAL FILTERS for false positives
+            # Skip if name is too short or too long
+            if len(name_text) < 3 or len(name_text) > 80:
+                continue
+            
+            # Skip policy/requirement text patterns
+            policy_patterns = [
+                r'^to be eligible',
+                r'^to obtain',
+                r'^at least (a|an|\d)',
+                r'^you must',
+                r'^students must',
+                r'^a (minimum|final|passing|grade)',
+                r'^the (minimum|final|passing)',
+                r'^will be reweighted',
+                r'^there (is|are|will)',
+                r'^each is worth',
+                r'result in',
+                r'weighted average',
+                r'^obtain a',
+                r'^achieve',
+                r'a mark of',
+                r'a grade of',
+            ]
+            if any(re.match(pattern, name_text.lower()) for pattern in policy_patterns):
+                continue
+            
+            # Skip if it looks like a sentence fragment (starts with lowercase)
+            if name_text and name_text[0].islower():
+                continue
+            
+            # Skip if it contains verbs that indicate it's not an assessment title
+            sentence_indicators = ['is', 'are', 'will be', 'must', 'should', 'may', 'can']
+            if any(f' {word} ' in name_text.lower() for word in sentence_indicators):
                 continue
             
             # Determine assessment type
