@@ -1199,8 +1199,8 @@ def add_assessment():
         # Update cache if available
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
-            cache_manager = CacheManager()
-            cache_manager.update_extracted_data(pdf_hash, extracted_data)
+            cache_manager = get_cache_manager()
+            cache_manager.store_extraction(pdf_hash, extracted_data)
         
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)
@@ -1263,7 +1263,7 @@ def remove_assessment():
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
             cache_manager = get_cache_manager()
-            cache_manager.update_extracted_data(pdf_hash, extracted_data)
+            cache_manager.store_extraction(pdf_hash, extracted_data)
         
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)
