@@ -435,19 +435,19 @@ class PDFExtractor:
                     assessments.append(assessment)
         
         # Also search for relative rules
-        relative_rules = self._extract_relative_rules(full_text)
-        for rule_text, anchor in relative_rules:
-            # Create assessment with rule
-            assessment = AssessmentTask(
-                title=f"Assessment (rule: {rule_text[:30]})",
-                type="other",
-                due_rule=rule_text,
-                rule_anchor=anchor,
-                confidence=0.5,
-                source_evidence=f"Relative rule: {rule_text}",
-                needs_review=True
-            )
-            assessments.append(assessment)
+            relative_rules = self._extract_relative_rules(full_text)
+            for rule_text, anchor in relative_rules:
+                # Create assessment with rule
+                assessment = AssessmentTask(
+                    title=f"Assessment (rule: {rule_text[:30]})",
+                    type="other",
+                    due_rule=rule_text,
+                    rule_anchor=anchor,
+                    confidence=0.5,
+                    source_evidence=f"Relative rule: {rule_text}",
+                    needs_review=True
+                )
+                assessments.append(assessment)
         
         # Filter out unwanted assessments (e.g., those starting with "#" or other patterns)
         filtered_assessments = []
@@ -526,83 +526,37 @@ class PDFExtractor:
             Tuple of (course_code, course_name). Both can be None if not found.
         """
         first_page = self.pages_text[0][1] if self.pages_text else ""
-        first_lines = first_page.split('\n')[:15]  # Check first 15 lines
         
         course_code = None
         course_name = None
         
-        # Common department patterns (full and abbreviated)
-        dept_patterns = [
-            # Full names with course numbers
-            r'(Microbiology\s*[&]\s*Immunology|Chemistry|Physiology|Physics|Biology|Computer\s+Science|Classical\s+Studies|Psychology|Economics|Mathematics|Engineering|Biochemistry)\s+(\d{3,4}[A-Z]?)',
-            # Abbreviated forms
-            r'(Chem|Phys|Bio|CS|CHEM|PHYS|BIO|BIOCHEM|ECE|MIC|PSY|ECON|MATH|ENG)\s+(\d{3,4}[A-Z]?)',
-            # Generic 2-4 letter code + number
-            r'([A-Z]{2,4})\s+(\d{3,4}[A-Z]?)',
-        ]
+        # Extract course code - simple pattern matching
+        code_pattern = r'([A-Z]{2,4})\s+(\d{3,4}[A-Z]?)'
+        match = re.search(code_pattern, first_page)
+        if match:
+            dept = match.group(1)
+            number = match.group(2)
+            course_code = f"{dept} {number}"
         
-        for pattern in dept_patterns:
-            match = re.search(pattern, first_page, re.IGNORECASE)
-            if match:
-                dept_raw = match.group(1).strip()
-                number = match.group(2)
-                course_code = f"{dept_raw} {number}"
-                break
-        
-        # Look for course name - usually a descriptive title
-        name_patterns = [
-            # "Course Name: Something" or "Title: Something"
-            r'(?:Course\s+Name|Title|Subject)[\s:]+([A-Z][^.\n]{10,80})',
-            # Line with course code followed by descriptive text
-            r'[A-Z]{2,4}\s+\d{3,4}[A-Z]?[\s:–-]+([A-Z][^.\n]{10,80})',
-            # All caps title line
-            r'^([A-Z][A-Z\s&]+)$',
-            # Title case line at start (not "Department of..." or "Course...")
-            r'^(?!Department|Course|Outline|Syllabus|University)([A-Z][a-z]+(?:\s+[A-Za-z&]+){1,6})\s*$',
-        ]
-        
-        for line in first_lines:
+        # For course name, look at first few lines
+        # Course name is usually on the first page, often on line 1 or near the course code
+        lines = first_page.split('\n')[:10]
+        for i, line in enumerate(lines):
             line = line.strip()
-            if not line or len(line) < 5:
+            if len(line) < 5 or len(line) > 100:
                 continue
             
-            # Skip lines that are clearly not titles
-            skip_patterns = ['www.', 'http', '@', 'email:', 'phone:', 'office:', 'instructor:', 'contact']
-            if any(p in line.lower() for p in skip_patterns):
+            # Skip lines that are obviously not course names
+            skip_patterns = ['university', 'www.', 'http', '@', 'email', 'phone', 'office', 
+                           'instructor', 'department of', 'course outline', 'syllabus', 'winter', 
+                           'fall', 'spring', 'summer', 'semester', r'20\d{2}']
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
                 continue
             
-            for pattern in name_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    candidate = match.group(1).strip()
-                    # Clean up
-                    candidate = re.sub(r'^(Preliminary\s+)?Course\s+Outline\s+(for\s+)?', '', candidate, flags=re.IGNORECASE)
-                    candidate = re.sub(r'^\s*Course\s+Syllabus\s+(for\s+)?', '', candidate, flags=re.IGNORECASE)
-                    candidate = re.sub(r'\s+\d{3,4}[A-Z]?\s*$', '', candidate)  # Remove trailing course numbers
-                    candidate = candidate.strip(' -–:')
-                    
-                    if len(candidate) > 8 and not candidate.lower().startswith('department'):
-                        course_name = candidate
-                        break
-            if course_name:
+            # If line contains only letters, spaces, &, and is a reasonable length, it's likely the course name
+            if re.match(r'^[A-Za-z\s&\-]+$', line) and len(line) > 8:
+                course_name = line
                 break
-        
-        # Fallback: use first substantial line that looks like a title
-        if not course_name:
-            for line in first_lines:
-                line = line.strip()
-                # Look for title-like lines (capitalized, reasonable length)
-                if len(line) > 15 and len(line) < 100:
-                    # Skip obvious non-titles
-                    if any(x in line.lower() for x in ['university', 'department', 'www.', 'http', 'email', 'phone', 'office', 'instructor']):
-                        continue
-                    # Clean up
-                    cleaned = re.sub(r'^(Preliminary\s+)?Course\s+Outline\s+(for\s+)?', '', line, flags=re.IGNORECASE)
-                    cleaned = re.sub(r'^\s*Course\s+Syllabus\s+(for\s+)?', '', cleaned, flags=re.IGNORECASE)
-                    cleaned = cleaned.strip(' -–:')
-                    if len(cleaned) > 8:
-                        course_name = cleaned[:100]
-                        break
         
         return course_code, course_name
     
@@ -737,7 +691,7 @@ class PDFExtractor:
                     days = fixed_days
                 else:
                     days = self._parse_days_of_week(match.group(1))
-                break
+                    break
         
         if not days:
             return None
@@ -1713,7 +1667,7 @@ class PDFExtractor:
                         'rotation' in prev_name and 
                         ('short' in prev_name or 'long' in prev_name) and
                         row_weight is None and not row_due_datetime):
-                        is_continuation = True
+                                is_continuation = True
             
             if is_continuation and current_assessment:
                 # Merge with previous assessment
