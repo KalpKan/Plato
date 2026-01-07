@@ -25,17 +25,57 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check if any field is currently being edited
             const editingField = document.querySelector('.editable-field.editing');
             if (editingField) {
-                e.preventDefault();
-                alert('Please save or cancel your current edit before generating the calendar.');
-                return false;
+                // Try to auto-save the field if it has a value
+                const input = editingField.querySelector('.inline-edit-input');
+                if (input) {
+                    const fieldType = editingField.getAttribute('data-field-type');
+                    const assessmentIndex = editingField.getAttribute('data-assessment-index');
+                    const newValue = input.value.trim();
+                    
+                    // For date fields, allow saving even if empty (to clear the date)
+                    if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
+                        console.log('Auto-saving field before generating calendar');
+                        // Get original content from a stored attribute or reconstruct
+                        const originalContent = editingField.getAttribute('data-original-content') || editingField.textContent;
+                        
+                        // Save the field synchronously (we'll wait for it)
+                        saveField(editingField, fieldType, newValue, assessmentIndex, originalContent);
+                        
+                        // Wait a moment for the save to complete, then submit
+                        setTimeout(() => {
+                            if (!document.querySelector('.editable-field.editing')) {
+                                // Field is no longer in editing mode, safe to submit
+                                reviewForm.onsubmit = function(e) {
+                                    return true;
+                                };
+                                reviewForm.submit();
+                            } else {
+                                // Still editing, show alert
+                                alert('Please wait for the field to finish saving, or cancel your edit before generating the calendar.');
+                            }
+                        }, 500);
+                        e.preventDefault();
+                        return false;
+                    } else {
+                        // No value entered, just cancel the edit
+                        console.log('Cancelling edit with no value');
+                        const originalContent = editingField.getAttribute('data-original-content') || '';
+                        editingField.innerHTML = originalContent;
+                        editingField.classList.remove('editing');
+                        // Continue with form submission
+                    }
+                } else {
+                    // Can't find input, show alert
+                    e.preventDefault();
+                    alert('Please save or cancel your current edit before generating the calendar.');
+                    return false;
+                }
             }
-            // Allow form submission when clicking generate button
-            // Remove the onsubmit="return false;" handler
+            
+            // No fields being edited, proceed with submission
             reviewForm.onsubmit = function(e) {
-                // Allow submission
                 return true;
             };
-            // Submit the form
             reviewForm.submit();
         });
     }
@@ -461,6 +501,9 @@ function startEditing(fieldElement) {
     const originalContent = fieldElement.innerHTML;
     const originalDisplay = fieldElement.style.display;
     
+    // Store original content as attribute for later retrieval
+    fieldElement.setAttribute('data-original-content', originalContent);
+    
     // Replace field with form
     fieldElement.innerHTML = '';
     fieldElement.appendChild(editForm);
@@ -576,7 +619,37 @@ function startEditing(fieldElement) {
                 console.log('Escape pressed');
                 fieldElement.innerHTML = originalContent;
                 fieldElement.classList.remove('editing');
+            } else if (e.key === 'Enter') {
+                // Auto-save on Enter key
+                e.preventDefault();
+                const newValue = input.value.trim();
+                if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
+                    // Allow empty dates to be saved (clears the field)
+                    console.log('Enter pressed - auto-saving field');
+                    saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+                }
             }
+        });
+        
+        // Auto-save on blur (when user clicks outside) - especially important for date inputs
+        input.addEventListener('blur', function(e) {
+            // Use setTimeout to allow click events on save/cancel buttons to fire first
+            setTimeout(() => {
+                // Check if we're still in editing mode (buttons might have already saved/cancelled)
+                if (fieldElement.classList.contains('editing')) {
+                    const newValue = input.value.trim();
+                    // For date fields, allow saving even if empty (to clear the date)
+                    if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
+                        console.log('Input blurred - auto-saving field');
+                        saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
+                    } else {
+                        // If no value and not a date field, cancel the edit
+                        console.log('Input blurred with no value - cancelling edit');
+                        fieldElement.innerHTML = originalContent;
+                        fieldElement.classList.remove('editing');
+                    }
+                }
+            }, 200); // Small delay to let button clicks process first
         });
     }
 }
