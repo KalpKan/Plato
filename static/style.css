@@ -1268,7 +1268,7 @@ footer .footer-disclaimer {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg); /* Increased padding for better edge coverage */
     opacity: 0.3;
     pointer-events: none;
     width: 100%;
@@ -1277,7 +1277,7 @@ footer .footer-disclaimer {
 
 .calendar-grid-wrapper {
     width: 100%;
-    max-width: 100%; /* Take full width, let grid scale */
+    max-width: 100%;
     padding: 0 var(--spacing-md);
     margin: 0 auto;
 }
@@ -1288,8 +1288,9 @@ footer .footer-disclaimer {
     gap: 12px; /* gap-3 from Figma (0.75rem = 12px) */
     width: 100%;
     height: auto;
-    max-width: 1400px; /* Slightly larger than max-w-7xl for better coverage */
+    max-width: 100%; /* Remove width constraint - fill available space */
     margin: 0 auto;
+    padding: 0 var(--spacing-lg); /* Add padding for edge spacing */
 }
 
 .calendar-day {
