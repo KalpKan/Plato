@@ -1255,6 +1255,7 @@ footer .footer-disclaimer {
     padding: var(--spacing-3xl) var(--spacing-md);
     overflow: hidden;
     min-height: 100vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1270,14 +1271,25 @@ footer .footer-disclaimer {
     padding: var(--spacing-md);
     opacity: 0.3;
     pointer-events: none;
+    width: 100%;
+    height: 100%;
+}
+
+.calendar-grid-wrapper {
+    width: 100%;
+    max-width: 100%; /* Take full width, let grid scale */
+    padding: 0 var(--spacing-md);
+    margin: 0 auto;
 }
 
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 12px; /* gap-3 from Figma (0.75rem = 12px) */
-    max-width: 1280px;
     width: 100%;
+    height: auto;
+    max-width: 1400px; /* Slightly larger than max-w-7xl for better coverage */
+    margin: 0 auto;
 }
 
 .calendar-day {
