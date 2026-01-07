@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     // Can't find input, show alert
                     e.preventDefault();
-                    alert('Please save or cancel your current edit before generating the calendar.');
+                    alert('Please refresh to save your changes.');
                     return false;
                 }
             }
