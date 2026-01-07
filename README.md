@@ -1,71 +1,84 @@
-# Course Outline to iCalendar Converter
+# Plato - Course Outline to Calendar Converter
 
-A beginner-friendly web application that converts Western University course outline PDFs into iCalendar (.ics) files with recurring schedules and assessment deadlines.
+A web application that automatically extracts course information from Western University course outline PDFs and generates iCalendar (.ics) files compatible with Google Calendar, Apple Calendar, and Outlook.
+
+## Overview
+
+Plato processes course outline PDFs to extract:
+- Course information (code, name, term)
+- Lecture and lab schedules (days, times, locations)
+- Assessments (assignments, quizzes, exams with due dates and weights)
+- Relative date rules (e.g., "24 hours after lab")
+
+The extracted data is then converted into a calendar file with:
+- Recurring lecture and lab events
+- Assessment due dates
+- Study plan events (configurable lead times based on assessment weights)
 
 ## Features
 
-- **Web-based interface** - Easy to use, no command-line required
-- Extracts course information from PDF outlines
-- Generates recurring lecture and lab schedules
-- Extracts assessments with due dates
-- Resolves relative deadlines (e.g., "24 hours after lab") - creates per-occurrence assessments
-- Creates study plan events with configurable lead times
-- Caches results for identical PDFs (separates extraction from user choices)
+- Automatic PDF extraction using multi-layered approach
+- Document structure analysis with layout-aware extraction
+- Section segmentation for accurate field extraction
+- Policy text filtering to reduce false positives
+- Constrained selection to ensure assessment weights total ~100%
+- Interactive review interface with inline editing
+- Manual section and assessment addition
+- Configurable study plan lead times
+- Session-based caching for performance
 - Force refresh option to re-extract cached PDFs
-- Exports .ics files compatible with Google Calendar and Apple Calendar
-- Manual mode fallback if PDF extraction fails
+- Dark mode, responsive design
+- Clean, minimalist UI
 
 ## Installation
 
 ### Prerequisites
+
 - Python 3.8 or higher
 - pip (Python package manager)
 
-### Setup
+### Local Setup
 
-1. Clone or download this repository
+1. Clone the repository:
+```bash
+git clone https://github.com/KalpKan/Plato.git
+cd Plato
+```
+
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
-
-### Starting the Web Application
-
+3. Start the development server:
 ```bash
 python3 src/app.py
 ```
 
-Then open your browser and navigate to:
+4. Open your browser and navigate to:
 ```
 http://localhost:5000
 ```
 
-**Note:** The web interface is now fully functional! See `WEB_INTERFACE_GUIDE.md` for detailed usage instructions.
+## Usage
 
-### Using the Web Interface
+### Basic Workflow
 
 1. **Upload PDF**: Click "Choose File" and select your course outline PDF
-2. **Review Extraction**: The system will extract course information and display it for review
-3. **Select Sections**: If multiple lecture/lab sections exist, select yours
-4. **Review Assessments**: Review and edit any ambiguous assessments
-5. **Confirm Lead Times**: Review the lead-time mapping (shown once per import)
-6. **Download Calendar**: Click "Download .ics" to get your calendar file
+2. **Review Extraction**: The system extracts course information and displays it for review
+3. **Edit Fields**: Click on any field to edit inline (dates, weights, titles, etc.)
+4. **Add Missing Data**: Use "Add Section" or "Add Assessment" buttons if needed
+5. **Select Sections**: If multiple lecture/lab sections exist, select yours from dropdowns
+6. **Review Assessments**: Review and edit any ambiguous assessments
+7. **Configure Lead Times**: Adjust study plan lead times if desired
+8. **Generate Calendar**: Click "Generate Calendar" to download the .ics file
 
 ### Manual Mode
 
 If PDF extraction fails or you prefer to enter data manually:
-1. Click "Manual Mode" button
+1. Click "Manual Mode" button on the upload page
 2. Enter term dates, section schedules, and assessments
 3. Generate .ics file from manual inputs
-
-### Output Files
-
-The .ics file will be named:
-- `<COURSECODE>_<TERM>_Lec<SECTION>_Lab<SECTION>_<HASH8>.ics`
-- Example: `CS3305_Fall2026_Lec001_Lab002_3fa21c9b.ics`
-- Falls back to PDF name + hash if course code/term not extracted
 
 ### Importing to Calendar
 
@@ -81,71 +94,153 @@ The .ics file will be named:
 3. Select the generated `.ics` file
 4. Choose your calendar and click "Import"
 
+**Outlook:**
+1. Open Outlook
+2. File → Open & Export → Import/Export
+3. Select "Import an iCalendar (.ics) or vCalendar file"
+4. Choose the generated `.ics` file
+
 ## Project Structure
 
 ```
 Plato/
 ├── src/
-│   ├── app.py               # Flask web application
-│   ├── models.py            # Data models
-│   ├── pdf_extractor.py     # PDF extraction logic
-│   ├── rule_resolver.py     # Relative rule resolution
-│   ├── study_plan.py        # Study plan generation
-│   ├── icalendar_gen.py     # iCalendar generation
-│   └── cache.py             # Caching system
-├── templates/               # HTML templates
-│   ├── index.html          # Upload page
-│   ├── review.html         # Review/edit page
-│   └── manual.html         # Manual entry page
-├── static/                  # Static files (CSS, JS)
-│   ├── style.css
-│   └── app.js
-├── tests/
-│   ├── fixtures/            # Test PDFs and expected outputs
-│   └── test_*.py            # Test files
-├── requirements.txt         # Python dependencies
-└── README.md               # This file
+│   ├── app.py                    # Flask web application
+│   ├── models.py                 # Data models (dataclasses)
+│   ├── pdf_extractor.py          # PDF extraction engine
+│   ├── document_structure.py    # Document structure analysis
+│   ├── assessment_extractor.py   # Assessment extraction pipeline
+│   ├── course_extractor.py      # Course info extraction
+│   ├── rule_resolver.py         # Relative date rule resolution
+│   ├── study_plan.py            # Study plan generation
+│   ├── icalendar_gen.py         # iCalendar file generation
+│   ├── cache.py                 # Caching system
+│   └── main.py                  # CLI entry point
+├── templates/                    # HTML templates
+│   ├── base.html               # Base template
+│   ├── index.html              # Landing page
+│   ├── review.html             # Review/edit page
+│   ├── manual.html             # Manual entry page
+│   └── error.html              # Error page
+├── static/                       # Static files
+│   ├── style.css               # Stylesheet
+│   └── app.js                  # Client-side JavaScript
+├── course_outlines/             # Test PDFs (not in git)
+├── test_course_outlines/        # Additional test PDFs
+├── requirements.txt            # Python dependencies
+├── Procfile                    # Railway deployment config
+├── Dockerfile                  # Docker configuration
+└── README.md                   # This file
 ```
 
 ## How It Works
 
-1. **PDF Upload:** User uploads PDF via web form
-2. **PDF Extraction:** Extracts text from the PDF and identifies term, sections, and assessments
-   - Confidence thresholds: < 0.75 → Needs review, < 0.50 for critical items → Manual confirmation
-3. **User Review:** Web UI displays extracted data for review and editing
-4. **Section Selection:** User selects lecture/lab sections if multiple exist
-5. **Rule Resolution:** Resolves relative deadlines using recurring schedules
+### Extraction Pipeline
+
+1. **Document Structure Analysis**
+   - Extracts text blocks with layout metadata (font sizes, positions)
+   - Reconstructs lines from blocks via y-coordinate clustering
+   - Detects tables (pdfplumber + reconstructed from aligned lines)
+   - Identifies sections (Evaluation, Course Information, etc.)
+
+2. **Section Segmentation**
+   - Identifies headings using font size, bold flags, and keywords
+   - Creates section ranges (start/end pages and positions)
+   - Scopes extraction to relevant sections (e.g., assessments only from Evaluation section)
+
+3. **Assessment Extraction**
+   - **Candidate Generation**: From tables, reconstructed tables, and inline patterns
+   - **Scoring**: Based on weight validity, assessment nouns, section context
+   - **Filtering**: Policy-window filtering to eliminate false positives
+   - **Selection**: Constrained selection to ensure weights total ~100%
+
+4. **Course Information Extraction**
+   - Layout-based ranking (font size, position, proximity to course code)
+   - Filters out generic words (Department, Faculty, etc.)
+   - Falls back to PDF metadata if needed
+
+5. **Rule Resolution**
+   - Parses relative deadline rules (e.g., "24 hours after lab")
    - Matches rules to existing assessments when possible
-   - Generates per-occurrence assessments when needed (e.g., "Lab Report 1", "Lab Report 2", etc.)
-6. **Lead Time Confirmation:** Shows default lead-time mapping once for user confirmation
-7. **Study Plan:** Generates "start studying" events based on confirmed lead times
-8. **Calendar Generation:** Creates .ics file with proper timezone (America/Toronto, TZID)
-9. **Caching:** Stores extraction results (by PDF hash) and user choices separately
+   - Generates per-occurrence assessments when needed
+   - Resolves to absolute datetimes using recurring schedules
+
+6. **Study Plan Generation**
+   - Default lead times based on assessment weight:
+     - 0-10%: 3 days
+     - 10-20%: 5 days
+     - 20-30%: 7 days
+     - 30-40%: 10 days
+     - 40-50%: 14 days
+     - 50%+: 21 days
+   - Finals: Always 21 days
+   - User-configurable per weight range
+
+7. **Calendar Generation**
+   - Creates recurring events (RRULE) for lectures and labs
+   - Creates assessment due events
+   - Creates study plan start events
+   - Uses timezone-aware datetimes (America/Toronto)
+   - Includes VTIMEZONE component for compatibility
+
+### Caching
+
+- **Extraction Cache**: Stores extracted data keyed by PDF hash (SHA-256)
+- **User Choices Cache**: Stores section selections and lead-time overrides keyed by session
+- **Force Refresh**: Option to bypass cache and re-extract
+
+## Performance
+
+Tested on 39 course outline PDFs:
+- **Extraction Success**: 100% (39/39)
+- **Perfect Weight Accuracy (90-110%)**: 87% (34/39)
+- **Good Weight Accuracy (80-120%)**: 92% (36/39)
+- **Assessment Extraction**: 97% (38/39 have 2+ assessments)
+- **Course Name Extraction**: 100% (39/39)
 
 ## Limitations
 
 - PDF format only (no DOCX support)
-- Requires clear, structured course outlines
+- Maximum file size: 5MB
+- Requires structured course outlines (works best with clear assessment tables)
 - Some ambiguous data may require manual review
-- No conflict checking with existing calendar events
+- Lecture/lab schedules rarely included in PDFs (manual entry available)
 
 ## Development
 
 ### Running Tests
 
 ```bash
-pytest tests/
+# Comprehensive extraction test
+python3 test_comprehensive.py
+
+# New extraction pipeline test
+python3 test_new_extraction.py
 ```
 
 ### Code Structure
 
-The code is organized into modules:
-- `models.py` - Data structures
-- `pdf_extractor.py` - PDF parsing and extraction
-- `rule_resolver.py` - Relative deadline resolution
+The codebase is organized into focused modules:
+- `models.py` - Data structures (dataclasses)
+- `pdf_extractor.py` - Main extraction orchestrator
+- `document_structure.py` - Layout analysis and section segmentation
+- `assessment_extractor.py` - Assessment candidate generation, scoring, selection
+- `course_extractor.py` - Course information extraction
+- `rule_resolver.py` - Relative date rule resolution
 - `study_plan.py` - Study plan generation
 - `icalendar_gen.py` - Calendar file generation
 - `cache.py` - Caching system
+
+## Deployment
+
+See `DEPLOYMENT.md` for detailed deployment instructions to Railway with Supabase.
+
+## Documentation
+
+- `PROJECT_OVERVIEW.md` - Comprehensive project documentation
+- `ARCHITECTURE.md` - System architecture and component responsibilities
+- `EXTRACTION_PLAN.md` - Detailed extraction algorithm documentation
+- `DEPLOYMENT.md` - Deployment guide
 
 ## License
 
@@ -153,11 +248,10 @@ This project is provided as-is for educational purposes.
 
 ## Support
 
-For issues or questions, please refer to the documentation files:
-- `IMPLEMENTATION_PLAN.md` - Development roadmap
-- `ARCHITECTURE.md` - System architecture
-- `DATA_MODELS.md` - Data structure definitions
-- `EXTRACTION_HEURISTICS.md` - Extraction logic details
-- `CACHING_APPROACH.md` - Caching implementation
-- `TEST_PLAN.md` - Testing strategy
+For issues or questions, please refer to the documentation files or open an issue on GitHub.
 
+## Credits
+
+Made by Kalp Kansara
+
+Note: This tool is not affiliated with Western University. It is an independent tool designed to help students manage their course schedules.

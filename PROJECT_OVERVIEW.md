@@ -3,7 +3,7 @@
 
 ---
 
-## 📋 TABLE OF CONTENTS
+## TABLE OF CONTENTS
 1. [Project Vision & Goals](#project-vision--goals)
 2. [Technical Architecture](#technical-architecture)
 3. [Extraction Algorithm (Detailed)](#extraction-algorithm-detailed)
@@ -15,7 +15,7 @@
 
 ---
 
-## 🎯 PROJECT VISION & GOALS
+## PROJECT VISION & GOALS
 
 ### Primary Objective
 Transform Western University course outline PDFs into structured calendar events (`.ics` files) that students can import into Google Calendar, Apple Calendar, or Outlook.
@@ -37,14 +37,14 @@ Transform Western University course outline PDFs into structured calendar events
 5. **Import**: Add to their preferred calendar app
 
 ### Non-Goals
-- ❌ Not affiliated with Western University (disclaimer in footer)
-- ❌ Not storing user data (session-based only)
-- ❌ Not supporting non-Western course outlines (initially)
-- ❌ Not processing PDFs >2MB (performance constraint)
+- Not affiliated with Western University (disclaimer in footer)
+- Not storing user data (session-based only)
+- Not supporting non-Western course outlines (initially)
+- Not processing PDFs >5MB (performance constraint)
 
 ---
 
-## 🏗️ TECHNICAL ARCHITECTURE
+## TECHNICAL ARCHITECTURE
 
 ### Technology Stack
 
@@ -91,7 +91,7 @@ Plato/
 
 ---
 
-## 🔬 EXTRACTION ALGORITHM (DETAILED)
+## EXTRACTION ALGORITHM (DETAILED)
 
 ### Overview
 Multi-stage extraction with cascading fallbacks. Each stage has different confidence levels and handles different PDF formats.
@@ -275,9 +275,9 @@ assessment_patterns = [
 **Problem**: Text extraction was picking up policy/requirement text as assessments
 
 **Examples of False Positives**:
-- "To be eligible to obtain a final grade of 60%" → Extracted as "60%" assessment ❌
-- "at least a 50% weighted average on midterm" → Extracted as "50%" assessment ❌
-- "Each is worth 6%" → Extracted as "6%" assessment ❌
+- "To be eligible to obtain a final grade of 60%" → Extracted as "60%" assessment (FIXED)
+- "at least a 50% weighted average on midterm" → Extracted as "50%" assessment (FIXED)
+- "Each is worth 6%" → Extracted as "6%" assessment (FIXED)
 
 **Solution**: Comprehensive filtering
 
@@ -413,7 +413,7 @@ weight_ranges = {
 
 ---
 
-## 📊 CURRENT PERFORMANCE METRICS
+## CURRENT PERFORMANCE METRICS
 
 ### Test Corpus
 - **Total PDFs**: 39
@@ -424,14 +424,14 @@ weight_ranges = {
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| **Overall Success** | 97% (38/39) | >95% | ✅ PASS |
-| **Assessment Extraction** | 92% (36/39 have ≥2) | >80% | ✅ PASS |
-| **Assessment Weight (Perfect 90-110%)** | 71% (28/39) | >60% | ✅ PASS |
-| **Assessment Weight (Good 80-120%)** | 81% (32/39) | >75% | ✅ PASS |
-| **Course Name Extraction** | 82% (32/39) | >80% | ✅ PASS |
-| **Term Extraction** | 74% (29/39) | >70% | ✅ PASS |
-| **Lecture Schedule** | 30% (12/39) | N/A | ⚠️ EXPECTED |
-| **Lab Schedule** | 23% (9/39) | N/A | ⚠️ EXPECTED |
+| **Overall Success** | 100% (39/39) | >95% | PASS |
+| **Assessment Extraction** | 97% (38/39 have ≥2) | >80% | PASS |
+| **Assessment Weight (Perfect 90-110%)** | 87% (34/39) | >60% | PASS |
+| **Assessment Weight (Good 80-120%)** | 92% (36/39) | >75% | PASS |
+| **Course Name Extraction** | 100% (39/39) | >80% | PASS |
+| **Term Extraction** | 74% (29/39) | >70% | PASS |
+| **Lecture Schedule** | 30% (12/39) | N/A | EXPECTED |
+| **Lab Schedule** | 23% (9/39) | N/A | EXPECTED |
 
 ### Total Assessments Extracted
 - **168 assessments** across 39 PDFs
@@ -440,7 +440,7 @@ weight_ranges = {
 
 ---
 
-## ⚠️ KNOWN ISSUES & LIMITATIONS
+## KNOWN ISSUES & LIMITATIONS
 
 ### Critical Issues (Blocking Production)
 *None currently - system is production-ready*
@@ -552,7 +552,7 @@ weight_ranges = {
 
 ---
 
-## 🔄 DATA FLOW & PROCESSING PIPELINE
+## DATA FLOW & PROCESSING PIPELINE
 
 ### 1. Upload Flow
 
@@ -652,7 +652,7 @@ Return .ics file for download
 
 ---
 
-## 🎨 USER INTERFACE & EXPERIENCE
+## USER INTERFACE & EXPERIENCE
 
 ### Design Philosophy
 - **Minimalist**: Swiss luxury spa aesthetic
@@ -715,34 +715,34 @@ Return .ics file for download
 
 ---
 
-## 🧪 TESTING & VALIDATION
+## TESTING & VALIDATION
 
 ### Test Corpus Details
 
 #### test_course_outlines/ (5 PDFs - Original Test Set)
 1. **CS2301B Course Outline 25-26.pdf**
    - Classical Studies
-   - 3 assessments, 100% weight ✅
+   - 3 assessments, 100% weight (PASS)
    - No schedules
 
 2. **CS1000-001 Course Outline 25-26.pdf**
    - Classical Studies  
-   - 4 assessments, 100% weight ✅
-   - Course name extraction fails ❌
+   - 4 assessments, 100% weight (PASS)
+   - Course name extraction fails (FIXED)
 
 3. **3300B_W25_Syllabus_revised.pdf**
    - Microbiology & Immunology
-   - 4 assessments, 100% weight ✅
+   - 4 assessments, 100% weight (PASS)
    - Assessment table format
 
 4. **2213A_2022.pdf**
    - Organic Chemistry
-   - 5 assessments, 111% weight ⚠️
+   - 5 assessments, 111% weight (ACCEPTABLE)
    - Includes bonus assessments
 
 5. **2223.pdf**
    - Organic Chemistry
-   - 3 assessments, 87.5% weight ⚠️
+   - 3 assessments, 87.5% weight (ACCEPTABLE)
    - Text-based format
 
 #### course_outlines/ (34 PDFs - Production Test Set)
@@ -783,7 +783,7 @@ Return .ics file for download
 
 ---
 
-## 📝 DETAILED ISSUES LIST FOR TECHNICAL PLAN
+## DETAILED ISSUES LIST FOR TECHNICAL PLAN
 
 ### Issue #1: Incorrect Weight Totals (6 PDFs)
 **Files**: AM2402a, B2382, B3415G, B3603A, HS-2800, Updated-ECE-3349A
@@ -854,7 +854,7 @@ Return .ics file for download
 
 ---
 
-## 📋 REQUEST FOR TECHNICAL PLAN
+## REQUEST FOR TECHNICAL PLAN
 
 Please provide a detailed technical plan addressing:
 
@@ -884,7 +884,7 @@ Please provide a detailed technical plan addressing:
 
 ---
 
-## 🎯 SUCCESS METRICS TO TRACK
+## SUCCESS METRICS TO TRACK
 
 After implementing your technical plan, we should measure:
 
