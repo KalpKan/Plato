@@ -75,7 +75,7 @@
             </div>
 
             <!-- Arrow 1 -->
-            <div class="workflow-arrow">
+            <div class="workflow-arrow" data-arrow="1">
                 <div class="arrow-line"></div>
                 <div class="arrow-particle"></div>
             </div>
@@ -89,7 +89,7 @@
             </div>
 
             <!-- Arrow 2 -->
-            <div class="workflow-arrow">
+            <div class="workflow-arrow" data-arrow="2">
                 <div class="arrow-line"></div>
                 <div class="arrow-particle"></div>
             </div>
@@ -263,17 +263,21 @@
         uploadActions.style.display = 'none';
     });
     
-    // Calendar animation - responsive
+    // Calendar animation - matching Figma timing
     document.addEventListener('DOMContentLoaded', () => {
         const events = document.querySelectorAll('.calendar-event');
         const isMobile = window.innerWidth <= 768;
+        
+        // Figma timing: 5s duration, 3s repeatDelay, delays: 0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1
+        const delays = [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1];
         
         events.forEach((event, index) => {
             setTimeout(() => {
                 // Use shorter animation on mobile for better performance
                 const duration = isMobile ? '3s' : '5s';
-                event.style.animation = `calendarPulse ${duration} infinite`;
-                event.style.animationDelay = (index * 0.3) + 's';
+                const repeatDelay = isMobile ? '2s' : '3s';
+                event.style.animation = `calendarPulse ${duration} ${repeatDelay} infinite`;
+                event.style.animationDelay = (delays[index] || index * 0.3) + 's';
             }, 100);
         });
         
@@ -285,13 +289,15 @@
                 const newIsMobile = window.innerWidth <= 768;
                 events.forEach((event, index) => {
                     const duration = newIsMobile ? '3s' : '5s';
-                    event.style.animation = `calendarPulse ${duration} infinite`;
+                    const repeatDelay = newIsMobile ? '2s' : '3s';
+                    event.style.animation = `calendarPulse ${duration} ${repeatDelay} infinite`;
+                    event.style.animationDelay = (delays[index] || index * 0.3) + 's';
                 });
             }, 250);
         });
     });
     
-    // Workflow animation - responsive
+    // Workflow animation - matching Figma timing (7s cycle)
     document.addEventListener('DOMContentLoaded', () => {
         const steps = document.querySelectorAll('.workflow-step');
         const arrows = document.querySelectorAll('.workflow-arrow');
@@ -308,21 +314,11 @@
             return;
         }
         
+        // Figma timing: 7s cycle - animations are now handled by CSS keyframes
+        // Just add 'active' class to trigger animations
         function animateWorkflow() {
-            steps.forEach((step, index) => {
-                setTimeout(() => {
-                    step.classList.add('active');
-                    if (index < arrows.length) {
-                        arrows[index].classList.add('active');
-                    }
-                }, index * 2000);
-            });
-            
-            setTimeout(() => {
-                steps.forEach(step => step.classList.remove('active'));
-                arrows.forEach(arrow => arrow.classList.remove('active'));
-                setTimeout(animateWorkflow, 1000);
-            }, 7000);
+            steps.forEach(step => step.classList.add('active'));
+            arrows.forEach(arrow => arrow.classList.add('active'));
         }
         
         animateWorkflow();
@@ -338,10 +334,17 @@
                     steps.forEach(step => step.classList.add('active'));
                     arrows.forEach(arrow => arrow.classList.add('active'));
                 } else {
-                    // Restart animation on desktop
-                    steps.forEach(step => step.classList.remove('active'));
-                    arrows.forEach(arrow => arrow.classList.remove('active'));
-                    animateWorkflow();
+                    // Restart animation on desktop - remove and re-add to restart
+                    steps.forEach(step => {
+                        step.classList.remove('active');
+                        void step.offsetWidth; // Force reflow
+                        step.classList.add('active');
+                    });
+                    arrows.forEach(arrow => {
+                        arrow.classList.remove('active');
+                        void arrow.offsetWidth; // Force reflow
+                        arrow.classList.add('active');
+                    });
                 }
             }, 250);
         });

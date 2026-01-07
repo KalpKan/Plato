@@ -1275,7 +1275,7 @@ footer .footer-disclaimer {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: var(--spacing-sm);
+    gap: 12px; /* gap-3 from Figma (0.75rem = 12px) */
     max-width: 1280px;
     width: 100%;
 }
@@ -1288,8 +1288,8 @@ footer .footer-disclaimer {
 .calendar-day-inner {
     height: 100%;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-accent-border);
-    background-color: var(--color-accent-muted);
+    border: 1px solid rgba(59, 130, 246, 0.4); /* blue-500/40 from Figma */
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
     padding: var(--spacing-xs);
     display: flex;
     flex-direction: column;
@@ -1297,13 +1297,13 @@ footer .footer-disclaimer {
 
 .calendar-day-number {
     font-size: var(--font-size-sm);
-    color: rgba(147, 197, 253, 0.8);
+    color: #93c5fd; /* blue-300 from Figma */
 }
 
 .calendar-event {
     margin-top: var(--spacing-xs);
     border-radius: var(--radius-sm);
-    background-color: var(--color-accent);
+    background-color: #3b82f6; /* blue-500 from Figma */
     padding: 2px 4px;
     font-size: var(--font-size-xs);
     line-height: 1.2;
@@ -1313,13 +1313,22 @@ footer .footer-disclaimer {
 }
 
 @keyframes calendarPulse {
-    0%, 100% {
+    /* Matching Figma motion timing: opacity: [0, 1, 1, 1, 0], scale: [0.8, 1, 1, 1, 0.8] */
+    0% {
         opacity: 0;
         transform: scale(0.8);
     }
-    10%, 80% {
+    10% {
         opacity: 1;
         transform: scale(1);
+    }
+    80% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8);
     }
 }
 
@@ -1345,21 +1354,21 @@ footer .footer-disclaimer {
     align-items: center;
     gap: var(--spacing-sm);
     border-radius: var(--radius-full);
-    border: 1px solid var(--color-accent-border);
-    background-color: var(--color-accent-muted);
+    border: 1px solid rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-xl);
 }
 
 .hero-badge i {
-    width: 20px;
+    width: 20px; /* h-5 w-5 from Figma */
     height: 20px;
-    color: var(--color-accent-hover);
+    color: #60a5fa; /* blue-400 from Figma */
 }
 
 .hero-badge span {
     font-size: var(--font-size-sm);
-    color: rgba(147, 197, 253, 0.8);
+    color: #93c5fd; /* blue-300 from Figma */
 }
 
 .hero-title {
@@ -1384,7 +1393,7 @@ footer .footer-disclaimer {
     align-items: center;
     gap: var(--spacing-sm);
     border-radius: var(--radius-lg);
-    background-color: var(--color-accent);
+    background-color: #2563eb; /* blue-600 from Figma */
     color: white;
     padding: var(--spacing-md) var(--spacing-2xl);
     font-size: var(--font-size-base);
@@ -1395,13 +1404,13 @@ footer .footer-disclaimer {
 }
 
 .btn-hero:hover {
-    background-color: var(--color-accent-hover);
+    background-color: #3b82f6; /* blue-500 from Figma */
     transform: translateY(-1px);
     box-shadow: var(--shadow-md), var(--shadow-glow);
 }
 
 .btn-hero i {
-    width: 20px;
+    width: 20px; /* h-5 w-5 from Figma */
     height: 20px;
 }
 
@@ -1409,12 +1418,12 @@ footer .footer-disclaimer {
     position: absolute;
     left: 50%;
     top: 0;
-    width: 384px;
+    width: 384px; /* h-96 w-96 from Figma */
     height: 384px;
     transform: translateX(-50%);
     border-radius: 50%;
-    background-color: rgba(59, 130, 246, 0.15);
-    filter: blur(96px);
+    background-color: rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
+    filter: blur(96px); /* blur-3xl from Figma */
     z-index: -1;
 }
 
@@ -1454,12 +1463,20 @@ footer .footer-disclaimer {
     gap: var(--spacing-sm);
     opacity: 0;
     transform: translateX(-20px);
-    transition: all var(--transition-slow);
 }
 
-.workflow-step.active {
-    opacity: 1;
-    transform: translateX(0);
+.workflow-step[data-step="1"].active {
+    /* Step 1: opacity [0, 1, 1, 1, 1, 1, 1, 0], x [-20, 0, 0, 0, 0, 0, 0, -20] */
+    animation: workflowStep1 7s ease-out infinite;
+}
+
+.workflow-step[data-step="2"] {
+    transform: translateX(0) scale(0.8);
+}
+
+.workflow-step[data-step="2"].active {
+    /* Step 2: opacity [0, 0, 0, 1, 1, 1, 1, 0], scale [0.8, 0.8, 0.8, 1, 1, 1, 1, 0.8] */
+    animation: workflowStep2 7s ease-out infinite;
 }
 
 .workflow-step[data-step="3"] {
@@ -1467,33 +1484,139 @@ footer .footer-disclaimer {
 }
 
 .workflow-step[data-step="3"].active {
-    transform: translateX(0);
+    /* Step 3: opacity [0, 0, 0, 0, 0, 0, 1, 0], x [20, 20, 20, 20, 20, 20, 0, 20] */
+    animation: workflowStep3 7s ease-out infinite;
+}
+
+@keyframes workflowStep1 {
+    /* Matching Figma times: [0, 0.11, 0.4, 0.5, 0.6, 0.7, 0.85, 1] */
+    0% {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    11% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    85% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+}
+
+@keyframes workflowStep2 {
+    /* Matching Figma times: [0, 0.11, 0.23, 0.3, 0.5, 0.6, 0.85, 1] */
+    0%, 11%, 23% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    30% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    85% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+}
+
+@keyframes workflowStep3 {
+    /* Matching Figma times: [0, 0.23, 0.37, 0.44, 0.52, 0.63, 0.74, 1] */
+    0%, 23%, 37%, 44%, 52%, 63% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    74% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
 }
 
 .workflow-icon {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
+    width: 80px; /* h-20 w-20 from Figma */
     height: 80px;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--color-accent-border);
-    background-color: var(--color-accent-muted);
+    border: 1px solid rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
 }
 
 .workflow-icon i {
-    width: 40px;
+    width: 40px; /* h-10 w-10 from Figma */
     height: 40px;
-    color: var(--color-accent-hover);
+    color: #60a5fa; /* blue-400 from Figma */
 }
 
 .workflow-icon.processing.active i {
-    animation: rotate 2s linear infinite;
+    /* Figma timing: rotate [0, 0, 0, 360, 720, 720, 720, 0] over 7s */
+    animation: rotateProcessing 7s linear infinite;
 }
 
-@keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@keyframes rotateProcessing {
+    /* Matching Figma times: [0, 0.11, 0.23, 0.44, 0.6, 0.7, 0.85, 1] */
+    0%, 11% {
+        transform: rotate(0deg);
+    }
+    23% {
+        transform: rotate(0deg);
+    }
+    44% {
+        transform: rotate(360deg);
+    }
+    60% {
+        transform: rotate(720deg);
+    }
+    70%, 85% {
+        transform: rotate(720deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+.workflow-icon.processing.active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid #3b82f6; /* blue-500 */
+    opacity: 0;
+    /* Figma timing: opacity [0, 0, 0, 0.5, 0, 0.5, 0, 0] */
+    animation: processingPulse 7s linear infinite;
+}
+
+@keyframes processingPulse {
+    /* Matching Figma times: [0, 0.11, 0.23, 0.37, 0.44, 0.52, 0.6, 1] */
+    0%, 11%, 23% {
+        opacity: 0;
+    }
+    37% {
+        opacity: 0.5;
+    }
+    44% {
+        opacity: 0;
+    }
+    52% {
+        opacity: 0.5;
+    }
+    60%, 100% {
+        opacity: 0;
+    }
 }
 
 .workflow-label {
@@ -1509,33 +1632,114 @@ footer .footer-disclaimer {
 
 .arrow-line {
     width: 100%;
-    height: 100%;
-    background: linear-gradient(to right, var(--color-accent), transparent);
+    height: 2px; /* h-0.5 from Figma */
+    background: linear-gradient(to right, #3b82f6, transparent); /* blue-500 from Figma */
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform var(--transition-slow);
 }
 
 .workflow-arrow.active .arrow-line {
-    transform: scaleX(1);
+    /* Arrow 1: scaleX [0, 0, 1, 1, 1, 1, 1, 0] */
+    animation: arrowLine1 7s ease-out infinite;
+}
+
+.workflow-arrow[data-arrow="2"].active .arrow-line {
+    /* Arrow 2: scaleX [0, 0, 0, 0, 0, 1, 1, 0] */
+    animation: arrowLine2 7s ease-out infinite;
+}
+
+@keyframes arrowLine1 {
+    /* Matching Figma times: [0, 0.11, 0.23, 0.4, 0.5, 0.6, 0.85, 1] */
+    0%, 11% {
+        transform: scaleX(0);
+    }
+    23% {
+        transform: scaleX(1);
+    }
+    85% {
+        transform: scaleX(1);
+    }
+    100% {
+        transform: scaleX(0);
+    }
+}
+
+@keyframes arrowLine2 {
+    /* Matching Figma times: [0, 0.23, 0.37, 0.44, 0.52, 0.63, 0.85, 1] */
+    0%, 23%, 37%, 44%, 52% {
+        transform: scaleX(0);
+    }
+    63% {
+        transform: scaleX(1);
+    }
+    85% {
+        transform: scaleX(1);
+    }
+    100% {
+        transform: scaleX(0);
+    }
 }
 
 .arrow-particle {
     position: absolute;
     left: 0;
     top: 50%;
-    width: 6px;
+    width: 6px; /* h-1.5 w-1.5 from Figma */
     height: 6px;
     border-radius: 50%;
-    background-color: var(--color-accent-hover);
+    background-color: #60a5fa; /* blue-400 from Figma */
     transform: translateY(-50%);
     opacity: 0;
-    transition: all var(--transition-slow);
 }
 
 .workflow-arrow.active .arrow-particle {
-    opacity: 1;
-    left: 96px;
+    /* Arrow 1 particle: x [0, 0, 96, 96, 96, 96, 96, 0], opacity [0, 0, 1, 1, 1, 1, 0, 0] */
+    animation: arrowParticle1 7s ease-out infinite;
+}
+
+.workflow-arrow[data-arrow="2"].active .arrow-particle {
+    /* Arrow 2 particle: x [0, 0, 0, 0, 0, 96, 96, 0], opacity [0, 0, 0, 0, 0, 1, 0, 0] */
+    animation: arrowParticle2 7s ease-out infinite;
+}
+
+@keyframes arrowParticle1 {
+    /* Matching Figma times: [0, 0.11, 0.23, 0.4, 0.5, 0.6, 0.85, 1] */
+    0%, 11% {
+        left: 0;
+        opacity: 0;
+    }
+    23% {
+        left: 96px;
+        opacity: 1;
+    }
+    85% {
+        left: 96px;
+        opacity: 1;
+    }
+    100% {
+        left: 0;
+        opacity: 0;
+    }
+}
+
+@keyframes arrowParticle2 {
+    /* Matching Figma times: [0, 0.23, 0.37, 0.44, 0.52, 0.63, 0.85, 1] */
+    0%, 23%, 37%, 44%, 52% {
+        left: 0;
+        opacity: 0;
+    }
+    63% {
+        left: 96px;
+        opacity: 1;
+    }
+    85% {
+        left: 96px;
+        opacity: 0;
+    }
+    100% {
+        left: 0;
+        opacity: 0;
+    }
 }
 
 .features-grid {
@@ -1557,18 +1761,18 @@ footer .footer-disclaimer {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
+    width: 48px; /* h-12 w-12 from Figma */
     height: 48px;
     border-radius: var(--radius-lg);
-    background-color: var(--color-accent-muted);
-    border: 1px solid var(--color-accent-border);
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
+    border: 1px solid rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
     margin-bottom: var(--spacing-md);
 }
 
 .feature-icon i {
-    width: 24px;
+    width: 24px; /* h-6 w-6 from Figma */
     height: 24px;
-    color: var(--color-accent-hover);
+    color: #60a5fa; /* blue-400 from Figma */
 }
 
 .feature-text-wrapper {
@@ -1618,8 +1822,8 @@ footer .footer-disclaimer {
 }
 
 .upload-dropzone.dragging {
-    border-color: var(--color-accent);
-    background-color: var(--color-accent-muted);
+    border-color: #3b82f6; /* blue-500 from Figma */
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
 }
 
 .upload-content {
@@ -1651,8 +1855,8 @@ footer .footer-disclaimer {
     display: inline-block;
     cursor: pointer;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--color-accent-border);
-    background-color: var(--color-accent-muted);
+    border: 1px solid rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
+    background-color: rgba(59, 130, 246, 0.1); /* blue-500/10 from Figma */
     padding: var(--spacing-sm) var(--spacing-lg);
     color: var(--color-text-primary);
     transition: all var(--transition-base);
@@ -1661,8 +1865,8 @@ footer .footer-disclaimer {
 }
 
 .upload-browse-btn:hover {
-    background-color: var(--color-accent-light);
-    border-color: var(--color-accent);
+    background-color: rgba(59, 130, 246, 0.2); /* blue-500/20 from Figma */
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .upload-hint {
@@ -1679,9 +1883,9 @@ footer .footer-disclaimer {
 }
 
 .file-icon {
-    width: 32px;
+    width: 32px; /* h-8 w-8 from Figma */
     height: 32px;
-    color: var(--color-accent-hover);
+    color: #60a5fa; /* blue-400 from Figma */
 }
 
 .file-details {
@@ -1726,7 +1930,7 @@ footer .footer-disclaimer {
     justify-content: center;
     gap: var(--spacing-sm);
     border-radius: var(--radius-lg);
-    background-color: var(--color-accent);
+    background-color: #2563eb; /* blue-600 from Figma */
     color: white;
     padding: var(--spacing-md) var(--spacing-lg);
     font-size: var(--font-size-base);
@@ -1737,11 +1941,11 @@ footer .footer-disclaimer {
 }
 
 .btn-generate:hover {
-    background-color: var(--color-accent-hover);
+    background-color: #3b82f6; /* blue-500 from Figma */
 }
 
 .btn-generate i {
-    width: 20px;
+    width: 20px; /* h-5 w-5 from Figma */
     height: 20px;
 }
 
