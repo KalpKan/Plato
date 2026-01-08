@@ -677,6 +677,22 @@ def review():
             else:
                 study_plan_gen = StudyPlanGenerator()
             
+            # Resolve relative date rules before generating calendar
+            # This ensures assessments with due_rule get converted to due_datetime
+            from .rule_resolver import RuleResolver
+            resolver = RuleResolver()
+            all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
+            extracted_data.assessments = resolver.resolve_rules(
+                extracted_data.assessments,
+                all_sections,
+                extracted_data.term
+            )
+            
+            # Update session and cache with resolved assessments
+            session['extracted_data'] = serialize_extracted_data(extracted_data)
+            if pdf_hash:
+                cache_manager.store_extraction(pdf_hash, extracted_data)
+            
             # Generate study plan (pass lead time overrides)
             study_plan = study_plan_gen.generate_study_plan(
                 extracted_data.assessments,

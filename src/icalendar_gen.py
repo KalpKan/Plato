@@ -5,7 +5,7 @@ Generates standards-compliant .ics files for calendar import.
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 from typing import List, Optional
 from icalendar import Calendar, Event
 from pytz import timezone
@@ -68,8 +68,34 @@ class ICalendarGenerator:
         
         # Add assessment due events
         for assessment in assessments:
+            # Only skip if assessment has neither due_datetime nor due_rule
+            # If it has due_rule, it should have been resolved by RuleResolver
+            # But if it wasn't resolved, we'll use end of term as fallback
             if assessment.due_datetime:
                 due_event = self._create_assessment_due_event(assessment)
+                cal.add_component(due_event)
+            elif assessment.due_rule:
+                # Rule wasn't resolved - use end of term as fallback date
+                # This ensures the assessment still appears in the calendar
+                fallback_date = term.end_date
+                fallback_datetime = self.tz.localize(
+                    datetime.combine(fallback_date, dt_time(hour=23, minute=59))
+                )
+                # Create event with fallback date using helper method
+                due_event = self._create_assessment_due_event_with_date(assessment, fallback_datetime)
+                # Add note about unresolved rule in description
+                desc = str(due_event.get('description', ''))
+                due_event['description'] = f"{desc}\n\nNote: Original rule '{assessment.due_rule}' could not be resolved. Using end of term as fallback date."
+                cal.add_component(due_event)
+            else:
+                # No date at all - use end of term as fallback
+                fallback_date = term.end_date
+                fallback_datetime = self.tz.localize(
+                    datetime.combine(fallback_date, dt_time(hour=23, minute=59))
+                )
+                due_event = self._create_assessment_due_event_with_date(assessment, fallback_datetime)
+                desc = str(due_event.get('description', ''))
+                due_event['description'] = f"{desc}\n\nNote: No due date found. Using end of term as placeholder. Please update manually."
                 cal.add_component(due_event)
         
         # Add study plan start events
@@ -148,37 +174,49 @@ class ICalendarGenerator:
         """Create event for assessment due date.
         
         Args:
+            assessment: Assessment task (must have due_datetime)
+            
+        Returns:
+            Event object
+        """
+        if not assessment.due_datetime:
+            raise ValueError("Assessment must have due_datetime to create event")
+        
+        return self._create_assessment_due_event_with_date(assessment, assessment.due_datetime)
+    
+    def _create_assessment_due_event_with_date(self, assessment: AssessmentTask, due_dt: datetime) -> Event:
+        """Create event for assessment with a specific due date.
+        
+        Args:
             assessment: Assessment task
+            due_dt: Due datetime to use
             
         Returns:
             Event object
         """
         event = Event()
         
-        # Use due_datetime, default to 11:59 PM if only date
-        due_dt = assessment.due_datetime
-        if due_dt:
-            # Ensure timezone
-            if due_dt.tzinfo is None:
-                due_dt = self.tz.localize(due_dt)
-            
-            event.add('uid', f"{uuid.uuid4()}@course-outline")
-            event.add('dtstart', due_dt)
-            # Due events are typically all-day or short duration
-            event.add('dtend', due_dt + timedelta(minutes=1))
-            event.add('summary', f"DUE: {assessment.title}")
-            
-            # Build description
-            desc_parts = [f"Assessment: {assessment.title}"]
-            desc_parts.append(f"Type: {assessment.type}")
-            if assessment.weight_percent:
-                desc_parts.append(f"Weight: {assessment.weight_percent}%")
-            if assessment.source_evidence:
-                desc_parts.append(f"Source: {assessment.source_evidence}")
-            desc_parts.append(f"Confidence: {assessment.confidence:.1%}")
-            
-            event.add('description', "\n".join(desc_parts))
-            event.add('priority', 5)  # Medium-high priority for due dates
+        # Ensure timezone
+        if due_dt.tzinfo is None:
+            due_dt = self.tz.localize(due_dt)
+        
+        event.add('uid', f"{uuid.uuid4()}@course-outline")
+        event.add('dtstart', due_dt)
+        # Due events are typically all-day or short duration
+        event.add('dtend', due_dt + timedelta(minutes=1))
+        event.add('summary', f"DUE: {assessment.title}")
+        
+        # Build description
+        desc_parts = [f"Assessment: {assessment.title}"]
+        desc_parts.append(f"Type: {assessment.type}")
+        if assessment.weight_percent:
+            desc_parts.append(f"Weight: {assessment.weight_percent}%")
+        if assessment.source_evidence:
+            desc_parts.append(f"Source: {assessment.source_evidence}")
+        desc_parts.append(f"Confidence: {assessment.confidence:.1%}")
+        
+        event.add('description', "\n".join(desc_parts))
+        event.add('priority', 5)  # Medium-high priority for due dates
         
         return event
     
