@@ -17,7 +17,7 @@ import uuid
 from pathlib import Path
 from datetime import date, datetime, time
 from typing import Optional, Dict, Any
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
+from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -31,6 +31,7 @@ from .pdf_extractor import PDFExtractor
 from .rule_resolver import RuleResolver
 from .study_plan import StudyPlanGenerator
 from .icalendar_gen import ICalendarGenerator
+from . import analytics
 
 # Initialize Flask app
 # Templates live in ../templates. Static files live in ../public/static so that
@@ -106,6 +107,97 @@ def get_cache():
     return _cache
 
 
+def load_extracted() -> Optional[ExtractedCourseData]:
+    """Load the current PDF's extracted data from the database.
+
+    The signed session cookie only carries the PDF hash (plus the filename,
+    a session id and the user's choices); the data itself lives in the
+    extraction cache keyed by that hash, so any server instance can serve
+    any request.
+    """
+    pdf_hash = session.get('pdf_hash')
+    if not pdf_hash:
+        return None
+    return get_cache().lookup_extraction(pdf_hash)
+
+
+def save_extracted(extracted_data: ExtractedCourseData) -> None:
+    """Persist the current PDF's extracted data (replaces the old cookie copy)."""
+    pdf_hash = session.get('pdf_hash')
+    if pdf_hash:
+        get_cache().store_extraction(pdf_hash, extracted_data)
+
+
+def _lead_time_generator(custom_lead_time_mapping: Dict[str, Any]) -> StudyPlanGenerator:
+    """Build a StudyPlanGenerator honouring the user's custom range -> days mapping."""
+    if not custom_lead_time_mapping:
+        return StudyPlanGenerator()
+    range_to_threshold = {
+        "0-5%": 5,
+        "6-10%": 10,
+        "11-20%": 20,
+        "21-30%": 30,
+        "31%+": 50,
+        "Finals": 50  # Finals use the same as 31%+
+    }
+    lead_time_mapping_for_gen = StudyPlanGenerator().lead_time_mapping.copy()
+    for range_key, days in custom_lead_time_mapping.items():
+        threshold = range_to_threshold.get(range_key)
+        if threshold:
+            lead_time_mapping_for_gen[threshold] = days
+    return StudyPlanGenerator(lead_time_mapping=lead_time_mapping_for_gen)
+
+
+def build_calendar(extracted_data: ExtractedCourseData,
+                   user_selections: UserSelections,
+                   lead_time_overrides: Dict[str, Any],
+                   custom_lead_time_mapping: Dict[str, Any],
+                   pdf_hash: str) -> tuple:
+    """Resolve rules, build the study plan and the .ics.
+
+    Returns (filename, ics_bytes, resolved_extracted_data). Nothing is written
+    to disk: the caller streams the bytes back in the same HTTP response.
+    """
+    resolver = RuleResolver()
+    all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
+    extracted_data.assessments = resolver.resolve_rules(
+        extracted_data.assessments, all_sections, extracted_data.term
+    )
+
+    study_plan = _lead_time_generator(custom_lead_time_mapping).generate_study_plan(
+        extracted_data.assessments,
+        user_lead_times=lead_time_overrides if lead_time_overrides else None
+    )
+
+    cal_gen = ICalendarGenerator(timezone_str=extracted_data.term.timezone)
+    calendar = cal_gen.generate_calendar(
+        term=extracted_data.term,
+        lecture_section=user_selections.selected_lecture_section,
+        lab_section=user_selections.selected_lab_section,
+        assessments=extracted_data.assessments,
+        study_plan=study_plan
+    )
+
+    hash_short = (pdf_hash or 'unknown')[:8]
+    course_code = (extracted_data.course_code or 'Unknown').replace(' ', '_').replace('/', '_')
+    term_name = extracted_data.term.term_name.replace(' ', '').replace('/', '_')
+    lec = user_selections.selected_lecture_section
+    lab = user_selections.selected_lab_section
+    lec_id = lec.section_id if lec and lec.section_id else 'None'
+    lab_id = lab.section_id if lab and lab.section_id else 'None'
+    filename = f"{course_code}_{term_name}_Lec{lec_id}_Lab{lab_id}_{hash_short}.ics"
+    filename = "".join(c for c in filename if c.isalnum() or c in "._-")
+    return filename, calendar.to_ical(), extracted_data
+
+
+def ics_response(filename: str, ics_bytes: bytes):
+    """Stream an .ics back as a download in this same request."""
+    resp = Response(ics_bytes, mimetype='text/calendar')
+    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
 def allowed_file(filename: str) -> bool:
     """Check if file extension is allowed.
     
@@ -137,6 +229,20 @@ def serialize_section(section: Optional[SectionOption]) -> Optional[Dict[str, An
         "end_time": serialize_time(section.end_time),
         "location": section.location
     }
+
+
+def deserialize_section(data: Optional[Dict[str, Any]]) -> Optional[SectionOption]:
+    """Inverse of serialize_section (used to rebuild choices from the cookie)."""
+    if not data:
+        return None
+    return SectionOption(
+        section_type=data.get("section_type", ""),
+        section_id=data.get("section_id", ""),
+        days_of_week=data.get("days_of_week", []),
+        start_time=deserialize_time(data["start_time"]) if data.get("start_time") else None,
+        end_time=deserialize_time(data["end_time"]) if data.get("end_time") else None,
+        location=data.get("location")
+    )
 
 
 def serialize_extracted_data(data: ExtractedCourseData) -> Dict[str, Any]:
@@ -464,7 +570,6 @@ def upload_file():
         # Store in session for review page
         session['pdf_hash'] = pdf_hash
         session['pdf_filename'] = filename
-        session['extracted_data'] = serialize_extracted_data(extracted_data)
         
         # Check for cached user choices
         user_choices = get_cache().lookup_user_choices(pdf_hash, session.get('session_id'))
@@ -497,67 +602,19 @@ def review():
     Returns:
         Rendered review.html template or redirect to download
     """
-    # Check if we have extracted data
-    if 'extracted_data' not in session:
+    # Check if we have extracted data (the cookie carries only the PDF hash;
+    # the data itself is read from the database on every request)
+    if 'pdf_hash' not in session:
         flash('No data to review. Please upload a PDF first.', 'error')
         return redirect(url_for('index'))
-    
-    extracted_data_dict = session['extracted_data']
-    extracted_data = deserialize_extracted_data(extracted_data_dict)
-    
-    # ALWAYS check cache first - session data can be stale
-    # This ensures we always have the latest extracted data
+
     pdf_hash = session.get('pdf_hash')
-    if pdf_hash:
-        cached_data = get_cache().lookup_extraction(pdf_hash)
-        if cached_data:
-            # Use cached data (it's more reliable than session)
-            extracted_data = cached_data
-            # Update session with fresh data
-            session['extracted_data'] = serialize_extracted_data(extracted_data)
-    
-    # Check if assessments are missing (likely stale session data)
-    # This happens when session has old data from before extraction was fixed
-    if len(extracted_data.assessments) == 0:
-        print(f"DEBUG: No assessments found in session data. PDF hash: {session.get('pdf_hash')}")
-        # Try to re-extract from cache or suggest force refresh
-        pdf_hash = session.get('pdf_hash')
-        if pdf_hash:
-            cached_data = get_cache().lookup_extraction(pdf_hash)
-            if cached_data and len(cached_data.assessments) > 0:
-                # Use cached data instead
-                extracted_data = cached_data
-                session['extracted_data'] = serialize_extracted_data(extracted_data)
-                flash('Loaded updated assessment data from cache.', 'info')
-            else:
-                # Cache also empty - try re-extracting from PDF
-                pdf_filename = session.get('pdf_filename')
-                if pdf_filename:
-                    filepath = upload_dir() / pdf_filename
-                    if filepath.exists():
-                        try:
-                            from .pdf_extractor import PDFExtractor
-                            from .rule_resolver import RuleResolver
-                            
-                            extractor = PDFExtractor(filepath)
-                            extracted_data = extractor.extract_all()
-                            
-                            # Resolve relative rules
-                            resolver = RuleResolver()
-                            all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
-                            extracted_data.assessments = resolver.resolve_rules(
-                                extracted_data.assessments,
-                                all_sections,
-                                extracted_data.term
-                            )
-                            
-                            # Update session and cache
-                            session['extracted_data'] = serialize_extracted_data(extracted_data)
-                            get_cache().store_extraction(pdf_hash, extracted_data)
-                            flash('Re-extracted assessments from PDF.', 'info')
-                        except Exception as e:
-                            flash(f'Could not re-extract: {str(e)}', 'warning')
-    
+    extracted_data = load_extracted()
+    if extracted_data is None:
+        flash('Your extracted data has expired. Please upload the PDF again.', 'error')
+        return redirect(url_for('index'))
+    extracted_data_dict = serialize_extracted_data(extracted_data)
+
     if request.method == 'POST':
         # Process form submission
         # Handle manual sections first (add them to extracted_data)
@@ -675,118 +732,22 @@ def review():
             'lead_time_overrides': lead_time_overrides  # Preserve lead time overrides
         }
         
-        # Generate calendar
+        # Generate calendar and stream it back in this same request
         try:
-            # Get custom lead time mapping from session
-            user_choices_dict = session.get('user_choices', {})
-            custom_lead_time_mapping = user_choices_dict.get('custom_lead_time_mapping', {})
-            
-            # Convert custom mapping to StudyPlanGenerator format if provided
-            # The generator expects a dict mapping weight thresholds to days
-            # We need to convert range strings like "0-5%" to the appropriate threshold
-            # Also merge with defaults for ranges not customized
-            if custom_lead_time_mapping:
-                # Convert range strings to weight thresholds
-                range_to_threshold = {
-                    "0-5%": 5,
-                    "6-10%": 10,
-                    "11-20%": 20,
-                    "21-30%": 30,
-                    "31%+": 50,
-                    "Finals": 50  # Finals use the same as 31%+
-                }
-                # Start with default mapping
-                default_gen = StudyPlanGenerator()
-                lead_time_mapping_for_gen = default_gen.lead_time_mapping.copy()
-                # Override with custom values
-                for range_key, days in custom_lead_time_mapping.items():
-                    threshold = range_to_threshold.get(range_key)
-                    if threshold:
-                        lead_time_mapping_for_gen[threshold] = days
-                study_plan_gen = StudyPlanGenerator(lead_time_mapping=lead_time_mapping_for_gen)
-            else:
-                study_plan_gen = StudyPlanGenerator()
-            
-            # Resolve relative date rules before generating calendar
-            # This ensures assessments with due_rule get converted to due_datetime
-            from .rule_resolver import RuleResolver
-            resolver = RuleResolver()
-            all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
-            extracted_data.assessments = resolver.resolve_rules(
-                extracted_data.assessments,
-                all_sections,
-                extracted_data.term
+            custom_lead_time_mapping = session.get('user_choices', {}).get('custom_lead_time_mapping', {})
+            filename, ics_bytes, extracted_data = build_calendar(
+                extracted_data, user_selections, lead_time_overrides,
+                custom_lead_time_mapping, pdf_hash
             )
-            
-            # Update session and cache with resolved assessments
-            session['extracted_data'] = serialize_extracted_data(extracted_data)
-            if pdf_hash:
-                get_cache().store_extraction(pdf_hash, extracted_data)
-            
-            # Generate study plan (pass lead time overrides)
-            study_plan = study_plan_gen.generate_study_plan(
-                extracted_data.assessments,
-                user_lead_times=lead_time_overrides if lead_time_overrides else None
-            )
-            
-            # Generate calendar
-            cal_gen = ICalendarGenerator(timezone_str=extracted_data.term.timezone)
-            calendar = cal_gen.generate_calendar(
-                term=extracted_data.term,
-                lecture_section=user_selections.selected_lecture_section,
-                lab_section=user_selections.selected_lab_section,
-                assessments=extracted_data.assessments,
-                study_plan=study_plan
-            )
-            
-            # Generate filename
-            pdf_hash = session.get('pdf_hash', 'unknown')
-            hash_short = pdf_hash[:8] if len(pdf_hash) >= 8 else pdf_hash
-            course_code = extracted_data.course_code or 'Unknown'
-            term_name = extracted_data.term.term_name.replace(' ', '')
-            lec_id = user_selections.selected_lecture_section.section_id if user_selections.selected_lecture_section and user_selections.selected_lecture_section.section_id else 'None'
-            lab_id = user_selections.selected_lab_section.section_id if user_selections.selected_lab_section and user_selections.selected_lab_section.section_id else 'None'
-            
-            # Sanitize filename components
-            course_code_safe = (course_code or 'Unknown').replace(' ', '_').replace('/', '_')
-            term_name_safe = term_name.replace(' ', '').replace('/', '_')
-            lec_id_safe = lec_id if lec_id else 'None'
-            lab_id_safe = lab_id if lab_id else 'None'
-            hash_short_safe = hash_short[:8] if len(hash_short) >= 8 else hash_short
-            
-            filename = f"{course_code_safe}_{term_name_safe}_Lec{lec_id_safe}_Lab{lab_id_safe}_{hash_short_safe}.ics"
-            # Final sanitization - remove any problematic characters
-            filename = "".join(c for c in filename if c.isalnum() or c in "._-")
-            
-            # Save calendar to temporary file (use absolute path to avoid path issues)
-            # Get project root (parent of src directory)
-            project_root = Path(__file__).parent.parent
-            temp_dir = project_root / 'temp_calendars'
-            temp_dir.mkdir(exist_ok=True)
-            temp_path = temp_dir / filename
-            
-            # Ensure the file is written successfully
-            cal_gen.export_to_file(calendar, str(temp_path))
-            
-            if not temp_path.exists():
-                raise FileNotFoundError(f"Calendar file was not created at {temp_path}")
-            
-            # Store in session (use absolute path)
-            session['calendar_filename'] = filename
-            session['calendar_path'] = str(temp_path.absolute())
-            
-            # Cache user choices
-            pdf_hash = session.get('pdf_hash')
-            if pdf_hash:
-                get_cache().store_user_choices(
-                    pdf_hash,
-                    user_selections,
-                    session.get('session_id')
-                )
-            
-            # Redirect to download
-            return redirect(url_for('download', filename=filename))
-            
+            # Persist resolved assessments and the user's choices for /download
+            save_extracted(extracted_data)
+            get_cache().store_user_choices(pdf_hash, user_selections, session.get('session_id'))
+            analytics.capture(session.get('session_id'), 'ics_downloaded', {
+                'events': ics_bytes.count(b'BEGIN:VEVENT'),
+                'assessments': len(extracted_data.assessments),
+            })
+            return ics_response(filename, ics_bytes)
+
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
@@ -914,7 +875,7 @@ def update_field():
     Returns:
         JSON response with success status
     """
-    if 'extracted_data' not in session:
+    if 'pdf_hash' not in session:
         return jsonify({'success': False, 'error': 'No data to update'}), 400
     
     try:
@@ -924,8 +885,9 @@ def update_field():
         assessment_index = data.get('assessment_index')
         
         # Get current extracted data
-        extracted_data_dict = session['extracted_data']
-        extracted_data = deserialize_extracted_data(extracted_data_dict)
+        extracted_data = load_extracted()
+        if extracted_data is None:
+            return jsonify({'success': False, 'error': 'No data to update'}), 400
         
         # Update based on field type
         if field_type == 'course_code':
@@ -1142,7 +1104,7 @@ def update_field():
             return jsonify({'success': False, 'error': f'Unknown field_type: {field_type}'}), 400
         
         # Update session with modified data
-        session['extracted_data'] = serialize_extracted_data(extracted_data)
+        save_extracted(extracted_data)
         
         # Also update cache
         pdf_hash = session.get('pdf_hash')
@@ -1178,7 +1140,7 @@ def add_assessment():
     Returns:
         JSON response with success status and updated completeness
     """
-    if 'extracted_data' not in session:
+    if 'pdf_hash' not in session:
         return jsonify({'success': False, 'error': 'No data to update'}), 400
     
     try:
@@ -1191,8 +1153,9 @@ def add_assessment():
             return jsonify({'success': False, 'error': 'Type is required'}), 400
         
         # Get current extracted data
-        extracted_data_dict = session['extracted_data']
-        extracted_data = deserialize_extracted_data(extracted_data_dict)
+        extracted_data = load_extracted()
+        if extracted_data is None:
+            return jsonify({'success': False, 'error': 'No data to update'}), 400
         
         # Parse due_datetime if provided
         due_datetime = None
@@ -1240,7 +1203,7 @@ def add_assessment():
         extracted_data.assessments.append(new_assessment)
         
         # Store updated data back in session
-        session['extracted_data'] = serialize_extracted_data(extracted_data)
+        save_extracted(extracted_data)
         
         # Update cache if available
         pdf_hash = session.get('pdf_hash')
@@ -1275,7 +1238,7 @@ def remove_assessment():
     Returns:
         JSON response with success status and updated completeness
     """
-    if 'extracted_data' not in session:
+    if 'pdf_hash' not in session:
         return jsonify({'success': False, 'error': 'No data to update'}), 400
     
     try:
@@ -1286,8 +1249,9 @@ def remove_assessment():
             return jsonify({'success': False, 'error': 'assessment_index is required'}), 400
         
         # Get current extracted data
-        extracted_data_dict = session['extracted_data']
-        extracted_data = deserialize_extracted_data(extracted_data_dict)
+        extracted_data = load_extracted()
+        if extracted_data is None:
+            return jsonify({'success': False, 'error': 'No data to update'}), 400
         
         # Validate index
         try:
@@ -1302,7 +1266,7 @@ def remove_assessment():
             return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
         
         # Store updated data back in session
-        session['extracted_data'] = serialize_extracted_data(extracted_data)
+        save_extracted(extracted_data)
         
         # Update cache if available
         pdf_hash = session.get('pdf_hash')
@@ -1327,40 +1291,50 @@ def remove_assessment():
 
 @app.route('/download/<filename>')
 def download(filename: str):
-    """Download generated .ics file.
-    
-    Args:
-        filename: Name of the calendar file to download
-        
-    Returns:
-        File download response or redirect with error message
+    """Re-generate and stream the .ics for the current PDF.
+
+    Nothing is stored on the server between requests: the calendar is rebuilt
+    from the database (extracted data) and the cookie (user choices).
     """
-    # Check if file exists in session
-    if 'calendar_path' not in session or session.get('calendar_filename') != filename:
+    if 'pdf_hash' not in session:
         flash('Calendar file not found. Please generate a calendar first.', 'error')
-        return redirect(url_for('review'))
-    
-    filepath = Path(session['calendar_path'])
-    
-    # Handle both absolute and relative paths
-    if not filepath.is_absolute():
-        project_root = Path(__file__).parent.parent
-        filepath = project_root / filepath
-    
-    if not filepath.exists():
-        flash('Calendar file not found. Please try generating the calendar again.', 'error')
-        return redirect(url_for('review'))
-    
+        return redirect(url_for('index'))
+    extracted_data = load_extracted()
+    if extracted_data is None:
+        flash('Your extracted data has expired. Please upload the PDF again.', 'error')
+        return redirect(url_for('index'))
+
+    user_choices_dict = session.get('user_choices', {})
+    user_selections = UserSelections()
+    lec = user_choices_dict.get('selected_lecture_section')
+    lab = user_choices_dict.get('selected_lab_section')
+    if lec:
+        user_selections.selected_lecture_section = deserialize_section(lec)
+    if lab:
+        user_selections.selected_lab_section = deserialize_section(lab)
     try:
-        return send_file(
-            str(filepath),
-            as_attachment=True,
-            download_name=filename,
-            mimetype='text/calendar'
+        built_name, ics_bytes, _ = build_calendar(
+            extracted_data, user_selections,
+            user_choices_dict.get('lead_time_overrides', {}),
+            user_choices_dict.get('custom_lead_time_mapping', {}),
+            session.get('pdf_hash')
         )
+        return ics_response(secure_filename(filename) or built_name, ics_bytes)
     except Exception as e:
-        flash(f'Error downloading calendar: {str(e)}. Please try generating the calendar again.', 'error')
+        flash(f'Error generating calendar: {str(e)}. Please try again.', 'error')
         return redirect(url_for('review'))
+
+
+@app.route('/api/health')
+def health():
+    """Liveness + database check used by the portfolio hub and UptimeRobot."""
+    db = 'ok'
+    try:
+        if not get_cache().ping():
+            db = 'error'
+    except Exception:
+        db = 'error'
+    return jsonify(ok=(db == 'ok'), db=db, service='plato'), (200 if db == 'ok' else 503)
 
 
 @app.errorhandler(404)
