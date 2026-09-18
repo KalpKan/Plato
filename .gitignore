@@ -76,3 +76,5 @@ temp_calendars/
 
 cookies*.txt
 .venv/
+.vercel
+.env.local
