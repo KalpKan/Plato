@@ -12,6 +12,8 @@ This is the main web interface for the application. It provides:
 
 import os
 import json
+import urllib.request
+import urllib.error
 import hashlib
 import uuid
 from pathlib import Path
@@ -478,6 +480,46 @@ def deserialize_extracted_data(data: Dict[str, Any]) -> ExtractedCourseData:
     )
 
 
+# ---------------------------------------------------------------------------
+# PostHog reverse proxy: the browser snippet posts to /ingest/* on this host so
+# ad blockers do not drop the events. Static SDK files come from the assets
+# host, everything else from the ingest host.
+# ---------------------------------------------------------------------------
+POSTHOG_INGEST_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com').rstrip('/')
+POSTHOG_ASSETS_HOST = POSTHOG_INGEST_HOST.replace('.i.posthog.com', '-assets.i.posthog.com')
+_HOP_HEADERS = {'host', 'content-length', 'connection', 'transfer-encoding', 'accept-encoding'}
+
+
+@app.route('/ingest/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
+def ingest_proxy(subpath: str):
+    """Forward a PostHog request and return its response unchanged."""
+    if not app.config['POSTHOG_API_KEY']:
+        return jsonify(error='analytics disabled'), 404
+    base = POSTHOG_ASSETS_HOST if subpath.startswith('static/') else POSTHOG_INGEST_HOST
+    url = f"{base}/{subpath}"
+    if request.query_string:
+        url += '?' + request.query_string.decode('utf-8', 'ignore')
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS}
+    # Keep the visitor's IP for PostHog's geolocation (country/city only)
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
+    if client_ip:
+        headers['X-Forwarded-For'] = client_ip
+    body = request.get_data() if request.method == 'POST' else None
+    req = urllib.request.Request(url, data=body, headers=headers, method=request.method)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as upstream:
+            payload = upstream.read()
+            resp = Response(payload, status=upstream.status)
+            ctype = upstream.headers.get('Content-Type')
+            if ctype:
+                resp.headers['Content-Type'] = ctype
+            return resp
+    except urllib.error.HTTPError as e:
+        return Response(e.read(), status=e.code)
+    except Exception as e:  # network trouble must never break the page
+        return jsonify(error=str(e)), 502
+
+
 @app.route('/')
 def index():
     """Home page with PDF upload form.
@@ -536,6 +578,10 @@ def upload_file():
         # Initialize session
         if 'session_id' not in session:
             session['session_id'] = str(uuid.uuid4())
+        analytics.capture(session['session_id'], 'pdf_uploaded', {
+            'size_bytes': filepath.stat().st_size,
+            'force_refresh': force_refresh,
+        })
         
         # Check cache (unless force refresh)
         extracted_data = None
@@ -543,6 +589,11 @@ def upload_file():
             extracted_data = get_cache().lookup_extraction(pdf_hash)
             if extracted_data:
                 flash('Found cached extraction data for this PDF.', 'info')
+                analytics.capture(session['session_id'], 'pdf_parsed', {
+                    'cached': True,
+                    'assessments': len(extracted_data.assessments),
+                    'course_code': extracted_data.course_code,
+                })
         
         # Extract from PDF if not cached or force refresh
         if extracted_data is None:
@@ -562,6 +613,13 @@ def upload_file():
                 # Cache extraction results
                 get_cache().store_extraction(pdf_hash, extracted_data)
                 flash('PDF extracted successfully.', 'success')
+                analytics.capture(session['session_id'], 'pdf_parsed', {
+                    'cached': False,
+                    'assessments': len(extracted_data.assessments),
+                    'lecture_sections': len(extracted_data.lecture_sections),
+                    'lab_sections': len(extracted_data.lab_sections),
+                    'course_code': extracted_data.course_code,
+                })
                 
             except Exception as e:
                 flash(f'Error extracting PDF: {str(e)}', 'error')
