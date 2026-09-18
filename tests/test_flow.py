@@ -88,3 +88,87 @@ def test_health_without_db(monkeypatch, tmp_path):
     assert r.status_code == 200
     body = r.get_json()
     assert body["ok"] is True and body["db"] == "ok"
+
+
+def test_review_post_keeps_custom_lead_time_mapping(monkeypatch, tmp_path):
+    """The weight-range -> days mapping the user set on the review page must survive
+    the /review POST (it is used to build the .ics) and still be there for /download."""
+    mod = _app(monkeypatch, tmp_path)
+    c = _client_with_pdf(mod)
+    mapping = {"0-10": 2}
+    with c.session_transaction() as s:
+        s["user_choices"] = {"custom_lead_time_mapping": mapping, "lead_time_overrides": {"Quiz 0": 5}}
+    captured = {}
+    real_build = mod.build_calendar
+
+    def spy(extracted, selections, overrides, custom_mapping, pdf_hash):
+        captured["mapping"] = custom_mapping
+        captured["overrides"] = overrides
+        return real_build(extracted, selections, overrides, custom_mapping, pdf_hash)
+
+    monkeypatch.setattr(mod, "build_calendar", spy)
+    r = c.post("/review", data={"lecture_section": "0", "lab_section": "none"})
+    assert r.status_code == 200 and r.mimetype == "text/calendar"
+    assert captured["mapping"] == mapping
+    assert captured["overrides"] == {"Quiz 0": 5}
+    with c.session_transaction() as s:
+        assert s["user_choices"]["custom_lead_time_mapping"] == mapping
+        assert s["user_choices"]["lead_time_overrides"] == {"Quiz 0": 5}
+
+
+def test_download_before_review_redirects_to_review(monkeypatch, tmp_path):
+    """Right after upload there is no chosen section yet; /download must not hand out
+    a calendar with no lecture events, it must send the user back to /review."""
+    mod = _app(monkeypatch, tmp_path)
+    c = _client_with_pdf(mod)  # user_choices == {}
+    r = c.get("/download/x.ics")
+    assert r.status_code == 302
+    assert r.headers["Location"].endswith("/review")
+
+
+def test_upload_uses_unique_tmp_name_and_cleans_up(monkeypatch, tmp_path):
+    """Two concurrent uploads named outline.pdf must not share a path, and nothing
+    may be left behind in /tmp after the request."""
+    import io
+    mod = _app(monkeypatch, tmp_path)
+    paths = []
+
+    class FakeExtractor:
+        def __init__(self, path):
+            paths.append(str(path))
+            assert path.exists()
+
+        def extract_all(self):
+            return _data()
+
+    monkeypatch.setattr(mod, "PDFExtractor", FakeExtractor)
+    c = mod.app.test_client()
+    for content in (b"%PDF-1.4 fake one", b"%PDF-1.4 fake two"):  # same name, different PDFs
+        r = c.post("/upload", data={"pdf_file": (io.BytesIO(content), "outline.pdf")},
+                   content_type="multipart/form-data")
+        assert r.status_code == 302
+    assert len(paths) == 2 and paths[0] != paths[1]
+    assert all(p.endswith(".pdf") for p in paths)
+    assert list(mod.upload_dir().iterdir()) == []
+
+
+def test_edit_routes_store_extraction_once(monkeypatch, tmp_path):
+    """Each edit must hit the database once, not twice."""
+    mod = _app(monkeypatch, tmp_path)
+    c = _client_with_pdf(mod)
+    cache = mod.get_cache()
+    calls = []
+    real = cache.store_extraction
+    monkeypatch.setattr(cache, "store_extraction", lambda h, d: calls.append(h) or real(h, d))
+
+    r = c.post("/api/update-field", json={"field_type": "course_name", "value": "N"})
+    assert r.status_code == 200 and len(calls) == 1
+    calls.clear()
+    r = c.post("/api/add-assessment", json={"title": "Final", "type": "exam", "weight_percent": 30,
+                                            "due_date": "2026-12-01", "due_time": "09:00"})
+    assert r.status_code == 200, r.data
+    assert len(calls) == 1
+    calls.clear()
+    r = c.post("/api/remove-assessment", json={"assessment_index": 0})
+    assert r.status_code == 200, r.data
+    assert len(calls) == 1

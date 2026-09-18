@@ -487,7 +487,13 @@ def deserialize_extracted_data(data: Dict[str, Any]) -> ExtractedCourseData:
 # ---------------------------------------------------------------------------
 POSTHOG_INGEST_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com').rstrip('/')
 POSTHOG_ASSETS_HOST = POSTHOG_INGEST_HOST.replace('.i.posthog.com', '-assets.i.posthog.com')
-_HOP_HEADERS = {'host', 'content-length', 'connection', 'transfer-encoding', 'accept-encoding'}
+# Only these request headers are forwarded to PostHog. Everything else, and in
+# particular the visitor's signed Flask session cookie and any Authorization
+# header, stays inside the app (a whitelist, never a blacklist).
+_FORWARDED_REQUEST_HEADERS = ('Content-Type', 'User-Agent', 'Accept', 'Origin', 'Referer')
+# Response headers passed back for the static SDK bundles so browsers can cache
+# them instead of refetching ~300 KB through this function on every page view.
+_STATIC_RESPONSE_HEADERS = ('Cache-Control', 'ETag', 'Last-Modified')
 
 
 @app.route('/ingest/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
@@ -499,7 +505,8 @@ def ingest_proxy(subpath: str):
     url = f"{base}/{subpath}"
     if request.query_string:
         url += '?' + request.query_string.decode('utf-8', 'ignore')
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS}
+    headers = {name: request.headers[name] for name in _FORWARDED_REQUEST_HEADERS
+               if request.headers.get(name)}
     # Keep the visitor's IP for PostHog's geolocation (country/city only)
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
     if client_ip:
@@ -513,6 +520,11 @@ def ingest_proxy(subpath: str):
             ctype = upstream.headers.get('Content-Type')
             if ctype:
                 resp.headers['Content-Type'] = ctype
+            if subpath.startswith('static/'):
+                for name in _STATIC_RESPONSE_HEADERS:
+                    value = upstream.headers.get(name)
+                    if value:
+                        resp.headers[name] = value
             return resp
     except urllib.error.HTTPError as e:
         return Response(e.read(), status=e.code)
@@ -566,10 +578,14 @@ def upload_file():
         flash('Invalid file type. Please upload a PDF file.', 'error')
         return redirect(url_for('index'))
     
+    filepath: Optional[Path] = None
     try:
-        # Save uploaded file
+        # Save the upload under a per-request unique name: two visitors uploading
+        # "outline.pdf" at the same moment on one warm instance must not share a
+        # path, and the file is removed in the finally block below so /tmp
+        # (512 MB on Vercel) never fills up.
         filename = secure_filename(file.filename)
-        filepath = upload_dir() / filename
+        filepath = upload_dir() / f"{uuid.uuid4().hex}-{filename}"
         file.save(str(filepath))
         
         # Compute PDF hash
@@ -648,6 +664,12 @@ def upload_file():
     except Exception as e:
         flash(f'Error processing file: {str(e)}', 'error')
         return redirect(url_for('index'))
+    finally:
+        if filepath is not None:
+            try:
+                filepath.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 @app.route('/review', methods=['GET', 'POST'])
@@ -782,17 +804,19 @@ def review():
         # Get lead time overrides from session
         user_choices_dict = session.get('user_choices', {})
         lead_time_overrides = user_choices_dict.get('lead_time_overrides', {})
+        custom_lead_time_mapping = user_choices_dict.get('custom_lead_time_mapping', {})
         
-        # Store user choices in session
+        # Store user choices in session (keep both lead-time customisations,
+        # /download rebuilds the calendar from exactly this dict)
         session['user_choices'] = {
             'selected_lecture_section': serialize_section(user_selections.selected_lecture_section),
             'selected_lab_section': serialize_section(user_selections.selected_lab_section),
-            'lead_time_overrides': lead_time_overrides  # Preserve lead time overrides
+            'lead_time_overrides': lead_time_overrides,
+            'custom_lead_time_mapping': custom_lead_time_mapping,
         }
         
         # Generate calendar and stream it back in this same request
         try:
-            custom_lead_time_mapping = session.get('user_choices', {}).get('custom_lead_time_mapping', {})
             filename, ics_bytes, extracted_data = build_calendar(
                 extracted_data, user_selections, lead_time_overrides,
                 custom_lead_time_mapping, pdf_hash
@@ -1161,13 +1185,8 @@ def update_field():
         else:
             return jsonify({'success': False, 'error': f'Unknown field_type: {field_type}'}), 400
         
-        # Update session with modified data
+        # Persist the modified data (one upsert; save_extracted writes the cache)
         save_extracted(extracted_data)
-        
-        # Also update cache
-        pdf_hash = session.get('pdf_hash')
-        if pdf_hash:
-            get_cache().store_extraction(pdf_hash, extracted_data)
         
         return jsonify({'success': True, 'message': 'Field updated successfully'})
         
@@ -1263,11 +1282,6 @@ def add_assessment():
         # Store updated data back in session
         save_extracted(extracted_data)
         
-        # Update cache if available
-        pdf_hash = session.get('pdf_hash')
-        if pdf_hash:
-                        get_cache().store_extraction(pdf_hash, extracted_data)
-        
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)
         
@@ -1326,11 +1340,6 @@ def remove_assessment():
         # Store updated data back in session
         save_extracted(extracted_data)
         
-        # Update cache if available
-        pdf_hash = session.get('pdf_hash')
-        if pdf_hash:
-                        get_cache().store_extraction(pdf_hash, extracted_data)
-        
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)
         
@@ -1363,9 +1372,12 @@ def download(filename: str):
         return redirect(url_for('index'))
 
     user_choices_dict = session.get('user_choices', {})
-    user_selections = UserSelections()
     lec = user_choices_dict.get('selected_lecture_section')
     lab = user_choices_dict.get('selected_lab_section')
+    if not lec and not lab:
+        flash('Please choose your lecture or lab section and generate the calendar first.', 'error')
+        return redirect(url_for('review'))
+    user_selections = UserSelections()
     if lec:
         user_selections.selected_lecture_section = deserialize_section(lec)
     if lab:

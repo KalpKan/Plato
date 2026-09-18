@@ -2101,12 +2101,26 @@ footer .footer-credit {
         padding: var(--spacing-lg) var(--spacing-xs);
     }
     
+    /* The hero is a flex item; pin it to the viewport so a long word can never
+       push the card wider than the phone screen. */
+    .hero-content,
+    .hero-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+    
     .hero-card {
         padding: var(--spacing-lg) var(--spacing-md);
     }
     
     .hero-title {
         font-size: 1.75rem;
+        overflow-wrap: break-word;
+    }
+    
+    .hero-description {
+        overflow-wrap: break-word;
     }
     
     .calendar-grid {

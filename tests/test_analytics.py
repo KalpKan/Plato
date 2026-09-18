@@ -105,3 +105,68 @@ def test_upload_emits_pdf_uploaded_and_pdf_parsed(monkeypatch, tmp_path):
                                    content_type="multipart/form-data")
     assert r.status_code == 302 and r.headers["Location"].endswith("/review")
     assert events == ["pdf_uploaded", "pdf_parsed"]
+
+
+def _fake_urlopen(seen, resp_headers=None, body=b'{"status":1}'):
+    class FakeResp(io.BytesIO):
+        status = 200
+        headers = resp_headers or {"Content-Type": "application/json"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=0):
+        seen["url"] = req.full_url
+        seen["headers"] = dict(req.headers)
+        return FakeResp(body)
+
+    return fake_urlopen
+
+
+def test_ingest_proxy_never_forwards_cookie_or_authorization(monkeypatch, tmp_path):
+    """The signed Flask session cookie is a bearer for the visitor's review session;
+    it must never leave the app. Only a short whitelist of headers is forwarded."""
+    mod = _app(monkeypatch, tmp_path, key="phc_test123")
+    seen = {}
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _fake_urlopen(seen))
+    c = mod.app.test_client()
+    with c.session_transaction() as s:
+        s["pdf_hash"] = "h" * 64
+    r = c.post("/ingest/e/", data=b'{"a":1}', content_type="application/json",
+               headers={"Authorization": "Bearer secret", "X-Custom": "1",
+                        "User-Agent": "UA/1", "Origin": "https://plato.kalpkan.com",
+                        "Referer": "https://plato.kalpkan.com/", "Accept": "*/*"})
+    assert r.status_code == 200
+    sent = {k.lower() for k in seen["headers"]}
+    assert "cookie" not in sent
+    assert "authorization" not in sent
+    assert "x-custom" not in sent
+    assert sent <= {"content-type", "user-agent", "accept", "origin", "referer", "x-forwarded-for"}
+    assert seen["headers"].get("User-agent") == "UA/1"
+    assert seen["headers"].get("Content-type") == "application/json"
+
+
+def test_ingest_static_forwards_cache_headers(monkeypatch, tmp_path):
+    mod = _app(monkeypatch, tmp_path, key="phc_test123")
+    seen = {}
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _fake_urlopen(
+        seen, {"Content-Type": "application/javascript", "Cache-Control": "public, max-age=3600",
+               "ETag": '"abc"', "Last-Modified": "Wed, 01 Jan 2025 00:00:00 GMT"}, b"//js"))
+    r = mod.app.test_client().get("/ingest/static/array.js")
+    assert r.status_code == 200
+    assert r.headers["Cache-Control"] == "public, max-age=3600"
+    assert r.headers["ETag"] == '"abc"'
+    assert r.headers["Last-Modified"] == "Wed, 01 Jan 2025 00:00:00 GMT"
+
+
+def test_ingest_event_endpoint_does_not_forward_cache_headers(monkeypatch, tmp_path):
+    mod = _app(monkeypatch, tmp_path, key="phc_test123")
+    seen = {}
+    monkeypatch.setattr(mod.urllib.request, "urlopen", _fake_urlopen(
+        seen, {"Content-Type": "application/json", "ETag": '"abc"'}))
+    r = mod.app.test_client().post("/ingest/e/", data=b"{}", content_type="application/json")
+    assert r.status_code == 200
+    assert "ETag" not in r.headers
