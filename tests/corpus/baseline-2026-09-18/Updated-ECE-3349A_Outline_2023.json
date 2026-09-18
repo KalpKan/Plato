@@ -1,0 +1,47 @@
+{
+  "file": "Updated-ECE-3349A_Outline_2023.pdf",
+  "ok": true,
+  "seconds": 4.19,
+  "course_code": "ECE 3349A",
+  "course_name": "ECE 3349A: Introduction of VLSI",
+  "term": {
+    "name": "Fall 2023",
+    "start": "2023-09-01",
+    "end": "2023-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Homework Assignments",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Laboratory",
+      "type": "other",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Examination",
+      "type": "final",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

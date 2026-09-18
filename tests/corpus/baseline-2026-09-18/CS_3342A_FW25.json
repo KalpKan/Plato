@@ -1,0 +1,63 @@
+{
+  "file": "CS_3342A_FW25.pdf",
+  "ok": true,
+  "seconds": 1.46,
+  "course_code": null,
+  "course_name": "Scheme - functional programming",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Assignment 1 (",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Assignment 2 (",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Assignment 3 (",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Assignment 4 (",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Exam (",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam (",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

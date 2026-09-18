@@ -1,0 +1,88 @@
+{
+  "file": "2277A001002.pdf",
+  "ok": true,
+  "seconds": 4.47,
+  "course_code": "MOS 2277A",
+  "course_name": "Personal Financial Planning",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Final Exam",
+      "type": "final_exam",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 12.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Budget Assignment",
+      "type": "assignment",
+      "weight": 8.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Midterm Exam (October 22, 2025 DURING CLASS TIME)***",
+      "type": "midterm",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    }
+  ]
+}

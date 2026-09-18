@@ -1,0 +1,258 @@
+{
+  "corpus_dir": "~/projects/plato-corpus/pdfs (outside the repo; canonical originals under '~/Desktop/Out and About/Sidequest/Plato/{course_outlines,test_course_outlines}' and ~/Downloads)",
+  "note": "PDFs are never committed (they name instructors/TAs). Ground truth JSON holds only course codes, slots, weights and dates.",
+  "files": [
+    {
+      "file": "2025F---MATH-4121A-9021A---Topology_red.pdf",
+      "sha256": "67b9c0e20bfe59e6340ff2cebbd3d6b4b712ca1b05217bfb06e20f32940c0539",
+      "bytes": 272808,
+      "labelled": false
+    },
+    {
+      "file": "2181A001002003.pdf",
+      "sha256": "a4bbd3fefe9a5facdb5439c914da4b1b6407fe50d42c9dc979462298c5061799",
+      "bytes": 298158,
+      "labelled": false
+    },
+    {
+      "file": "2213A_2022.pdf",
+      "sha256": "fbdf3e3760a6d7e5075fc86623002bbce49b5764a7363199ee45dd1d4a1da1ee",
+      "bytes": 1018790,
+      "labelled": false
+    },
+    {
+      "file": "2223.pdf",
+      "sha256": "52243eab9dd86c981ee7b4286ede025303c5000275b2c72a058bd8d677f2047e",
+      "bytes": 401413,
+      "labelled": false
+    },
+    {
+      "file": "2227A,001,002,003 Jean F25.pdf",
+      "sha256": "37e89f33322bb6bb8f6ae5e3b729e5316484bd1bd14a6cf85185df48c48c1db3",
+      "bytes": 263935,
+      "labelled": false
+    },
+    {
+      "file": "2242A001.pdf",
+      "sha256": "64e3c1b388cd05183116ce07ce92d591e3f3852a24bbbd94b8edf5d1f64f0ca4",
+      "bytes": 249672,
+      "labelled": false
+    },
+    {
+      "file": "2277A001002.pdf",
+      "sha256": "d0f90c33732d377d5e013ab065be2a6367ff5254f0c6f8962b97f72a0a9cd7a4",
+      "bytes": 250728,
+      "labelled": false
+    },
+    {
+      "file": "3300B_W25_Syllabus_revised.pdf",
+      "sha256": "e5716c96113f75e79837a97f8f2dddb9221d47838009dc87fd0429a39878b92b",
+      "bytes": 672950,
+      "labelled": false
+    },
+    {
+      "file": "3311A001.pdf",
+      "sha256": "28c6e09dfc0299727ed8a386adcacc28ea129778e258b951422b0a101a3b4c96",
+      "bytes": 232664,
+      "labelled": false
+    },
+    {
+      "file": "3313A001002003.pdf",
+      "sha256": "de927bb527835bb471cc0e7c79fcdfdadf8cdb112b0f3542f111cea9fa7402f4",
+      "bytes": 234125,
+      "labelled": false
+    },
+    {
+      "file": "AM2402a_outline_2025_red.pdf",
+      "sha256": "25bbb3c50f969c76dcc1d341d52e4da97cb76208b8df7a92d883e29b3d8a2be6",
+      "bytes": 261950,
+      "labelled": false
+    },
+    {
+      "file": "AM3615B_9576B_outline_red.pdf",
+      "sha256": "93b1b80a7677f77ca2d085423dda9aa3976eef331d81049f1507f9dcb1bd96c5",
+      "bytes": 267547,
+      "labelled": false
+    },
+    {
+      "file": "AM3813B-AM9524B-2025_red.pdf",
+      "sha256": "7da878735b1e2198452bc091bd7bbb4a08fc2a26aae72374c7ede0322aea11b2",
+      "bytes": 585544,
+      "labelled": false
+    },
+    {
+      "file": "ANATCELL 3309 Syllabus FW25-26.pdf",
+      "sha256": "25cf0851df6f194ca341e6c6fdbacd4b50f1d65a63157e8e9ec25b83614c2500",
+      "bytes": 470248,
+      "labelled": false
+    },
+    {
+      "file": "B2382 Course Outline 2025.pdf",
+      "sha256": "e6b793170440404ba207fc0566a17d26a45c31b7762ccae8d4a357f6dba59ae2",
+      "bytes": 257708,
+      "labelled": false
+    },
+    {
+      "file": "B2483A.pdf",
+      "sha256": "4893e3b489b843fec46c9530ad1c3a8925f543d21192a8cf20f8c33f607d5fa7",
+      "bytes": 394280,
+      "labelled": false
+    },
+    {
+      "file": "B3415G Course Outline 2025.pdf",
+      "sha256": "87ae807510b98b7e9ac35dae8a2dd58beb4bfba11a059575367c19417279062e",
+      "bytes": 289891,
+      "labelled": false
+    },
+    {
+      "file": "B3603A.pdf",
+      "sha256": "e8a6d104a565c8e3027518143dabc77c66956bb42668084c26a78ed9f9e82160",
+      "bytes": 113452,
+      "labelled": false
+    },
+    {
+      "file": "BIOCHEM 3381A Course Outline Fall 2025.pdf",
+      "sha256": "b49a3dde93220f03d796946d0d57c2683f83e47f433e09d15105d01305b9e3f1",
+      "bytes": 879638,
+      "labelled": true
+    },
+    {
+      "file": "BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf",
+      "sha256": "8294d1f35855773cb85e3c01c7ae0eaca0e3949b7b36bbd9625117a946b142fb",
+      "bytes": 552466,
+      "labelled": false
+    },
+    {
+      "file": "CS1000-001 Course Outline 25-26.pdf",
+      "sha256": "d05fb969994994882ac5785eee83394557c2d265535c0552228480cc27305fb5",
+      "bytes": 174551,
+      "labelled": true
+    },
+    {
+      "file": "CS2301B Course Outline 25-26.pdf",
+      "sha256": "a8b086fa28d8fbf8a3158c4fed86901f8c476ebf54e19ae55e4d4766a1326d7c",
+      "bytes": 507074,
+      "labelled": true
+    },
+    {
+      "file": "CS_2209A_FW25.pdf",
+      "sha256": "2785c78c27405d0c96427022cee7a12a78e3274c7246cba982c156264f40e2d2",
+      "bytes": 201779,
+      "labelled": false
+    },
+    {
+      "file": "CS_2211A_FW25.pdf",
+      "sha256": "d0703cb9e7eb3d964ae52439b4cefbfc64aac026815e15f0473e2e936acc0cc7",
+      "bytes": 357900,
+      "labelled": false
+    },
+    {
+      "file": "CS_3342A_FW25.pdf",
+      "sha256": "7e10afc9aad14279dd71ce1c4d3f1b8de1cec3bdf822bbcf548089570672ae56",
+      "bytes": 515865,
+      "labelled": true
+    },
+    {
+      "file": "CS_4411A_9538A_FW25.pdf",
+      "sha256": "1c85d008c0c5c2987acddf396dc7c01bf91cce09beb3d6f13f1a1e3bbdb20546",
+      "bytes": 265455,
+      "labelled": false
+    },
+    {
+      "file": "Calc1301BFW25_red.pdf",
+      "sha256": "9bfd66fb7544bd04de50f4fe02103997c9593beb142135c75932c8d45b9ca75d",
+      "bytes": 347640,
+      "labelled": false
+    },
+    {
+      "file": "ECE-2240A_Fall-2025-Website-Version.pdf",
+      "sha256": "cbc4fe3e6e31dabcf391758bed9bf70d477018b97799ae02e355ddeb209bb5db",
+      "bytes": 297971,
+      "labelled": true
+    },
+    {
+      "file": "ECE-4429_Fall-2025-Website-Version.pdf",
+      "sha256": "bc72957c36eb3ec6e577c1f012d1666d5d8bd49ed466a39734c1ad89bb23620f",
+      "bytes": 314044,
+      "labelled": false
+    },
+    {
+      "file": "FHS Course Outline 2000.pdf",
+      "sha256": "f117ffd5a39a376a9edf160d86d8162e91cbe50931cc48211f3780957a955a7d",
+      "bytes": 392944,
+      "labelled": true
+    },
+    {
+      "file": "HS-2250A-Introduction-to-Health-Promotion1.pdf",
+      "sha256": "a27e5a6c0a4416a835b16853398cf9c226bc5c0ef9a7f58f5de99ead040204f8",
+      "bytes": 4077644,
+      "labelled": false
+    },
+    {
+      "file": "HS-2610G-Introduction-to-Ethics-and-Health.pdf",
+      "sha256": "1827ac53d89d18fe40de8958f2db43ee7b9865951cc5a175ba7fc85210ed0d70",
+      "bytes": 191884,
+      "labelled": false
+    },
+    {
+      "file": "HS-2800-Research-Methods.pdf",
+      "sha256": "1f38f57a1d91c1eb17156f29f22d582cb9b863fcf470ddf9166b0d7d0d29c4a4",
+      "bytes": 210695,
+      "labelled": true
+    },
+    {
+      "file": "HS-3250F-Global-Health-Promotion.pdf",
+      "sha256": "ceef67fa313eb8f7516d414195b4e041dff99bf7d5f003a83e9854770f06ca00",
+      "bytes": 234450,
+      "labelled": false
+    },
+    {
+      "file": "MSE-2201_Fall-2025-Website-Version.pdf",
+      "sha256": "69a1d3c47e4ce1743b4658e1a42f7bd216dc9a590dd6d13731fe106d3dd12fd3",
+      "bytes": 220786,
+      "labelled": false
+    },
+    {
+      "file": "MSE-2214_Fall-2025-Website-Version.pdf",
+      "sha256": "a477174f0ba06487ab88ccedde61b43ac87a5cab40a3573e32c2e0d687f3a14f",
+      "bytes": 250994,
+      "labelled": false
+    },
+    {
+      "file": "Math-1228---Fall-2025_red.pdf",
+      "sha256": "aa9e70dea0628351c1841854355feec3a9cb1f7cebd8b56c2334d29c4cbca89b",
+      "bytes": 281690,
+      "labelled": true
+    },
+    {
+      "file": "PP3000E Syllabus - Fall–Winter 2025–2026 - FINAL.pdf",
+      "sha256": "b7acbdf7a786925725de20992a0089af0d9a9a0f14c5e509806ba79648be84bd",
+      "bytes": 483622,
+      "labelled": false
+    },
+    {
+      "file": "Physiology 3120 Syllabus 2025–2026 Oct 31st UPDATED.pdf",
+      "sha256": "415de3bcf56f0c3643e6e118d4615bced8dd662e19ba1c54b5b8c41ac137f3ba",
+      "bytes": 786549,
+      "labelled": true
+    },
+    {
+      "file": "SE2205A-2024-25.pdf",
+      "sha256": "59a4b4b6a23a8e116e4eb8b2afeb9d208e713a729bc1ecbe2fbad7e424a1c21c",
+      "bytes": 365569,
+      "labelled": false
+    },
+    {
+      "file": "Updated-ECE-3349A_Outline_2023.pdf",
+      "sha256": "a7a1b0a80293d39361bb8a2f1377660a06bb440f599c7390cbf8157274cf47a9",
+      "bytes": 611035,
+      "labelled": false
+    },
+    {
+      "file": "outline26.pdf",
+      "sha256": "46cadab1dc788b25c36a36ffe22258a6890007b0390af68251a3f19341fd42da",
+      "bytes": 110995,
+      "labelled": true
+    }
+  ]
+}

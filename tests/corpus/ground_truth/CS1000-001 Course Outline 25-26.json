@@ -1,0 +1,72 @@
+{
+  "file": "CS1000-001 Course Outline 25-26.pdf",
+  "sha256": "d05fb969994994882ac5785eee83394557c2d265535c0552228480cc27305fb5",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "Classical Studies 1000",
+  "course_name": "Ancient Greece and Rome",
+  "department": "Classical Studies",
+  "term": {
+    "name": "Fall/Winter 2025-2026",
+    "start": "2025-09-04",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "'2025-2026' on page 1; Western sessional dates"
+  },
+  "sections": [],
+  "sections_note": "'TIME AND PLACE OF CLASS: See OWL' - no slot in the PDF; the app must say so, not invent one.",
+  "assessments": [
+    {
+      "title": "First test",
+      "type": "test",
+      "weight": 20,
+      "due": "2025-11-12",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Second test",
+      "type": "test",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'during December exam period'"
+    },
+    {
+      "title": "Third test",
+      "type": "test",
+      "weight": 25,
+      "due": "2026-02-25",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Final examination",
+      "type": "final",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ]
+    }
+  ],
+  "notes": [
+    "Inline 'Name: weight% (date)' list, no table.",
+    "Baseline extractor invented course code 'ROME 2025'."
+  ],
+  "expected_weight_total": 100
+}

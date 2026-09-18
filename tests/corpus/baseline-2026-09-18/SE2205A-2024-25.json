@@ -1,0 +1,47 @@
+{
+  "file": "SE2205A-2024-25.pdf",
+  "ok": true,
+  "seconds": 5.3,
+  "course_code": "SE 2205A",
+  "course_name": "ALGORITHMS AND DATA STRUCTURES FOR OBJECT ORIENTED DESIGN",
+  "term": {
+    "name": "Fall 2024",
+    "start": "2024-09-01",
+    "end": "2024-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Labs (Total = 6)",
+      "type": "other",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Mid-Term Examination",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Examination",
+      "type": "final",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Bonus Quizzes (Total = 5)",
+      "type": "quiz",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

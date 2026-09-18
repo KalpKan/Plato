@@ -1,0 +1,87 @@
+{
+  "file": "MSE-2214_Fall-2025-Website-Version.pdf",
+  "ok": true,
+  "seconds": 2.68,
+  "course_code": "MSE 2214",
+  "course_name": "MSE 2214 \u2013 Thermodynamics",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Final Examination",
+      "type": "final_exam",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Term Test 1",
+      "type": "quiz",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Tutorial Exercises",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory",
+      "type": "lab",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Term Test 1 15%",
+      "type": "quiz",
+      "weight": 4.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory 10%",
+      "type": "lab",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Final 50%",
+      "type": "other",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "ASSESSED\nTutorial",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "PA1,",
+      "type": "other",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    }
+  ]
+}

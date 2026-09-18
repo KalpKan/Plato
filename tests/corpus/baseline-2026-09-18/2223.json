@@ -1,0 +1,55 @@
+{
+  "file": "2223.pdf",
+  "ok": true,
+  "seconds": 3.14,
+  "course_code": null,
+  "course_name": "Organic Chemistry of Biological Molecules",
+  "term": {
+    "name": "Winter 2023",
+    "start": "2023-01-08",
+    "end": "2023-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Final Exam exam is cumulative but it emphasizes the",
+      "type": "final_exam",
+      "weight": 47.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Midterm Test Saturday, March 2, 7:30 \u2013 9:30 PM",
+      "type": "midterm",
+      "weight": 32.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory Five experiments \u00d7 4.00 each",
+      "type": "lab",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Stereochemistry, reactions of functional groups, properties of di- and polysaccharides,",
+      "type": "other",
+      "weight": 8.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Component Notes",
+      "type": "other",
+      "weight": 1.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    }
+  ]
+}

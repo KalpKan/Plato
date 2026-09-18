@@ -1,0 +1,96 @@
+{
+  "file": "outline26.pdf",
+  "sha256": "46cadab1dc788b25c36a36ffe22258a6890007b0390af68251a3f19341fd42da",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "CS 3340B",
+  "course_name": "Analysis of Algorithms I",
+  "department": "Computer Science",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2026-02-14",
+      "2026-02-22"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "page 3: Class Begin Mon Jan 5 2026, Class End Thu Apr 9 2026, Exam Apr 12-30"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Tue"
+      ],
+      "start": "14:30",
+      "end": "15:30",
+      "location": "MC-110"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": "14:30",
+      "end": "16:30",
+      "location": "MC-110"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignment 1",
+      "type": "assignment",
+      "weight": 8,
+      "due": "2026-01-29",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 2",
+      "type": "assignment",
+      "weight": 8,
+      "due": "2026-03-05",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 3",
+      "type": "assignment",
+      "weight": 9,
+      "due": "2026-04-02",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 30,
+      "due": "2026-03-12",
+      "due_time": "14:30",
+      "date_status": "exact",
+      "end_time": "16:20",
+      "note": "tentative"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ]
+    }
+  ],
+  "notes": [
+    "'Class Meetings: Tuesday 2:30-3:30pm, Thursday 2:30-4:30pm' - two different lengths on two days.",
+    "Evaluation table lists '3 Assignments 25%' as one row; the per-assignment table on page 5 splits it 8/8/9.",
+    "This is the outline from incidents.md 2026-09-18 (course code came out as the room 'MC 110')."
+  ],
+  "expected_weight_total": 100
+}

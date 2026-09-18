@@ -1,0 +1,95 @@
+{
+  "file": "FHS Course Outline 2000.pdf",
+  "sha256": "f117ffd5a39a376a9edf160d86d8162e91cbe50931cc48211f3780957a955a7d",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "KIN 2000",
+  "course_name": "Physical Activity and Health",
+  "department": "Kinesiology (FHS)",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2026-02-14",
+      "2026-02-22"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "Important Dates table, page 1"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": "10:30",
+      "end": "12:20",
+      "location": "SSC-2050",
+      "source": "Table 4, page 2"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Physical Activity Tracker 1",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2026-01-16",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "Physical Activity Goal & Plan",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2026-01-21",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "Mid-term Exam",
+      "type": "midterm",
+      "weight": 30,
+      "due": "2026-02-12",
+      "due_time": "10:30",
+      "date_status": "exact",
+      "note": "in class, Thursday lecture slot"
+    },
+    {
+      "title": "Physical Activity Goal Report",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2026-03-15",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "Physical Activity Tracker 2",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2026-03-20",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ]
+    }
+  ],
+  "notes": [
+    "Table 6 titles carry footnote digits in the PDF text (Tracker 11, Plan3, Exam4...). The clean title is expected.",
+    "'All assignments are due at 23:59 EST unless otherwise specified.'",
+    "Course schedule table (Table 5) repeats the same due dates; do not duplicate them."
+  ],
+  "expected_weight_total": 100
+}

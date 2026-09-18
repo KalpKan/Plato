@@ -1,0 +1,63 @@
+{
+  "file": "AM3813B-AM9524B-2025_red.pdf",
+  "ok": true,
+  "seconds": 3.15,
+  "course_code": "AM 3813B",
+  "course_name": "Prerequisites",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-08",
+    "end": "2026-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Assignments (5) \u2014 taking the best 5 of the first 6 assignments,",
+      "type": "other",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Quiz 1: Thursday, February 5,",
+      "type": "quiz",
+      "weight": 10.0,
+      "due": "2026-02-05",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "Quiz 2: Thursday, February 26,",
+      "type": "quiz",
+      "weight": 10.0,
+      "due": "2026-02-26",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test: Thursday, March 12, 2026, 7:00-9:00 pm, Room",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": "2026-03-12",
+      "due_time": "21:00",
+      "confidence": 0.7
+    },
+    {
+      "title": "Participation (class attendance)",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35.0,
+      "due": "2026-04-30",
+      "due_time": "23:59",
+      "confidence": 0.7
+    }
+  ]
+}

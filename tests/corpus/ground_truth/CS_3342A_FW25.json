@@ -1,0 +1,111 @@
+{
+  "file": "CS_3342A_FW25.pdf",
+  "sha256": "7e10afc9aad14279dd71ce1c4d3f1b8de1cec3bdf822bbcf548089570672ae56",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "CS 3342A",
+  "course_name": "Organization of Programming Languages",
+  "department": "Computer Science",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall 2025' in the page-1 image; Western sessional dates"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Wed"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": null,
+      "source": "page 1 is an image (no text layer)"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": "11:30",
+      "end": "13:30",
+      "location": null,
+      "source": "page 1 is an image (no text layer)"
+    }
+  ],
+  "sections_extractable_without_ocr": false,
+  "assessments": [
+    {
+      "title": "Assignment 1",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2025-10-09",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 2",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2025-10-25",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 3",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2025-11-27",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 4",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2025-12-04",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 30,
+      "due": "2025-10-30",
+      "due_time": "11:30",
+      "date_status": "exact",
+      "end_time": "13:30"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ]
+    }
+  ],
+  "notes": [
+    "Page 1 (course code, term, class times) is a scanned image; the text layer starts on page 2.",
+    "'best 3 out of 4' assignments: all four still have due dates and belong in the calendar.",
+    "Baseline titles came out as 'Assignment 1 (' and course name as 'Scheme - functional programming'."
+  ],
+  "expected_weight_total": 100,
+  "weight_total_note": "4 assignments x 10% but only the best 3 count: 30 + 30 + 40 = 100. A naive sum of rows is 110; both 100 and 110 are acceptable totals.",
+  "acceptable_weight_totals": [
+    100,
+    110
+  ]
+}

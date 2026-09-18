@@ -1,0 +1,92 @@
+{
+  "file": "ECE-2240A_Fall-2025-Website-Version.pdf",
+  "sha256": "cbc4fe3e6e31dabcf391758bed9bf70d477018b97799ae02e355ddeb209bb5db",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "ECE 2240A",
+  "course_name": "Electronics Laboratory I",
+  "department": "Electrical and Computer Engineering",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall/Winter 2025' page 1; Western sessional dates"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Fri"
+      ],
+      "start": "13:30",
+      "end": "14:30",
+      "location": "HSB-236"
+    },
+    {
+      "type": "tutorial",
+      "days": [
+        "Fri"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": "UCC-56"
+    },
+    {
+      "type": "lab",
+      "days": [],
+      "start": null,
+      "end": null,
+      "location": null,
+      "note": "'3hrs/session (weekly); 10 sessions' - day/time only on draftmyschedule; app must ask, not guess"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Labs (8 lab reports)",
+      "type": "lab_report",
+      "weight": 50,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-09-16",
+        "2025-11-22"
+      ],
+      "rule": "Lab report due 24 hrs after each lab session"
+    },
+    {
+      "title": "PCB Project",
+      "type": "project",
+      "weight": 20,
+      "due": "2025-11-29",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "assigned Oct 21"
+    },
+    {
+      "title": "Final Examination",
+      "type": "final",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ]
+    }
+  ],
+  "notes": [
+    "Times written as '1.30 pm-2.30 pm' and '12.30-1.30 pm' (dots, not colons).",
+    "Baseline mapped the tutorial as a lab and dated the PCB project 2026-11-29 (wrong year).",
+    "Baseline term came out as Winter 2025."
+  ],
+  "expected_weight_total": 100
+}

@@ -1,0 +1,68 @@
+{
+  "file": "CS2301B Course Outline 25-26.pdf",
+  "sha256": "a8b086fa28d8fbf8a3158c4fed86901f8c476ebf54e19ae55e4d4766a1326d7c",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "CS 2301B",
+  "course_name": "Crime and Punishment in Ancient Greece and Rome",
+  "department": "Classical Studies",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-08",
+    "reading_week": [
+      "2026-02-14",
+      "2026-02-22"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "weekly table Jan 5 - Apr 8"
+  },
+  "sections": [],
+  "sections_note": "online asynchronous; no timetable slot exists",
+  "assessments": [
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2026-02-02",
+        "2026-02-06"
+      ],
+      "note": "'Date TBA'; schedule puts it in week 5"
+    },
+    {
+      "title": "Midterm Test 2",
+      "type": "midterm",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2026-03-09",
+        "2026-03-13"
+      ],
+      "note": "'Date TBA'; schedule puts it in week 9"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 50,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ]
+    }
+  ],
+  "notes": [
+    "Every assessment is TBA: the correct output is three undated assessments that the review page flags, and an .ics with no invented dates."
+  ],
+  "expected_weight_total": 100
+}

@@ -1,0 +1,175 @@
+{
+  "file": "PP3000E Syllabus - Fall\u2013Winter 2025\u20132026 - FINAL.pdf",
+  "ok": true,
+  "seconds": 8.13,
+  "course_code": null,
+  "course_name": "Physiology and Pharmacology Laboratory-PhysPharm 3000E",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Total Rotation 4",
+      "type": "other",
+      "weight": 28.75,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Rotation 3 long",
+      "type": "other",
+      "weight": 20.0,
+      "due": "2026-02-13",
+      "due_time": "18:00",
+      "confidence": 0.8
+    },
+    {
+      "title": "Apr 7th \u2013 8th in lab",
+      "type": "lab",
+      "weight": 12.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Rotation 1: short",
+      "type": "other",
+      "weight": 10.0,
+      "due": "2026-10-24",
+      "due_time": "18:00",
+      "confidence": 0.8
+    },
+    {
+      "title": "Poster presentations",
+      "type": "presentation",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "ASSIGNMENT 1",
+      "type": "assignment",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Toolboxes Quiz from Toolbox 1, 2 and 3",
+      "type": "quiz",
+      "weight": 5.0,
+      "due": "2026-09-19",
+      "due_time": "18:00",
+      "confidence": 0.8
+    },
+    {
+      "title": "Statistics module quiz",
+      "type": "quiz",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Long report Written Completion",
+      "type": "other",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Long report results Written Completion",
+      "type": "other",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Serial dilution quiz",
+      "type": "quiz",
+      "weight": 2.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Short report intro & methods",
+      "type": "other",
+      "weight": null,
+      "due": "2026-10-03",
+      "due_time": "18:00",
+      "confidence": 0.5
+    },
+    {
+      "title": "Short report results",
+      "type": "other",
+      "weight": null,
+      "due": "2026-10-10",
+      "due_time": "18:00",
+      "confidence": 0.5
+    },
+    {
+      "title": "report",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5
+    },
+    {
+      "title": "PRACTICUM TIME",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5
+    },
+    {
+      "title": "in lab",
+      "type": "lab",
+      "weight": null,
+      "due": "2025-12-09",
+      "due_time": "00:00",
+      "confidence": 0.5
+    },
+    {
+      "title": "Long report intro+references",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5
+    },
+    {
+      "title": "Long report methods",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5
+    },
+    {
+      "title": "Long report results",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5
+    },
+    {
+      "title": "Due Mar 20th at 6:00 p.m.",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.25
+    }
+  ]
+}

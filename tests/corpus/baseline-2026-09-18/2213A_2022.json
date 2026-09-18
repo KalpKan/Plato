@@ -1,0 +1,55 @@
+{
+  "file": "2213A_2022.pdf",
+  "ok": true,
+  "seconds": 3.87,
+  "course_code": null,
+  "course_name": "Course Website",
+  "term": {
+    "name": "Fall 2022",
+    "start": "2022-09-01",
+    "end": "2022-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Final Exam",
+      "type": "final_exam",
+      "weight": 45.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Tests for Carbonyl Compounds Week of November 21",
+      "type": "quiz",
+      "weight": 28.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory Five experiments (4.00 each)",
+      "type": "lab",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "for C=C Bonds Week of November 7",
+      "type": "other",
+      "weight": 14.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Addition Reaction of Alkenes",
+      "type": "other",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    }
+  ]
+}

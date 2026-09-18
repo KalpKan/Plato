@@ -1,0 +1,47 @@
+{
+  "file": "CS1000-001 Course Outline 25-26.pdf",
+  "ok": true,
+  "seconds": 1.35,
+  "course_code": "ROME 2025",
+  "course_name": "ANCIENT GREECE AND ROME",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "First test",
+      "type": "quiz",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Second test",
+      "type": "quiz",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Third test",
+      "type": "quiz",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    },
+    {
+      "title": "Final examination",
+      "type": "final_exam",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.85
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "file": "FHS Course Outline 2000.pdf",
+  "ok": true,
+  "seconds": 5.4,
+  "course_code": "KIN 2000",
+  "course_name": "KIN 2000 Physical Activity and Health",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-08",
+    "end": "2026-04-30"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "10:30",
+      "end": "12:20",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "10:30",
+      "end": "12:20",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Physical Activity Tracker 11",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Physical Activity Goal & Plan3",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Mid-term Exam4",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Physical Activity Goal Report5",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Physical Activity Tracker 26",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Exam7",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

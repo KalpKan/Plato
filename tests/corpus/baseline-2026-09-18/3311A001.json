@@ -1,0 +1,80 @@
+{
+  "file": "3311A001.pdf",
+  "ok": true,
+  "seconds": 4.22,
+  "course_code": "MOS 3311",
+  "course_name": "Advanced Corporate Finance",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "04:30",
+      "end": "18:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Mon"
+      ],
+      "start": "01:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "04:30",
+      "end": "18:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Mon"
+      ],
+      "start": "01:30",
+      "end": "16:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Midterm Exam: (Monday, October 20 in class) =",
+      "type": "midterm",
+      "weight": 35.0,
+      "due": "2025-10-20",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam: (during examination period scheduled by the Registrar) =",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Group Project",
+      "type": "other",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

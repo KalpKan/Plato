@@ -1,0 +1,124 @@
+{
+  "file": "B3415G Course Outline 2025.pdf",
+  "ok": true,
+  "seconds": 4.44,
+  "course_code": null,
+  "course_name": "List of Prerequisites",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "11:30",
+      "end": "12:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "11:30",
+      "end": "12:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Final Exam",
+      "type": "final_exam",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Midterm",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Research",
+      "type": "other",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Feb 10/12 Ocean acidification",
+      "type": "other",
+      "weight": 7.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Feb 3/5 Near shore marine ecosystems",
+      "type": "other",
+      "weight": 6.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Jan 27/29 Primary production, phytoplankton",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Jan 20/22 Living in water",
+      "type": "other",
+      "weight": 4.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "(make-up on Monday March 10",
+      "type": "other",
+      "weight": 4.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Biol 3415G \u2013 Winter 2025",
+      "type": "other",
+      "weight": 4.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "Jan 6/8",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.25
+    },
+    {
+      "title": "Feb 3/5",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.25
+    }
+  ]
+}

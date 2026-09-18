@@ -1,0 +1,39 @@
+{
+  "file": "HS-2610G-Introduction-to-Ethics-and-Health.pdf",
+  "ok": true,
+  "seconds": 3.15,
+  "course_code": "HS 2610G",
+  "course_name": "HS 2610G: Introduction to Ethics",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Major Essay",
+      "type": "other",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

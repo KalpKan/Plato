@@ -1,0 +1,39 @@
+{
+  "file": "AM3615B_9576B_outline_red.pdf",
+  "ok": true,
+  "seconds": 4.17,
+  "course_code": "AM 3615B",
+  "course_name": "List of Prerequisites",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-08",
+    "end": "2026-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Assignments (5) 5x",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 45.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

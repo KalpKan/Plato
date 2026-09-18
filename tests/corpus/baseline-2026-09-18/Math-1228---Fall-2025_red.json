@@ -1,0 +1,55 @@
+{
+  "file": "Math-1228---Fall-2025_red.pdf",
+  "ok": true,
+  "seconds": 3.44,
+  "course_code": "MC 113",
+  "course_name": "Course Contact Policies",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Final Exam",
+      "type": "final_exam",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Term Test 1",
+      "type": "quiz",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Dr. Hyun Jong Kim",
+      "type": "other",
+      "weight": null,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.25
+    },
+    {
+      "title": "Bonus*",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    }
+  ]
+}

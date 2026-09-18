@@ -1,0 +1,77 @@
+{
+  "file": "Math-1228---Fall-2025_red.pdf",
+  "sha256": "aa9e70dea0628351c1841854355feec3a9cb1f7cebd8b56c2334d29c4cbca89b",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "Math 1228",
+  "course_name": "Methods of Finite Mathematics",
+  "department": "Mathematics",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "file name and 'Fall 2025' content; Western sessional dates"
+  },
+  "sections": [],
+  "sections_note": "Section 200 is online asynchronous; six tutorial sections (002-007) are listed with blank Time/Room cells.",
+  "assessments": [
+    {
+      "title": "Online Quizzes",
+      "type": "quiz",
+      "weight": 10,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "6 quizzes, best 5; schedule only on OWL"
+    },
+    {
+      "title": "Term Test 1",
+      "type": "test",
+      "weight": 20,
+      "due": "2025-10-03",
+      "due_time": "19:00",
+      "date_status": "exact",
+      "end_time": "20:30"
+    },
+    {
+      "title": "Term Test 2",
+      "type": "test",
+      "weight": 20,
+      "due": "2025-11-14",
+      "due_time": "19:00",
+      "date_status": "exact",
+      "end_time": "20:30"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ]
+    }
+  ],
+  "excluded_rows": [
+    "Bonus* 10% (extra weight on the best test; not an event)"
+  ],
+  "notes": [
+    "Baseline extracted an instructor's name as an assessment and 'MC 113' (a room) as the course code."
+  ],
+  "expected_weight_total": 90,
+  "weight_total_note": "Rows sum to 90; the outline's 'Bonus* 10%' is extra weight on the best test, so 90 (without bonus) or 100 (with the bonus row) are both acceptable totals.",
+  "acceptable_weight_totals": [
+    90,
+    100
+  ]
+}

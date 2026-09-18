@@ -1,0 +1,108 @@
+{
+  "file": "CS_4411A_9538A_FW25.pdf",
+  "ok": true,
+  "seconds": 2.33,
+  "course_code": "CS 4411",
+  "course_name": "Databases II (Advanced Databases)",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "12:30",
+      "end": "14:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "04:00",
+      "end": "17:00",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "12:30",
+      "end": "14:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "04:00",
+      "end": "17:00",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignments",
+      "type": "other",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm test",
+      "type": "midterm",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final exam",
+      "type": "final",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Project",
+      "type": "other",
+      "weight": 35.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

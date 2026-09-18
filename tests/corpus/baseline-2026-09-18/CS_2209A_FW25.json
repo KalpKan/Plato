@@ -1,0 +1,88 @@
+{
+  "file": "CS_2209A_FW25.pdf",
+  "ok": true,
+  "seconds": 2.35,
+  "course_code": "PSCI 2209A",
+  "course_name": "COMPSCI 2209A",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "09:30",
+      "end": "11:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "09:30",
+      "end": "10:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "09:30",
+      "end": "11:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "09:30",
+      "end": "10:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignments",
+      "type": "other",
+      "weight": 17.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 8.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final exam",
+      "type": "final",
+      "weight": 45.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

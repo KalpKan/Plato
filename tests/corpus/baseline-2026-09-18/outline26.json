@@ -1,0 +1,90 @@
+{
+  "file": "outline26.pdf",
+  "ok": true,
+  "seconds": 2.34,
+  "course_code": "MC 110",
+  "course_name": "Analysis",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "02:30",
+      "end": "15:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "02:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "02:30",
+      "end": "03:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "02:30",
+      "end": "15:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "02:30",
+      "end": "16:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "3 Assignments",
+      "type": "other",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 45.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

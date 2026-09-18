@@ -1,0 +1,63 @@
+{
+  "file": "HS-2250A-Introduction-to-Health-Promotion1.pdf",
+  "ok": true,
+  "seconds": 5.67,
+  "course_code": "HS 2250A",
+  "course_name": "HS 2250A: Introduction to",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Midterm 1* [online]",
+      "type": "midterm",
+      "weight": 32.5,
+      "due": "2026-10-08",
+      "due_time": "18:00",
+      "confidence": 0.8
+    },
+    {
+      "title": "[*Cannot be used for",
+      "type": "other",
+      "weight": null,
+      "due": "2026-09-12",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "Midterm 2 [online]",
+      "type": "midterm",
+      "weight": null,
+      "due": "2026-11-12",
+      "due_time": "06:00",
+      "confidence": 0.5
+    },
+    {
+      "title": "% Midterm 2 [online]",
+      "type": "midterm",
+      "weight": 12.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "School of Health Studies",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    },
+    {
+      "title": "School of Health Studies",
+      "type": "other",
+      "weight": 6.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.5499999999999999
+    }
+  ]
+}

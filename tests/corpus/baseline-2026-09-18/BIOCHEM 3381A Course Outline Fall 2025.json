@@ -1,0 +1,87 @@
+{
+  "file": "BIOCHEM 3381A Course Outline Fall 2025.pdf",
+  "ok": true,
+  "seconds": 7.62,
+  "course_code": null,
+  "course_name": "Biological Macromolecules (Biochem 3381A)",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "I. Quizzes (",
+      "type": "quiz",
+      "weight": 15.0,
+      "due": "2025-09-12",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "II. Assignment 1 (",
+      "type": "other",
+      "weight": 5.0,
+      "due": "2025-09-29",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "III. Assignment 2 (",
+      "type": "other",
+      "weight": 20.0,
+      "due": "2025-10-13",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "IV. Assignment 3 (",
+      "type": "other",
+      "weight": 20.0,
+      "due": "2025-11-10",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "* Inquiry Update Reports: (",
+      "type": "other",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "* Final Group Presentation: (",
+      "type": "other",
+      "weight": 5.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "* Final Written Report: Wed. December 8th. (",
+      "type": "other",
+      "weight": 25.0,
+      "due": "2025-12-08",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "* Peer Evaluations: individual contribution to your group (",
+      "type": "other",
+      "weight": 7.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "6 x",
+      "type": "midterm",
+      "weight": 2.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

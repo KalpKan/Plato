@@ -1,0 +1,39 @@
+{
+  "file": "CS2301B Course Outline 25-26.pdf",
+  "ok": true,
+  "seconds": 3.03,
+  "course_code": "CS 2301B",
+  "course_name": "Crime and Punishment in Ancient Greece and Rome",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-08",
+    "end": "2026-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test 2",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "file": "2227A,001,002,003 Jean F25.pdf",
+  "ok": true,
+  "seconds": 4.17,
+  "course_code": "MOS 2227A",
+  "course_name": "Introduction to Financial Accounting",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Pre-Class Readiness Quizzes",
+      "type": "quiz",
+      "weight": 8.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Post-Class Application Assignments",
+      "type": "other",
+      "weight": 16.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 32.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 44.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "The best eight out of 10 quizzes weighed at",
+      "type": "quiz",
+      "weight": 1.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "The best eight out of 12 assignments weighed at",
+      "type": "other",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

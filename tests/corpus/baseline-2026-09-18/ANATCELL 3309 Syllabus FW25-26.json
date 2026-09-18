@@ -1,0 +1,55 @@
+{
+  "file": "ANATCELL 3309 Syllabus FW25-26.pdf",
+  "ok": true,
+  "seconds": 5.76,
+  "course_code": "CELL 3309",
+  "course_name": "ANATCELL 3309 Mammalian Histology",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Term 1 Lab Assignments",
+      "type": "assignment",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Term 2 Lab Assignments",
+      "type": "assignment",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

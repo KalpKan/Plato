@@ -1,0 +1,108 @@
+{
+  "file": "2181A001002003.pdf",
+  "ok": true,
+  "seconds": 3.75,
+  "course_code": "MOS 2181A",
+  "course_name": "Organizational Behaviour",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": null
+    },
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Tue"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Chapter Assignments (one assignment for each of the 15 chapters) =",
+      "type": "other",
+      "weight": 7.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Exam #1 (during class time, 2 hours in length) =",
+      "type": "midterm",
+      "weight": 31.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Exam #2 (during class time, 2 hours in length) =",
+      "type": "midterm",
+      "weight": 31.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Exam #3 (December exam period, 2 hours in length) =",
+      "type": "midterm",
+      "weight": 31.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

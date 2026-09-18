@@ -1,0 +1,58 @@
+{
+  "file": "ECE-4429_Fall-2025-Website-Version.pdf",
+  "ok": true,
+  "seconds": 1.97,
+  "course_code": "ECE 4429",
+  "course_name": "ECE 4429 \u2013 Advanced Digital Signal Processing",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Wed"
+      ],
+      "start": "14:30",
+      "end": "17:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm",
+      "type": "midterm",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Laboratory",
+      "type": "other",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Examina\ufffdon",
+      "type": "final",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

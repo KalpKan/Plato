@@ -1,0 +1,100 @@
+{
+  "file": "Physiology 3120 Syllabus 2025\u20132026 Oct 31st UPDATED.pdf",
+  "ok": true,
+  "seconds": 6.42,
+  "course_code": null,
+  "course_name": "Physiology 3120",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "10:30",
+      "end": "11:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "PeerWise Assignment 1",
+      "type": "assignment",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Assignment 1 Slide redesign",
+      "type": "assignment",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "PeerWise Assignment 2",
+      "type": "assignment",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Midterm Test 2",
+      "type": "midterm",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "PeerWise Assignment 3",
+      "type": "assignment",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Assignment 2 Slide redesign & Teach",
+      "type": "assignment",
+      "weight": 6.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Optional Bonus Assignment",
+      "type": "assignment",
+      "weight": 1.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

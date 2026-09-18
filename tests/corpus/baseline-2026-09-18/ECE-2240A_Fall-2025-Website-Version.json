@@ -1,0 +1,60 @@
+{
+  "file": "ECE-2240A_Fall-2025-Website-Version.pdf",
+  "ok": true,
+  "seconds": 2.75,
+  "course_code": "ECE 2240A",
+  "course_name": "ECE 2240A \u2013 Electronics Laboratory I",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Fri"
+      ],
+      "start": "13:30",
+      "end": "14:30",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Fri"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Labs (Total = 8)",
+      "type": "other",
+      "weight": 50.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "PCB Project",
+      "type": "project",
+      "weight": 20.0,
+      "due": "2026-11-29",
+      "due_time": "23:59",
+      "confidence": 0.8
+    },
+    {
+      "title": "Final Examination",
+      "type": "final",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

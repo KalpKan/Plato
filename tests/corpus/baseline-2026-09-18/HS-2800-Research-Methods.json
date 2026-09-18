@@ -1,0 +1,95 @@
+{
+  "file": "HS-2800-Research-Methods.pdf",
+  "ok": true,
+  "seconds": 4.97,
+  "course_code": null,
+  "course_name": "Fall & Winter | 2025-2026",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "End of term test",
+      "type": "quiz",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Mid-term test -",
+      "type": "quiz",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "End of year assessment (no final exam)",
+      "type": "final_exam",
+      "weight": 25.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "End of term test -",
+      "type": "quiz",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Jacobsen 2021: C.1 TBA",
+      "type": "other",
+      "weight": null,
+      "due": "2026-09-04",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "Jacobsen 2021: C.2, 4 TBA",
+      "type": "other",
+      "weight": null,
+      "due": "2026-09-11",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "TBA",
+      "type": "other",
+      "weight": null,
+      "due": "2026-09-18",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "Jacobsen 2021: C.19, 20, 21",
+      "type": "other",
+      "weight": null,
+      "due": "2026-09-25",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "On OWL Brightspace",
+      "type": "other",
+      "weight": null,
+      "due": "2026-10-02",
+      "due_time": "00:00",
+      "confidence": 0.25
+    },
+    {
+      "title": "Jacobsen 2021: C.11",
+      "type": "other",
+      "weight": null,
+      "due": "2026-10-30",
+      "due_time": "00:00",
+      "confidence": 0.25
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "file": "Physiology 3120 Syllabus 2025–2026 Oct 31st UPDATED.pdf",
+  "sha256": "415de3bcf56f0c3643e6e118d4615bced8dd662e19ba1c54b5b8c41ac137f3ba",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "Physiology 3120",
+  "course_name": "Physiology 3120",
+  "department": "Physiology and Pharmacology",
+  "term": {
+    "name": "Fall/Winter 2025-2026",
+    "start": "2025-09-04",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "Important Dates, page 1 (Sept 4 - Dec 9; Jan 5 - Apr 9)"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "10:30",
+      "end": "11:30",
+      "location": null,
+      "source": "Timetabled Sessions table"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "PeerWise Assignment 1",
+      "type": "assignment",
+      "weight": 2,
+      "due": "2025-10-27",
+      "due_time": "23:59",
+      "date_status": "exact",
+      "secondary_due": "2025-10-29"
+    },
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25,
+      "due": "2025-11-14",
+      "due_time": "18:00",
+      "date_status": "exact",
+      "end_time": "20:00"
+    },
+    {
+      "title": "Assignment 1 Slide redesign",
+      "type": "assignment",
+      "weight": 3,
+      "due": "2025-12-08",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "PeerWise Assignment 2",
+      "type": "assignment",
+      "weight": 2,
+      "due": "2026-01-19",
+      "due_time": "23:59",
+      "date_status": "exact",
+      "secondary_due": "2026-01-21"
+    },
+    {
+      "title": "Midterm Test 2",
+      "type": "midterm",
+      "weight": 25,
+      "due": "2026-01-30",
+      "due_time": "18:00",
+      "date_status": "exact",
+      "end_time": "20:00"
+    },
+    {
+      "title": "PeerWise Assignment 3",
+      "type": "assignment",
+      "weight": 2,
+      "due": "2026-03-23",
+      "due_time": "23:59",
+      "date_status": "exact",
+      "secondary_due": "2026-03-25"
+    },
+    {
+      "title": "Assignment 2 Slide redesign & Teach",
+      "type": "assignment",
+      "weight": 6,
+      "due": "2026-04-08",
+      "due_time": "23:59",
+      "date_status": "exact"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ]
+    }
+  ],
+  "excluded_rows": [
+    "Optional Bonus Assignment +1% (optional; may appear but must not count toward the 100% total)"
+  ],
+  "notes": [
+    "Dates in the table have no year; the year must come from the term (Oct/Nov/Dec -> 2025, Jan-Apr -> 2026).",
+    "Cells wrap across lines ('Author: Mon, Oct. 27th / by / 11:59 / PM.')."
+  ],
+  "expected_weight_total": 100
+}

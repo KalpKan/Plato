@@ -1,0 +1,47 @@
+{
+  "file": "CS_2211A_FW25.pdf",
+  "ok": true,
+  "seconds": 4.2,
+  "course_code": "PSCI 2211A",
+  "course_name": "Course Description \u2013 COMPSCI 2211A: Software Tools and Systems Programming",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Assignments",
+      "type": "other",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Labs",
+      "type": "other",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

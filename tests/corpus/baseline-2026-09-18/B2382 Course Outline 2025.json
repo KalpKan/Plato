@@ -1,0 +1,47 @@
+{
+  "file": "B2382 Course Outline 2025.pdf",
+  "ok": true,
+  "seconds": 4.12,
+  "course_code": null,
+  "course_name": "in-person lectures",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Lecture Test",
+      "type": "midterm",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Tutorial Quiz",
+      "type": "quiz",
+      "weight": 7.5,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    },
+    {
+      "title": "For lecture tests, the best 3 test marks (",
+      "type": "midterm",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

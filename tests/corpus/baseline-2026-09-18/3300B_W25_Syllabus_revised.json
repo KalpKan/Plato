@@ -1,0 +1,47 @@
+{
+  "file": "3300B_W25_Syllabus_revised.pdf",
+  "ok": true,
+  "seconds": 4.56,
+  "course_code": null,
+  "course_name": "Microbiology & Immunology",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Test 1",
+      "type": "other",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Test 2",
+      "type": "other",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Test 3",
+      "type": "other",
+      "weight": 20.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

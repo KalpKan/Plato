@@ -1,0 +1,47 @@
+{
+  "file": "Calc1301BFW25_red.pdf",
+  "ok": true,
+  "seconds": 3.85,
+  "course_code": "FW 2025",
+  "course_name": "Calculus II",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Submitted Homework",
+      "type": "assignment",
+      "weight": 12.0,
+      "due": "2026-01-30",
+      "due_time": "23:59",
+      "confidence": 0.8
+    },
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 10.0,
+      "due": "2026-01-19",
+      "due_time": "23:59",
+      "confidence": 0.8
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 36.0,
+      "due": "2026-02-27",
+      "due_time": "19:00",
+      "confidence": 0.8
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 42.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}

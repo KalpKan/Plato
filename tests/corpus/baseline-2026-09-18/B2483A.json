@@ -1,0 +1,35 @@
+{
+  "file": "B2483A.pdf",
+  "ok": true,
+  "seconds": 3.91,
+  "course_code": "BIO 2483A",
+  "course_name": "List of Prerequisites",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "12:30",
+      "end": "01:20",
+      "location": null
+    },
+    {
+      "type": "lab",
+      "id": "",
+      "days": [
+        "Thu"
+      ],
+      "start": "12:30",
+      "end": "01:20",
+      "location": null
+    }
+  ],
+  "assessments": []
+}

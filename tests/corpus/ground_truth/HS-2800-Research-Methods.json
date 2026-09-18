@@ -1,0 +1,80 @@
+{
+  "file": "HS-2800-Research-Methods.pdf",
+  "sha256": "1f38f57a1d91c1eb17156f29f22d582cb9b863fcf470ddf9166b0d7d0d29c4a4",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "Health Sciences 2800",
+  "course_name": "Health Sciences Research Methods",
+  "department": "Health Studies",
+  "term": {
+    "name": "Fall/Winter 2025-2026",
+    "start": "2025-09-04",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "'Fall & Winter | 2025-2026'; weekly table Sept 4 - Apr 9"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": null,
+      "end": null,
+      "location": null,
+      "note": "weekly dates are all Thursdays; '3 hours long'; clock time not in the PDF"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Mid-term test (Term 1)",
+      "type": "midterm",
+      "weight": 20,
+      "due": "2025-10-16",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Scheduled during class time'"
+    },
+    {
+      "title": "End of term test",
+      "type": "test",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'Date TBD', Registrar-scheduled in exam period"
+    },
+    {
+      "title": "Mid-term test (Term 2)",
+      "type": "midterm",
+      "weight": 25,
+      "due": "2026-02-05",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Scheduled during class time'"
+    },
+    {
+      "title": "End of year assessment (essay)",
+      "type": "assignment",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba"
+    }
+  ],
+  "notes": [
+    "Weekly schedule table has a Reading/Assessment column; reading rows ('Jacobsen 2021: C.1', 'TBA') are NOT assessments.",
+    "Baseline produced 10 assessments including 6 reading rows and duplicated the tests."
+  ],
+  "expected_weight_total": 100
+}

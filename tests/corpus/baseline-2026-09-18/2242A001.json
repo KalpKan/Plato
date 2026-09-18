@@ -1,0 +1,39 @@
+{
+  "file": "2242A001.pdf",
+  "ok": true,
+  "seconds": 3.5,
+  "course_code": "MOS 2242A",
+  "course_name": "Statistics",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Exam 1: Monday, October 6, 2025; 10:00 a.m. - 12:00 p.m. =",
+      "type": "midterm",
+      "weight": 33.0,
+      "due": "2025-10-06",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "Exam 2: Monday, November 17, 2025; 10:00 a.m. - 12:00 p.m. =",
+      "type": "midterm",
+      "weight": 33.0,
+      "due": "2025-11-17",
+      "due_time": "23:59",
+      "confidence": 0.7
+    },
+    {
+      "title": "Exam 3: to be scheduled during the final exam period, Dec. 11-22, 2025 =",
+      "type": "final",
+      "weight": 34.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.7
+    }
+  ]
+}

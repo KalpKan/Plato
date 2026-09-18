@@ -1,0 +1,63 @@
+{
+  "file": "B3603A.pdf",
+  "ok": true,
+  "seconds": 1.93,
+  "course_code": "NCB 223",
+  "course_name": "Denis Maxwell",
+  "term": {
+    "name": "Unknown",
+    "start": "2026-09-18",
+    "end": "2026-09-18"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Final Exam",
+      "type": "final_exam",
+      "weight": 30.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory",
+      "type": "lab",
+      "weight": 28.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Total marks",
+      "type": "other",
+      "weight": 28.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Term paper",
+      "type": "other",
+      "weight": 15.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Nov 25/26 Group lab presentations",
+      "type": "lab",
+      "weight": 7.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Pre-midterm quiz",
+      "type": "midterm",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    }
+  ]
+}

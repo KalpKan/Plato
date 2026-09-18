@@ -1,0 +1,71 @@
+{
+  "file": "MSE-2201_Fall-2025-Website-Version.pdf",
+  "ok": true,
+  "seconds": 2.88,
+  "course_code": "MSE 2201",
+  "course_name": "MSE 2201 \u2013 Introduction to Electrical Instrumentation",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-08",
+    "end": "2025-04-30"
+  },
+  "sections": [],
+  "assessments": [
+    {
+      "title": "Laboratory Experiments (8 Total)",
+      "type": "lab",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Final Examination",
+      "type": "final_exam",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory Examination",
+      "type": "lab",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Project",
+      "type": "project",
+      "weight": 10.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Laboratory 10%",
+      "type": "lab",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Final Examination 40%",
+      "type": "final_exam",
+      "weight": 3.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    },
+    {
+      "title": "Project 10%",
+      "type": "project",
+      "weight": 2.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.8
+    }
+  ]
+}

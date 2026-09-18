@@ -1,0 +1,133 @@
+{
+  "file": "BIOCHEM 3381A Course Outline Fall 2025.pdf",
+  "sha256": "b49a3dde93220f03d796946d0d57c2683f83e47f433e09d15105d01305b9e3f1",
+  "labelled_by": "spec agent, 2026-09-18, by reading the PDF",
+  "course_code": "Biochem 3381A",
+  "course_name": "Biological Macromolecules",
+  "department": "Biochemistry",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall 2025'; first lecture Sept 5"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "12:30",
+      "end": "13:20",
+      "location": "AHB-1R40"
+    },
+    {
+      "type": "tutorial",
+      "days": [
+        "Wed"
+      ],
+      "start": "17:30",
+      "end": "18:20",
+      "location": "Zoom",
+      "note": "6 scheduled tutorials, not every week"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Weekly Quizzes",
+      "type": "quiz",
+      "weight": 15,
+      "due": null,
+      "due_time": "13:00",
+      "date_status": "recurring",
+      "dates": [
+        "2025-09-12",
+        "2025-09-19",
+        "2025-09-26",
+        "2025-10-10",
+        "2025-10-17",
+        "2025-10-31",
+        "2025-11-14"
+      ],
+      "note": "7 quizzes x 2.5%, best 6 count"
+    },
+    {
+      "title": "Assignment 1",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2025-09-29",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 2",
+      "type": "assignment",
+      "weight": 20,
+      "due": "2025-10-13",
+      "due_time": "23:55",
+      "date_status": "exact",
+      "note": "PDF says 'Wednesday October 13' (Oct 13 2025 is a Monday); keep the date as written"
+    },
+    {
+      "title": "Assignment 3",
+      "type": "assignment",
+      "weight": 20,
+      "due": "2025-11-10",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Inquiry Update Reports",
+      "type": "assignment",
+      "weight": 3,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "three 1% reports, dates not in the outline"
+    },
+    {
+      "title": "Final Group Presentation",
+      "type": "presentation",
+      "weight": 5,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-11-24",
+        "2025-12-08"
+      ]
+    },
+    {
+      "title": "Final Written Report",
+      "type": "assignment",
+      "weight": 25,
+      "due": "2025-12-08",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Peer Evaluations",
+      "type": "assignment",
+      "weight": 7,
+      "due": "2025-12-08",
+      "due_time": "23:55",
+      "date_status": "exact"
+    }
+  ],
+  "notes": [
+    "No final exam. Total is 100 across 8 items; the 'Inquiry (40%)' heading is a group, not an item.",
+    "'All assignments are due at 11:55 pm EST unless otherwise specified.'",
+    "Baseline produced titles like 'I. Quizzes (' and '* Final Written Report: Wed. December 8th. (' plus a bogus '6 x' midterm."
+  ],
+  "expected_weight_total": 100
+}

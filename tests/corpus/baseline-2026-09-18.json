@@ -1,0 +1,683 @@
+{
+  "pooled": {
+    "course_code": {
+      "n": 10,
+      "hit": 3,
+      "pct": 30.0
+    },
+    "term": {
+      "n": 10,
+      "hit": 0,
+      "pct": 0.0
+    },
+    "sections_recall": {
+      "n": 11,
+      "hit": 3,
+      "pct": 27.272727272727273
+    },
+    "sections_precision": {
+      "n": 10,
+      "hit": 3,
+      "pct": 30.0
+    },
+    "assessments_recall": {
+      "n": 51,
+      "hit": 47,
+      "pct": 92.15686274509804
+    },
+    "assessments_precision": {
+      "n": 57,
+      "hit": 47,
+      "pct": 82.45614035087719
+    },
+    "weights": {
+      "n": 47,
+      "hit": 46,
+      "pct": 97.87234042553192
+    },
+    "dates_exact": {
+      "n": 29,
+      "hit": 4,
+      "pct": 13.793103448275861
+    },
+    "no_fabricated": {
+      "n": 18,
+      "hit": 18,
+      "pct": 100.0
+    },
+    "clean_titles": {
+      "n": 47,
+      "hit": 36,
+      "pct": 76.59574468085107
+    },
+    "weight_total": {
+      "n": 10,
+      "hit": 7,
+      "pct": 70.0
+    },
+    "files_ok": {
+      "n": 10,
+      "hit": 10,
+      "pct": 100.0
+    }
+  },
+  "files": [
+    {
+      "file": "BIOCHEM 3381A Course Outline Fall 2025.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          2,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          8,
+          8
+        ],
+        "assessments_precision": [
+          9,
+          8
+        ],
+        "weights": [
+          8,
+          8
+        ],
+        "dates_exact": [
+          5,
+          4
+        ],
+        "no_fabricated": [
+          3,
+          3
+        ],
+        "clean_titles": [
+          8,
+          5
+        ],
+        "weight_total": [
+          1,
+          0
+        ]
+      },
+      "extracted_total": 102.5,
+      "missed": [],
+      "spurious": [
+        "6 x"
+      ],
+      "date_details": [
+        "Final Group Presentation: range -> None OK",
+        "Inquiry Update Reports: tba -> None OK",
+        "Assignment 3: due 2025-11-10 -> 2025-11-10 OK",
+        "Assignment 2: due 2025-10-13 -> 2025-10-13 OK",
+        "Assignment 1: due 2025-09-29 -> 2025-09-29 OK",
+        "Weekly Quizzes: recurring -> 2025-09-12 OK",
+        "Final Written Report: due 2025-12-08 -> 2025-12-08 OK",
+        "Peer Evaluations: due 2025-12-08 -> None WRONG"
+      ]
+    },
+    {
+      "file": "CS1000-001 Course Outline 25-26.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          0,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          4,
+          4
+        ],
+        "assessments_precision": [
+          4,
+          4
+        ],
+        "weights": [
+          4,
+          4
+        ],
+        "dates_exact": [
+          2,
+          0
+        ],
+        "no_fabricated": [
+          2,
+          2
+        ],
+        "clean_titles": [
+          4,
+          4
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Final examination: registrar -> None OK",
+        "Third test: due 2026-02-25 -> None WRONG",
+        "Second test: range -> None OK",
+        "First test: due 2025-11-12 -> None WRONG"
+      ]
+    },
+    {
+      "file": "CS2301B Course Outline 25-26.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          1
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          0,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          3,
+          3
+        ],
+        "assessments_precision": [
+          3,
+          3
+        ],
+        "weights": [
+          3,
+          3
+        ],
+        "dates_exact": [
+          0,
+          0
+        ],
+        "no_fabricated": [
+          3,
+          3
+        ],
+        "clean_titles": [
+          3,
+          3
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Final Exam: registrar -> None OK",
+        "Midterm Test 2: tba -> None OK",
+        "Midterm Test 1: tba -> None OK"
+      ]
+    },
+    {
+      "file": "CS_3342A_FW25.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          2,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          6,
+          6
+        ],
+        "assessments_precision": [
+          6,
+          6
+        ],
+        "weights": [
+          6,
+          6
+        ],
+        "dates_exact": [
+          5,
+          0
+        ],
+        "no_fabricated": [
+          1,
+          1
+        ],
+        "clean_titles": [
+          6,
+          6
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 110.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Final Exam: tba -> None OK",
+        "Midterm Exam: due 2025-10-30 -> None WRONG",
+        "Assignment 4: due 2025-12-04 -> None WRONG",
+        "Assignment 3: due 2025-11-27 -> None WRONG",
+        "Assignment 2: due 2025-10-25 -> None WRONG",
+        "Assignment 1: due 2025-10-09 -> None WRONG"
+      ]
+    },
+    {
+      "file": "ECE-2240A_Fall-2025-Website-Version.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          1
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          2,
+          1
+        ],
+        "sections_precision": [
+          2,
+          1
+        ],
+        "assessments_recall": [
+          3,
+          3
+        ],
+        "assessments_precision": [
+          3,
+          3
+        ],
+        "weights": [
+          3,
+          3
+        ],
+        "dates_exact": [
+          1,
+          0
+        ],
+        "no_fabricated": [
+          2,
+          2
+        ],
+        "clean_titles": [
+          3,
+          3
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Final Examination: registrar -> None OK",
+        "PCB Project: due 2025-11-29 -> 2026-11-29 WRONG",
+        "Labs (8 lab reports): recurring -> None OK"
+      ]
+    },
+    {
+      "file": "FHS Course Outline 2000.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          1
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          1,
+          1
+        ],
+        "sections_precision": [
+          2,
+          1
+        ],
+        "assessments_recall": [
+          6,
+          6
+        ],
+        "assessments_precision": [
+          6,
+          6
+        ],
+        "weights": [
+          6,
+          6
+        ],
+        "dates_exact": [
+          5,
+          0
+        ],
+        "no_fabricated": [
+          1,
+          1
+        ],
+        "clean_titles": [
+          6,
+          0
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Physical Activity Goal Report: due 2026-03-15 -> None WRONG",
+        "Physical Activity Goal & Plan: due 2026-01-21 -> None WRONG",
+        "Physical Activity Tracker 2: due 2026-03-20 -> None WRONG",
+        "Physical Activity Tracker 1: due 2026-01-16 -> None WRONG",
+        "Final Exam: registrar -> None OK",
+        "Mid-term Exam: due 2026-02-12 -> None WRONG"
+      ]
+    },
+    {
+      "file": "HS-2800-Research-Methods.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          1,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          4,
+          3
+        ],
+        "assessments_precision": [
+          10,
+          3
+        ],
+        "weights": [
+          3,
+          3
+        ],
+        "dates_exact": [
+          1,
+          0
+        ],
+        "no_fabricated": [
+          2,
+          2
+        ],
+        "clean_titles": [
+          3,
+          3
+        ],
+        "weight_total": [
+          1,
+          0
+        ]
+      },
+      "extracted_total": 110.0,
+      "missed": [
+        "Mid-term test (Term 1)"
+      ],
+      "spurious": [
+        "End of term test",
+        "Jacobsen 2021: C.1 TBA",
+        "Jacobsen 2021: C.2, 4 TBA",
+        "TBA",
+        "Jacobsen 2021: C.19, 20, 21",
+        "On OWL Brightspace",
+        "Jacobsen 2021: C.11"
+      ],
+      "date_details": [
+        "End of year assessment (essay): tba -> None OK",
+        "Mid-term test (Term 2): due 2026-02-05 -> None WRONG",
+        "End of term test: range -> None OK"
+      ]
+    },
+    {
+      "file": "Math-1228---Fall-2025_red.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          0,
+          0
+        ],
+        "sections_precision": [
+          0,
+          0
+        ],
+        "assessments_recall": [
+          4,
+          3
+        ],
+        "assessments_precision": [
+          5,
+          3
+        ],
+        "weights": [
+          3,
+          3
+        ],
+        "dates_exact": [
+          1,
+          0
+        ],
+        "no_fabricated": [
+          2,
+          2
+        ],
+        "clean_titles": [
+          3,
+          2
+        ],
+        "weight_total": [
+          1,
+          0
+        ]
+      },
+      "extracted_total": 80.0,
+      "missed": [
+        "Term Test 2"
+      ],
+      "spurious": [
+        "Dr. Hyun Jong Kim",
+        "Bonus*"
+      ],
+      "date_details": [
+        "Final Exam: registrar -> None OK",
+        "Term Test 1: due 2025-10-03 -> None WRONG",
+        "Online Quizzes: tba -> None OK"
+      ]
+    },
+    {
+      "file": "Physiology 3120 Syllabus 2025–2026 Oct 31st UPDATED.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          1,
+          1
+        ],
+        "sections_precision": [
+          1,
+          1
+        ],
+        "assessments_recall": [
+          8,
+          8
+        ],
+        "assessments_precision": [
+          8,
+          8
+        ],
+        "weights": [
+          8,
+          8
+        ],
+        "dates_exact": [
+          7,
+          0
+        ],
+        "no_fabricated": [
+          1,
+          1
+        ],
+        "clean_titles": [
+          8,
+          8
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [],
+      "spurious": [],
+      "date_details": [
+        "Final Exam: registrar -> None OK",
+        "Assignment 2 Slide redesign & Teach: due 2026-04-08 -> None WRONG",
+        "PeerWise Assignment 3: due 2026-03-23 -> None WRONG",
+        "Midterm Test 2: due 2026-01-30 -> None WRONG",
+        "PeerWise Assignment 2: due 2026-01-19 -> None WRONG",
+        "Assignment 1 Slide redesign: due 2025-12-08 -> None WRONG",
+        "Midterm Test 1: due 2025-11-14 -> None WRONG",
+        "PeerWise Assignment 1: due 2025-10-27 -> None WRONG"
+      ]
+    },
+    {
+      "file": "outline26.pdf",
+      "ok": true,
+      "counts": {
+        "course_code": [
+          1,
+          0
+        ],
+        "term": [
+          1,
+          0
+        ],
+        "sections_recall": [
+          2,
+          0
+        ],
+        "sections_precision": [
+          5,
+          0
+        ],
+        "assessments_recall": [
+          5,
+          3
+        ],
+        "assessments_precision": [
+          3,
+          3
+        ],
+        "weights": [
+          3,
+          2
+        ],
+        "dates_exact": [
+          2,
+          0
+        ],
+        "no_fabricated": [
+          1,
+          1
+        ],
+        "clean_titles": [
+          3,
+          2
+        ],
+        "weight_total": [
+          1,
+          1
+        ]
+      },
+      "extracted_total": 100.0,
+      "missed": [
+        "Assignment 1",
+        "Assignment 2"
+      ],
+      "spurious": [],
+      "date_details": [
+        "Final Exam: registrar -> None OK",
+        "Midterm Exam: due 2026-03-12 -> None WRONG",
+        "Assignment 3: due 2026-04-02 -> None WRONG"
+      ]
+    }
+  ]
+}

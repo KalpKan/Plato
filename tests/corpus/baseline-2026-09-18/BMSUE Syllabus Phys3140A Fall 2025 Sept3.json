@@ -1,0 +1,60 @@
+{
+  "file": "BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf",
+  "ok": true,
+  "seconds": 5.64,
+  "course_code": null,
+  "course_name": "Cellular Physiology-Physiology 3140A",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-01",
+    "end": "2025-12-15"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "09:30",
+      "end": "10:20",
+      "location": null
+    }
+  ],
+  "assessments": [
+    {
+      "title": "In Class Quiz 1, covers Modules 1-2",
+      "type": "quiz",
+      "weight": 7.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Midterm Test (2 hrs), covers lecture 1 \u2013 16, Modules 1-2",
+      "type": "midterm",
+      "weight": 40.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "In Class Quiz 2, covers Modules 1-5",
+      "type": "quiz",
+      "weight": 8.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    },
+    {
+      "title": "Final Exam, covers lecture 17 \u2013 34, Modules 1-5",
+      "type": "final",
+      "weight": 45.0,
+      "due": null,
+      "due_time": null,
+      "confidence": 0.6
+    }
+  ]
+}
