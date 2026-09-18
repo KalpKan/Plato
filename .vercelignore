@@ -1,0 +1,10 @@
+.venv
+tests
+figma landingpage
+legacy
+course_outlines
+test_*.py
+uploads
+temp_calendars
+.pytest_cache
+__pycache__

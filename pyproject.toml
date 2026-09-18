@@ -1,0 +1,22 @@
+[project]
+name = "plato"
+version = "1.0.0"
+description = "Turns Western University course-outline PDFs into a calendar (.ics) file"
+requires-python = ">=3.12"
+dependencies = [
+  "Flask>=3.0.0",
+  "pdfplumber>=0.10.0",
+  "PyMuPDF>=1.23.0",
+  "dateparser>=1.2.0",
+  "icalendar>=5.0.0",
+  "pytz>=2023.3",
+  "psycopg2-binary>=2.9.10",
+  "posthog>=3.0.0",
+]
+
+# Vercel: load the Flask instance named `app` from src/app.py
+[tool.vercel]
+entrypoint = "src.app:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
