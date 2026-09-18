@@ -71,19 +71,49 @@ class SupabaseCacheManager:
             )
         
         self.database_url = database_url
-        self._test_connection()
-    
-    def _test_connection(self):
-        """Test database connection on initialization.
-        
-        Raises:
-            psycopg2.OperationalError: If connection fails
-        """
+        # No connection is opened here: on a serverless host every cold start
+        # would otherwise pay for a round trip before the first request.
+
+    def ping(self) -> bool:
+        """Run `select 1`; True when the database answers."""
+        conn = self._get_connection()
         try:
-            conn = psycopg2.connect(self.database_url)
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            row = cur.fetchone()
+            cur.close()
+            return bool(row and row[0] == 1)
+        finally:
             conn.close()
-        except Exception as e:
-            raise ConnectionError(f"Failed to connect to Supabase: {e}")
+
+    def ensure_schema(self):
+        """Create the two cache tables if they do not exist (idempotent)."""
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS extraction_cache (
+                    pdf_hash TEXT PRIMARY KEY,
+                    extracted_json TEXT NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_choices (
+                    id SERIAL PRIMARY KEY,
+                    pdf_hash TEXT NOT NULL,
+                    session_id TEXT,
+                    selected_lecture_section_json TEXT,
+                    selected_lab_section_json TEXT,
+                    lead_time_overrides_json TEXT,
+                    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS user_choices_pdf_hash_idx ON user_choices (pdf_hash, timestamp DESC)")
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
     
     def _get_connection(self):
         """Get a database connection.

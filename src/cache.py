@@ -78,6 +78,14 @@ class CacheManager:
         conn.commit()
         conn.close()
     
+    def ping(self) -> bool:
+        """Local SQLite is always reachable once the file exists."""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            return conn.execute("SELECT 1").fetchone()[0] == 1
+        finally:
+            conn.close()
+
     def lookup_extraction(self, pdf_hash: str) -> Optional[ExtractedCourseData]:
         """Look up extracted data from cache by PDF hash.
         

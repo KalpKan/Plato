@@ -33,20 +33,41 @@ from .study_plan import StudyPlanGenerator
 from .icalendar_gen import ICalendarGenerator
 
 # Initialize Flask app
-# Set template and static folders to be in project root
-app = Flask(__name__, 
+# Templates live in ../templates. Static files live in ../public/static so that
+# Vercel's CDN serves them directly; Flask serves the same folder locally.
+app = Flask(__name__,
             template_folder='../templates',
-            static_folder='../static')
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+            static_folder='../public/static')
+
+# SECRET_KEY signs the session cookie. There is deliberately NO default: a
+# missing value must fail the deploy, not silently ship a guessable key.
+_secret = os.getenv('SECRET_KEY')
+if not _secret:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is required (no default). "
+        "See README 'Where the settings live'."
+    )
+app.secret_key = _secret
 
 # Configuration
-UPLOAD_FOLDER = Path('uploads')
-UPLOAD_FOLDER.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {'pdf'}
-MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
-
-app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER)
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB (Vercel itself caps request bodies at 4.5 MB)
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+# Public PostHog project key for the browser snippet (not a secret; empty = analytics off)
+app.config['POSTHOG_API_KEY'] = os.getenv('POSTHOG_API_KEY', '')
+app.config['POSTHOG_UI_HOST'] = os.getenv('POSTHOG_UI_HOST', 'https://us.posthog.com')
+
+
+def upload_dir() -> Path:
+    """Scratch directory for uploaded PDFs.
+
+    On Vercel the only writable location is /tmp, and it does not survive
+    between requests, so everything here is treated as disposable.
+    """
+    d = Path(os.getenv('PLATO_TMP_DIR', '/tmp')) / 'plato'
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
 
 # Custom Jinja2 filter for 12-hour time format
 @app.template_filter('time_12h')
@@ -72,8 +93,17 @@ def time_12h_filter(time_obj):
         return f"{display_hour}:{minute:02d} {ampm}"
     return str(time_obj)
 
-# Initialize cache manager (auto-selects SQLite or Supabase)
-cache_manager = get_cache_manager()
+# Cache manager is created on first use (auto-selects SQLite or Postgres) so
+# that importing the module never opens a database connection.
+_cache = None
+
+
+def get_cache():
+    """Return the process-wide cache manager, creating it on first call."""
+    global _cache
+    if _cache is None:
+        _cache = get_cache_manager()
+    return _cache
 
 
 def allowed_file(filename: str) -> bool:
@@ -391,7 +421,7 @@ def upload_file():
     try:
         # Save uploaded file
         filename = secure_filename(file.filename)
-        filepath = Path(app.config['UPLOAD_FOLDER']) / filename
+        filepath = upload_dir() / filename
         file.save(str(filepath))
         
         # Compute PDF hash
@@ -404,7 +434,7 @@ def upload_file():
         # Check cache (unless force refresh)
         extracted_data = None
         if not force_refresh:
-            extracted_data = cache_manager.lookup_extraction(pdf_hash)
+            extracted_data = get_cache().lookup_extraction(pdf_hash)
             if extracted_data:
                 flash('Found cached extraction data for this PDF.', 'info')
         
@@ -424,7 +454,7 @@ def upload_file():
                 )
                 
                 # Cache extraction results
-                cache_manager.store_extraction(pdf_hash, extracted_data)
+                get_cache().store_extraction(pdf_hash, extracted_data)
                 flash('PDF extracted successfully.', 'success')
                 
             except Exception as e:
@@ -437,7 +467,7 @@ def upload_file():
         session['extracted_data'] = serialize_extracted_data(extracted_data)
         
         # Check for cached user choices
-        user_choices = cache_manager.lookup_user_choices(pdf_hash, session.get('session_id'))
+        user_choices = get_cache().lookup_user_choices(pdf_hash, session.get('session_id'))
         if user_choices:
             session['user_choices'] = {
                 'selected_lecture_section': serialize_section(user_choices.selected_lecture_section) if user_choices and user_choices.selected_lecture_section else None,
@@ -479,7 +509,7 @@ def review():
     # This ensures we always have the latest extracted data
     pdf_hash = session.get('pdf_hash')
     if pdf_hash:
-        cached_data = cache_manager.lookup_extraction(pdf_hash)
+        cached_data = get_cache().lookup_extraction(pdf_hash)
         if cached_data:
             # Use cached data (it's more reliable than session)
             extracted_data = cached_data
@@ -493,7 +523,7 @@ def review():
         # Try to re-extract from cache or suggest force refresh
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
-            cached_data = cache_manager.lookup_extraction(pdf_hash)
+            cached_data = get_cache().lookup_extraction(pdf_hash)
             if cached_data and len(cached_data.assessments) > 0:
                 # Use cached data instead
                 extracted_data = cached_data
@@ -503,7 +533,7 @@ def review():
                 # Cache also empty - try re-extracting from PDF
                 pdf_filename = session.get('pdf_filename')
                 if pdf_filename:
-                    filepath = Path(app.config['UPLOAD_FOLDER']) / pdf_filename
+                    filepath = upload_dir() / pdf_filename
                     if filepath.exists():
                         try:
                             from .pdf_extractor import PDFExtractor
@@ -523,7 +553,7 @@ def review():
                             
                             # Update session and cache
                             session['extracted_data'] = serialize_extracted_data(extracted_data)
-                            cache_manager.store_extraction(pdf_hash, extracted_data)
+                            get_cache().store_extraction(pdf_hash, extracted_data)
                             flash('Re-extracted assessments from PDF.', 'info')
                         except Exception as e:
                             flash(f'Could not re-extract: {str(e)}', 'warning')
@@ -691,7 +721,7 @@ def review():
             # Update session and cache with resolved assessments
             session['extracted_data'] = serialize_extracted_data(extracted_data)
             if pdf_hash:
-                cache_manager.store_extraction(pdf_hash, extracted_data)
+                get_cache().store_extraction(pdf_hash, extracted_data)
             
             # Generate study plan (pass lead time overrides)
             study_plan = study_plan_gen.generate_study_plan(
@@ -748,7 +778,7 @@ def review():
             # Cache user choices
             pdf_hash = session.get('pdf_hash')
             if pdf_hash:
-                cache_manager.store_user_choices(
+                get_cache().store_user_choices(
                     pdf_hash,
                     user_selections,
                     session.get('session_id')
@@ -1028,7 +1058,7 @@ def update_field():
                         pdf_hash = session.get('pdf_hash')
                         if pdf_hash:
                             # Get existing user selections or create new
-                            user_selections = cache_manager.lookup_user_choices(pdf_hash, session.get('session_id'))
+                            user_selections = get_cache().lookup_user_choices(pdf_hash, session.get('session_id'))
                             if user_selections is None:
                                 from .models import UserSelections
                                 user_selections = UserSelections()
@@ -1048,7 +1078,7 @@ def update_field():
                             elif assessment.title in user_selections.lead_time_overrides:
                                 del user_selections.lead_time_overrides[assessment.title]
                             
-                            cache_manager.store_user_choices(pdf_hash, user_selections, session.get('session_id'))
+                            get_cache().store_user_choices(pdf_hash, user_selections, session.get('session_id'))
                 except (ValueError, IndexError) as e:
                     return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
             else:
@@ -1086,7 +1116,7 @@ def update_field():
             pdf_hash = session.get('pdf_hash')
             if pdf_hash:
                 # Get existing user selections or create new
-                user_selections = cache_manager.lookup_user_choices(pdf_hash, session.get('session_id'))
+                user_selections = get_cache().lookup_user_choices(pdf_hash, session.get('session_id'))
                 if user_selections is None:
                     from .models import UserSelections
                     user_selections = UserSelections()
@@ -1106,7 +1136,7 @@ def update_field():
                 elif weight_range in user_selections.custom_lead_time_mapping:
                     del user_selections.custom_lead_time_mapping[weight_range]
                 
-                cache_manager.store_user_choices(pdf_hash, user_selections, session.get('session_id'))
+                get_cache().store_user_choices(pdf_hash, user_selections, session.get('session_id'))
         
         else:
             return jsonify({'success': False, 'error': f'Unknown field_type: {field_type}'}), 400
@@ -1117,7 +1147,7 @@ def update_field():
         # Also update cache
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
-            cache_manager.store_extraction(pdf_hash, extracted_data)
+            get_cache().store_extraction(pdf_hash, extracted_data)
         
         return jsonify({'success': True, 'message': 'Field updated successfully'})
         
@@ -1215,8 +1245,7 @@ def add_assessment():
         # Update cache if available
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
-            cache_manager = get_cache_manager()
-            cache_manager.store_extraction(pdf_hash, extracted_data)
+                        get_cache().store_extraction(pdf_hash, extracted_data)
         
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)
@@ -1278,8 +1307,7 @@ def remove_assessment():
         # Update cache if available
         pdf_hash = session.get('pdf_hash')
         if pdf_hash:
-            cache_manager = get_cache_manager()
-            cache_manager.store_extraction(pdf_hash, extracted_data)
+                        get_cache().store_extraction(pdf_hash, extracted_data)
         
         # Recalculate completeness
         completeness = calculate_completeness(extracted_data)

@@ -75,3 +75,4 @@ uploads/
 temp_calendars/
 
 cookies*.txt
+.venv/
