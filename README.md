@@ -30,35 +30,63 @@ The extracted data is then converted into a calendar file with:
 - Dark mode, responsive design
 - Clean, minimalist UI
 
-## Installation
+## How to run this (on your own computer)
 
-### Prerequisites
+You need Python 3.12 or newer installed. Then, in a terminal:
 
-- Python 3.8 or higher
-- pip (Python package manager)
-
-### Local Setup
-
-1. Clone the repository:
 ```bash
 git clone https://github.com/KalpKan/Plato.git
 cd Plato
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+SECRET_KEY=anything-random .venv/bin/python -m flask --app src.app run
 ```
 
-2. Install dependencies:
+Open http://127.0.0.1:5000 in your browser. Without a `DATABASE_URL` the app keeps
+its cache in a small SQLite file under your home folder, so nothing else is needed.
+`SECRET_KEY` is mandatory: the app refuses to start without one.
+
+To check everything works: `.venv/bin/pytest` (all tests should pass).
+
+## How to deploy this (the live site)
+
+The live copy runs at **https://plato.kalpkan.com** on Vercel (free Hobby plan) as one
+Python function, with its database on Neon (free plan). Every push to the `main`
+branch on GitHub deploys automatically; there is nothing to click.
+
+To deploy by hand from this folder (only needed if the automatic deploy is off):
+
 ```bash
-pip install -r requirements.txt
+npx vercel@latest --prod --yes --scope kks-projects-2edcb11a
 ```
 
-3. Start the development server:
-```bash
-python3 src/app.py
-```
+Check that it is healthy: open https://plato.kalpkan.com/api/health and you should
+see `{"db":"ok","ok":true,"service":"plato"}`.
 
-4. Open your browser and navigate to:
-```
-http://localhost:5000
-```
+If you ever start from a brand-new database, create its tables once with
+`DATABASE_URL="<the Neon URL>" python scripts/init_db.py`.
+
+The full operating manual (what to do when it breaks, where every setting is)
+lives in the portfolio repo: `skills/portfolio-ops/` in https://github.com/KalpKan/portfolio.
+
+## Where the settings live
+
+All settings are environment variables. Their names are listed in `.env.example`
+(with empty values). The real values are stored in **Vercel → project `plato` →
+Settings → Environment Variables**, never in this repository.
+
+| Setting | What it is | Required? |
+|---|---|---|
+| `SECRET_KEY` | A long random string that signs the browser cookie. If it changes, visitors simply start over. | Yes, always |
+| `DATABASE_URL` | The Postgres connection string from Neon (project "Plato", database `plato`, pooled). Caches parsed PDFs. | Yes on Vercel; optional locally |
+| `POSTHOG_API_KEY` | The public PostHog project key (`phc_...`). Turns on visitor analytics. | No (empty = analytics off) |
+| `POSTHOG_HOST` | PostHog ingest host; default `https://us.i.posthog.com` | No |
+| `POSTHOG_UI_HOST` | PostHog web app host; default `https://us.posthog.com` | No |
+| `PLATO_TMP_DIR` | Scratch folder for uploads; default `/tmp` (the only writable place on Vercel) | No |
+
+Upload limit: the app accepts PDFs up to 16 MB, but Vercel itself rejects any
+request body over 4.5 MB, so on the live site a PDF must be under 4.5 MB
+(course outlines are usually well under 1 MB).
 
 ## Usage
 
@@ -114,7 +142,8 @@ Plato/
 │   ├── rule_resolver.py         # Relative date rule resolution
 │   ├── study_plan.py            # Study plan generation
 │   ├── icalendar_gen.py         # iCalendar file generation
-│   ├── cache.py                 # Caching system
+│   ├── cache.py                 # Caching system (SQLite locally, Postgres/Neon live)
+│   ├── analytics.py             # PostHog server-side events
 │   └── main.py                  # CLI entry point
 ├── templates/                    # HTML templates
 │   ├── base.html               # Base template
@@ -122,14 +151,17 @@ Plato/
 │   ├── review.html             # Review/edit page
 │   ├── manual.html             # Manual entry page
 │   └── error.html              # Error page
-├── static/                       # Static files
+├── public/static/               # Static files (served by Vercel's CDN)
 │   ├── style.css               # Stylesheet
 │   └── app.js                  # Client-side JavaScript
+├── tests/                       # pytest suite
+├── scripts/init_db.py           # Creates the database tables once
 ├── course_outlines/             # Test PDFs (not in git)
-├── test_course_outlines/        # Additional test PDFs
-├── requirements.txt            # Python dependencies
-├── Procfile                    # Railway deployment config
-├── Dockerfile                  # Docker configuration
+├── requirements.txt            # Runtime dependencies (requirements-dev.txt adds pytest)
+├── pyproject.toml              # Tells Vercel where the app is (src.app:app)
+├── vercel.json                 # Vercel function settings (what to leave out of the bundle)
+├── .env.example                # Names of the settings, no values
+├── legacy/                      # Old Railway/Docker/Supabase files, unused
 └── README.md                   # This file
 ```
 
@@ -233,14 +265,13 @@ The codebase is organized into focused modules:
 
 ## Deployment
 
-See `DEPLOYMENT.md` for detailed deployment instructions to Railway with Supabase.
+See "How to deploy this" above. The old Railway/Docker files are kept for
+reference in `legacy/railway/` and are not used.
 
 ## Documentation
 
 - `PROJECT_OVERVIEW.md` - Comprehensive project documentation
-- `ARCHITECTURE.md` - System architecture and component responsibilities
 - `EXTRACTION_PLAN.md` - Detailed extraction algorithm documentation
-- `DEPLOYMENT.md` - Deployment guide
 
 ## License
 
