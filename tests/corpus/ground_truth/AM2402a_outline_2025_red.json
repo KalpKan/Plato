@@ -1,0 +1,91 @@
+{
+  "file": "AM2402a_outline_2025_red.pdf",
+  "labelled_by": "test agent round 4, 2026-09-19, by reading the PDF (random draw, seed 20260923 = 20260919+4, from the 18 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "Applied Math 2402A",
+  "course_name": "Applied Math 2402A",
+  "department": "Applied Mathematics",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Applied Math 2402A Course Outline Fall 2025'; no sessional dates printed; Western sessional dates"
+  },
+  "sections": [
+    {
+      "type": "tutorial",
+      "days": [
+        "Thu"
+      ],
+      "start": "08:30",
+      "end": "09:30",
+      "location": "HSB-13",
+      "source": "'The tutorial (lab) times are Thurs 8:30am HSB-13, OR Friday 8:30am NCB-105' ('1 laboratory hour'; the outline calls them tutorials held in computer labs; type lab is the defensible alternative)"
+    },
+    {
+      "type": "tutorial",
+      "days": [
+        "Fri"
+      ],
+      "start": "08:30",
+      "end": "09:30",
+      "location": "NCB-105",
+      "source": "same sentence; second section"
+    }
+  ],
+  "sections_note": "Lectures: [redacted] in this copy",
+  "assessments": [
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 20,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-09-18",
+        "2025-12-05"
+      ],
+      "note": "'Quizzes (optional (see below), weekly, best 8 of 10) 2% each for up to 20%'; first quiz Thurs/Fri Sept 18/19 in the last 15 min of each tutorial; optional but part of the 100"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 35,
+      "due": "2025-10-25",
+      "due_time": "10:00",
+      "date_status": "exact",
+      "note": "'Saturday, October 25, 10:00am - 12:00pm, room TBD'"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "no date printed at all; December exam period"
+    }
+  ],
+  "excluded_rows": [
+    "Make-up Midterm"
+  ],
+  "notes": [
+    "The Make-up Midterm line ('Saturday, November 1, 10:00am - 12:00pm') has no weight and is not an assessment.",
+    "The evaluation block is not a table: labels and weights are separated by runs of blank lines.",
+    "The outline prints 'Applied Math 2402A' (AM 2402A only in the file name); the course name is redacted, so the name equals the code."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "25bbb3c50f969c76dcc1d341d52e4da97cb76208b8df7a92d883e29b3d8a2be6"
+}

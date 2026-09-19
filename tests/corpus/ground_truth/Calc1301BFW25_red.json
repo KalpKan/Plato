@@ -1,0 +1,79 @@
+{
+  "file": "Calc1301BFW25_red.pdf",
+  "labelled_by": "test agent round 4, 2026-09-19, by reading the PDF (random draw, seed 20260923 = 20260919+4, from the 18 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "Calculus 1301B",
+  "course_name": "Calculus II",
+  "department": "Mathematics",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2026-02-14",
+      "2026-02-22"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "'Classes begin: January 5, 2026 ... Classes end: April 9, 2026; Exam period: April 12 - 30, 2026'; header 'FW 2025-26', 'Academic Term: FW25' (the B suffix = Winter)"
+  },
+  "sections": [],
+  "sections_note": "LEC 001/002/003 rows are blank (redacted); nothing to extract",
+  "assessments": [
+    {
+      "title": "Submitted Homework",
+      "type": "assignment",
+      "weight": 12,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "dates": [
+        "2026-01-30",
+        "2026-02-13",
+        "2026-03-20"
+      ],
+      "note": "'Three equally weighted written assignments totaling 12%'; 'due on January 30th, February 13th, and March 20th, respectively' (year from the term)"
+    },
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 10,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2026-01-19",
+        "2026-04-09"
+      ],
+      "note": "'Best Six of Eight ... totaling 10%'; 'Due dates are posted on OWL, with the first quiz open during the week of Jan 19th'"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 36,
+      "due": "2026-02-27",
+      "due_time": "19:00",
+      "date_status": "exact",
+      "note": "'Friday February 27th, 7pm until 9pm'; schedule row 'Midterm Exam on Friday Feb. 27, 7:00-9:00pm'; make-up Fri Mar 6 7-9pm is not the due date"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 42,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ],
+      "note": "'TBA (3 Hours)'; 'scheduled by the Office of the Registrar'"
+    }
+  ],
+  "notes": [
+    "Table columns Assessment | Format | Weighting | Date; two weights are written in prose inside the Weighting cell ('totaling 12% of final grade')."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "9bfd66fb7544bd04de50f4fe02103997c9593beb142135c75932c8d45b9ca75d"
+}

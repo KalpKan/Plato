@@ -1,0 +1,62 @@
+{
+  "file": "HS-2250A-Introduction-to-Health-Promotion1.pdf",
+  "labelled_by": "test agent round 4, 2026-09-19, by reading the PDF (random draw, seed 20260923 = 20260919+4, from the 18 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "HS 2250A",
+  "course_name": "Introduction to Health Promotion",
+  "department": "Health Sciences",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall | 2025'; schedule week 1 Sept 4 ... week 15 Dec 8; week 10 'Reading Week'; no 'Classes end' line, Western sessional dates"
+  },
+  "sections": [],
+  "sections_note": "'Lectures: Online; Asynchronous' - no slot to extract",
+  "assessments": [
+    {
+      "title": "Midterm 1",
+      "type": "midterm",
+      "weight": 32.5,
+      "due": "2025-10-08",
+      "due_time": "18:00",
+      "date_status": "exact",
+      "note": "'October 8th at 6:00 PM EST' (table) and prose; make-up Sat Oct 18 10:00 is not the due date"
+    },
+    {
+      "title": "Midterm 2",
+      "type": "midterm",
+      "weight": 32.5,
+      "due": "2025-11-12",
+      "due_time": "18:00",
+      "date_status": "exact",
+      "note": "'November 12th at 6:00 PM EST'; make-up Sat Nov 22 10:00 is not the due date"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'TBA' in the table; 'will be scheduled by the Registrar's Office'; make-up 'likely in January of 2026'"
+    }
+  ],
+  "notes": [
+    "Grading table columns are Weighting | Grade Component | Date (weight first).",
+    "Traps: three make-up exam dates (Oct 18, Nov 22, January 2026); the schedule says 'Midterm 1 will occur on Oct 8th'."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "a27e5a6c0a4416a835b16853398cf9c226bc5c0ef9a7f58f5de99ead040204f8"
+}

@@ -1,0 +1,65 @@
+{
+  "file": "HS-2610G-Introduction-to-Ethics-and-Health.pdf",
+  "labelled_by": "test agent round 4, 2026-09-19, by reading the PDF (random draw, seed 20260923 = 20260919+4, from the 18 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "HS 2610G",
+  "course_name": "Introduction to Ethics and Health",
+  "department": "Health Sciences",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2026-02-16",
+      "2026-02-20"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "'Winter | 2026'; timetable week 1 January 5-9 ... week 13 April 6-9; 'April 12-30 Exam Period'"
+  },
+  "sections": [],
+  "sections_note": "'Lectures: In person TBA'",
+  "assessments": [
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2026-02-09",
+        "2026-02-13"
+      ],
+      "note": "evaluation row 'Midterm Exam (in-class) 25%'; timetable week 6 'February 9-13 Mid-term Examination (online, during class time slot)' - a week, not a day"
+    },
+    {
+      "title": "Major Essay",
+      "type": "assignment",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "no date anywhere in the outline"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 35,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ],
+      "note": "'Final Exam (in-person) 35%'; 'April 12-30 Exam Period'"
+    }
+  ],
+  "notes": [
+    "Evaluation table is Component | Weight with no date column; the Reading/Assessment column of the timetable is 'TBD' on every row."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "1827ac53d89d18fe40de8958f2db43ee7b9865951cc5a175ba7fc85210ed0d70"
+}

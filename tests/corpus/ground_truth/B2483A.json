@@ -1,0 +1,66 @@
+{
+  "file": "B2483A.pdf",
+  "labelled_by": "test agent round 4, 2026-09-19, by reading the PDF (random draw, seed 20260923 = 20260919+4, from the 18 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "BIO 2483A",
+  "course_name": "Ecology",
+  "department": "Biology",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-07"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Ecology, BIO 2483A, Fall 2025 term'; lecture schedule Sept. 4 ... Dec. 9; '(reading break Nov. 3 -7)'"
+  },
+  "sections": [],
+  "sections_note": "no lecture day/time printed; tutorials 'time slots & room numbers ... on the course OWL site'",
+  "assessments": [
+    {
+      "title": "Midterm exam",
+      "type": "midterm",
+      "weight": 35,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "the Date(s) cell is empty on the rendered page (checked); no midterm date anywhere in the outline"
+    },
+    {
+      "title": "Three Tutorial quizzes",
+      "type": "quiz",
+      "weight": 20,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-10-01",
+        "2025-11-19"
+      ],
+      "note": "'Run each tutorial session'; tutorial units Oct 1-10, Oct 22-31, Nov 12-19 (approx. dates, no slot printed); 1/3 of 20% each"
+    },
+    {
+      "title": "Final exam",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'December exam period; Time and Locations TBA'; cell also says 'Students must pass the final exam to pass the course'"
+    }
+  ],
+  "notes": [
+    "Table columns Value | Item | Date (s); the Item cell of the final holds a second sentence.",
+    "The outline prints 'BIO 2483A' / 'BIO2483A' (never 'Biology 2483A'), so the ground truth uses that spelling, as B3415G does."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "4893e3b489b843fec46c9530ad1c3a8925f543d21192a8cf20f8c33f607d5fa7"
+}
