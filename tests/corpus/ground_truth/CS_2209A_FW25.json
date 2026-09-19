@@ -1,0 +1,135 @@
+{
+  "file": "CS_2209A_FW25.pdf",
+  "sha256": "2785c78c27405d0c96427022cee7a12a78e3274c7246cba982c156264f40e2d2",
+  "labelled_by": "test agent round 2, 2026-09-19, by reading the PDF (chosen because the fixed parser marks its dated items 'missing')",
+  "course_code": "COMPSCI 2209A",
+  "course_name": "Applied Logic for Computer Science",
+  "department": "Computer Science",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Academic Term: Fall 2025'; section 4 'Sessional Dates: Classes begin September 4, 2025 ... Classes end December 9, 2025, Exam period December 11-22, 2025'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Tue"
+      ],
+      "start": "09:30",
+      "end": "11:30",
+      "location": null,
+      "source": "'Lectures: Hours: Tuesdays 9:30-11:30 am, and Thursdays 9:30-10:30 am' (page 1)"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": "09:30",
+      "end": "10:30",
+      "location": null,
+      "source": "same line"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignment 1",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2025-10-08",
+      "due_time": "23:55",
+      "date_status": "exact",
+      "note": "'Assignments 17% (three assignments: the first one 5%, and the remaining two, 6% each)'; 'Assignment 1 ... deadline: October 8, at 11:55 pm'"
+    },
+    {
+      "title": "Assignment 2",
+      "type": "assignment",
+      "weight": 6,
+      "due": "2025-11-10",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 3",
+      "type": "assignment",
+      "weight": 6,
+      "due": "2025-12-09",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Quiz 1",
+      "type": "quiz",
+      "weight": 2,
+      "due": "2025-09-21",
+      "due_time": "23:55",
+      "date_status": "exact",
+      "note": "'Quizzes (online) 8% (four quizzes, 2% each)'; 'Quiz 1 ... deadline: September 21 at 11:55 pm'"
+    },
+    {
+      "title": "Quiz 2",
+      "type": "quiz",
+      "weight": 2,
+      "due": "2025-10-19",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Quiz 3",
+      "type": "quiz",
+      "weight": 2,
+      "due": "2025-11-16",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Quiz 4",
+      "type": "quiz",
+      "weight": 2,
+      "due": "2025-12-08",
+      "due_time": "23:55",
+      "date_status": "exact"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 30,
+      "due": "2025-10-21",
+      "due_time": "09:30",
+      "end_time": "11:30",
+      "date_status": "exact",
+      "note": "'Midterm Test ... October 21, 9:30 AM-11:30 AM, in class'"
+    },
+    {
+      "title": "Final exam",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'date and time: TBD'"
+    }
+  ],
+  "excluded_rows": [],
+  "notes": [
+    "The evaluation list gives group rows (Assignments 17 %, Quizzes 8 %) and the per-item deadlines are in bullet lists further down ('Assignments:' and 'Online Quizzes:'). A calendar needs the seven dated items, not the two group rows; the scorer accepts either the seven items or the two group rows as a match set only through titles, so the group rows count as two misses plus two spurious rows here."
+  ],
+  "expected_weight_total": 100,
+  "acceptable_weight_totals": [
+    100
+  ]
+}

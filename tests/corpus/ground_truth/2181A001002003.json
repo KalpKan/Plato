@@ -1,0 +1,133 @@
+{
+  "file": "2181A001002003.pdf",
+  "sha256": "a4bbd3fefe9a5facdb5439c914da4b1b6407fe50d42c9dc979462298c5061799",
+  "labelled_by": "test agent round 2, 2026-09-19, by reading the PDF (chosen because the fixed parser marks its dated items 'missing')",
+  "course_code": "MOS 2181A",
+  "course_name": "Organizational Behaviour",
+  "department": "Management & Organizational Studies",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall 2025 Course Syllabus'; 'Classes begin: September 4, 2025 ... Classes end: December 9, 2025 Exam period: December 11 - 22, 2025'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Tue"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": "SSC 2036",
+      "section_id": "001",
+      "source": "'1.1 Class Location and Time Section 001: Tuesdays, 1:30pm-4:30pm, SSC 2036'"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": "SSC 2036",
+      "section_id": "002",
+      "source": "'Section 002: Wednesdays, 9:30am-12:30pm, SSC 2036'"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": "SEB 2100",
+      "section_id": "003",
+      "source": "'Section 003: Wednesdays, 1:30pm-4:30pm, SEB 2100'"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Chapter Assignments",
+      "type": "assignment",
+      "weight": 7,
+      "due": null,
+      "due_time": "23:59",
+      "date_status": "recurring",
+      "dates": [
+        "2025-09-19",
+        "2025-09-26",
+        "2025-10-17",
+        "2025-10-24",
+        "2025-10-31",
+        "2025-11-21",
+        "2025-11-28",
+        "2025-12-05"
+      ],
+      "note": "15 chapter assignments due on eight listed dates ('Chapter 1, Chapter 2, Chapter 3 assignments: due Sept 19 @ 11:59pm' ... 'Chapter 14, Chapter 15 assignments: due Dec 5 @ 11:59pm'); best 11 of 15 count"
+    },
+    {
+      "title": "Exam #1",
+      "type": "midterm",
+      "weight": 31,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-10-07",
+        "2025-10-08"
+      ],
+      "dates": [
+        "2025-10-07",
+        "2025-10-08"
+      ],
+      "note": "section-dependent: 'Section 001: Tues Oct 7, 2pm-4pm ... Section 002: Wed Oct 8, 10am-12pm ... Section 003: Wed Oct 8, 2pm-4pm'; the app should date it once the section is chosen, never leave it undated silently"
+    },
+    {
+      "title": "Exam #2",
+      "type": "midterm",
+      "weight": 31,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-11-11",
+        "2025-11-12"
+      ],
+      "dates": [
+        "2025-11-11",
+        "2025-11-12"
+      ],
+      "note": "section-dependent: 'Section 001: Tues Nov 11, 2pm-4pm ... Section 002: Wed Nov 12, 10am-12pm ... Section 003: Wed Nov 12, 2pm-4pm'"
+    },
+    {
+      "title": "Exam #3",
+      "type": "final",
+      "weight": 31,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'December exam period ... to be scheduled by the Registrar's Office'"
+    }
+  ],
+  "excluded_rows": [],
+  "notes": [
+    "'Total = 100%' printed under the table."
+  ],
+  "expected_weight_total": 100,
+  "acceptable_weight_totals": [
+    100
+  ]
+}

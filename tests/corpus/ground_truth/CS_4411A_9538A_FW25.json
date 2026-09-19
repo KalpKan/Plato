@@ -1,0 +1,111 @@
+{
+  "file": "CS_4411A_9538A_FW25.pdf",
+  "sha256": "1c85d008c0c5c2987acddf396dc7c01bf91cce09beb3d6f13f1a1e3bbdb20546",
+  "labelled_by": "test agent round 2, 2026-09-19, by reading the PDF (chosen because the fixed parser marks its dated items 'missing')",
+  "course_code": "COMPSCI 4411",
+  "course_name": "Databases II (Advanced Databases)",
+  "department": "Computer Science",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Academic term: Fall 2025'; 'Sessional Dates: Classes begin: September 4, 2025 ... Classes end: December 9, 2025, Exam period: December 11 - 22, 2025'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Tue"
+      ],
+      "start": "12:30",
+      "end": "14:30",
+      "location": null,
+      "source": "'Time: Tuesdays 12:30-2:30 pm and Thursdays 12:30-1:30 pm' (page 1)"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Thu"
+      ],
+      "start": "12:30",
+      "end": "13:30",
+      "location": null,
+      "source": "same line"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignment 1",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2025-09-25",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Assignments 15% (three assignments, 5% each)'; 'Assignment 1: Data storage and indexing (Available: Sep 11, Submission deadline: Sep 25 ...)'"
+    },
+    {
+      "title": "Assignment 2",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2025-11-13",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Assignment 3",
+      "type": "assignment",
+      "weight": 5,
+      "due": "2025-11-27",
+      "due_time": null,
+      "date_status": "exact"
+    },
+    {
+      "title": "Midterm test",
+      "type": "midterm",
+      "weight": 20,
+      "due": "2025-10-21",
+      "due_time": "12:30",
+      "end_time": "14:30",
+      "date_status": "exact",
+      "note": "'Midterm exam: Weeks 1-6 (Oct 21, 12:30-2:30 pm, in class)'"
+    },
+    {
+      "title": "Project",
+      "type": "project",
+      "weight": 35,
+      "due": "2025-12-06",
+      "due_time": "23:55",
+      "date_status": "exact",
+      "note": "'Project: Submission deadline: Dec 6, 11:55 pm'"
+    },
+    {
+      "title": "Final exam",
+      "type": "final",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'date and time: TBD'"
+    }
+  ],
+  "excluded_rows": [],
+  "notes": [
+    "Course number line reads 'COMPSCI 4411/9538 A' (undergraduate/graduate pair); either 'COMPSCI 4411A' or 'COMPSCI 4411' is an acceptable code."
+  ],
+  "expected_weight_total": 100,
+  "acceptable_weight_totals": [
+    100
+  ]
+}
