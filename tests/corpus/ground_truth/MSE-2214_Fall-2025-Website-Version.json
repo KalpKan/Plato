@@ -1,0 +1,84 @@
+{
+  "file": "MSE-2214_Fall-2025-Website-Version.pdf",
+  "labelled_by": "test agent round 3, 2026-09-19, by reading the PDF (random draw, seed 20260919, from the 24 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "MSE 2214",
+  "course_name": "Thermodynamics",
+  "department": "Mechatronic Systems Engineering",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "Header 'Course Outline Fall/Winter 2025' is the Engineering template (ECE 2240A has the same header and is labelled Fall 2025); the course is one term: both term tests are in October 2025 and one final is 'during the regular examination period'; the file itself is named Fall-2025. Western sessional dates."
+  },
+  "sections": [],
+  "sections_note": "'LECTURE: 3 hours per week / LAB: 3 hours / 2 times during the term / TUTORIAL: 2 hours per week' with no day, time or room; the tutorial period is 1:30-3:30 pm (from the term-test sentence) but the day is not printed",
+  "assessments": [
+    {
+      "title": "Tutorial Exercises",
+      "type": "assignment",
+      "weight": 10,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-09-04",
+        "2025-12-09"
+      ],
+      "note": "'A maximum of 8 exercises', lowest two dropped; no dates"
+    },
+    {
+      "title": "Laboratory",
+      "type": "lab_report",
+      "weight": 10,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "'two lab exercises', no dates"
+    },
+    {
+      "title": "Term Test 1",
+      "type": "test",
+      "weight": 15,
+      "due": "2025-10-02",
+      "due_time": "13:30",
+      "date_status": "exact",
+      "note": "page 5: 'The tests are tentatively set to be held on October 2nd, 2025 and October 30th, 2025. Both will be held from 1:30 pm to 3:30 pm'; the evaluation table's Due Date column is empty"
+    },
+    {
+      "title": "Term Test 2",
+      "type": "test",
+      "weight": 15,
+      "due": "2025-10-30",
+      "due_time": "13:30",
+      "date_status": "exact",
+      "note": "same sentence"
+    },
+    {
+      "title": "Final Examination",
+      "type": "final",
+      "weight": 50,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'during the regular examination period'"
+    }
+  ],
+  "notes": [
+    "Evaluation table has an empty 'Due Date' column; the dates live in prose on page 5.",
+    "Header 'Fall/Winter 2025' can mislead a term reader into a two-term window."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "a477174f0ba06487ab88ccedde61b43ac87a5cab40a3573e32c2e0d687f3a14f"
+}

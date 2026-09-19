@@ -1,0 +1,107 @@
+{
+  "file": "B3415G Course Outline 2025.pdf",
+  "labelled_by": "test agent round 3, 2026-09-19, by reading the PDF (random draw, seed 20260919, from the 24 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "Biol 3415G",
+  "course_name": "Aquatic Ecology",
+  "department": "Biology",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-06",
+    "end": "2025-04-04",
+    "reading_week": [
+      "2025-02-15",
+      "2025-02-23"
+    ],
+    "exam_period": [
+      "2025-04-07",
+      "2025-04-30"
+    ],
+    "source": "'Key Sessional Dates: Classes begin: January 6, 2025 ... Classes end: April 4, 2025, Exam period: April 7 - 30, 2025'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon"
+      ],
+      "start": "10:30",
+      "end": "11:30",
+      "location": null,
+      "source": "'Lectures: Mondays (10:30-11:30 AM) and Wednesdays (9:30-11:30 AM)'"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "11:30",
+      "location": null,
+      "source": "same line (second hour is the participation activity)"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Participation Activities",
+      "type": "participation",
+      "weight": 10,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-01-08",
+        "2025-04-02"
+      ],
+      "note": "'In class - almost every week'; ~12 activities, best 9"
+    },
+    {
+      "title": "Research Communication Assignment #1",
+      "type": "assignment",
+      "weight": 10,
+      "due": "2025-02-14",
+      "due_time": "17:00",
+      "date_status": "exact",
+      "note": "'Online - Friday February 14th, 5pm'"
+    },
+    {
+      "title": "Midterm",
+      "type": "midterm",
+      "weight": 25,
+      "due": "2025-03-05",
+      "due_time": "09:30",
+      "date_status": "exact",
+      "dates": [
+        "2025-02-26",
+        "2025-03-05"
+      ],
+      "note": "evaluation table 'In class - Wednesday March 5th, 9:30am'; the week-by-week schedule says 'Mid-term - in class - Wednesday February 26th' (outline contradicts itself; the Grading Scheme table is taken as authoritative)"
+    },
+    {
+      "title": "Research Communication Assignment #2",
+      "type": "assignment",
+      "weight": 15,
+      "due": "2025-03-21",
+      "due_time": "17:00",
+      "date_status": "exact",
+      "note": "'Online - Friday March 21st, 5pm'"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-04-07",
+        "2025-04-30"
+      ],
+      "note": "'Scheduled by the registrar'; schedule row 'April 7-30 April exam period Final Exam scheduled by the registrar' - a date of April 7 would be invented"
+    }
+  ],
+  "notes": [
+    "Trap: the schedule table's 'April 7-30' row sits next to 'Final Exam scheduled by the registrar'."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "87ae807510b98b7e9ac35dae8a2dd58beb4bfba11a059575367c19417279062e"
+}

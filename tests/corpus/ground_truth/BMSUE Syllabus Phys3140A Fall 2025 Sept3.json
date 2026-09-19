@@ -1,0 +1,82 @@
+{
+  "file": "BMSUE Syllabus Phys3140A Fall 2025 Sept3.pdf",
+  "labelled_by": "test agent round 3, 2026-09-19, by reading the PDF (random draw, seed 20260919, from the 24 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "Physiology 3140A",
+  "course_name": "Cellular Physiology",
+  "department": "Physiology and Pharmacology",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Course Outline for Fall 2025'; Important Dates 'Classes Begin September 4 ... Classes End December 9 ... Exam Period December 11-22'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "09:30",
+      "end": "10:20",
+      "location": null,
+      "source": "Timetabled Sessions 'Lecture | M/W/F | 9:30 - 10:20 AM'"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "In Class Quiz 1, covers Modules 1-2",
+      "type": "quiz",
+      "weight": 7,
+      "due": "2025-10-01",
+      "due_time": "09:30",
+      "date_status": "exact",
+      "note": "'Oct 1 in class' (lecture 9:30)"
+    },
+    {
+      "title": "Midterm Test (2 hrs), covers lecture 1 - 16, Modules 1-2",
+      "type": "midterm",
+      "weight": 40,
+      "due": "2025-10-19",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Sunday, Oct 19'"
+    },
+    {
+      "title": "In Class Quiz 2, covers Modules 1-5",
+      "type": "quiz",
+      "weight": 8,
+      "due": "2025-11-12",
+      "due_time": "09:30",
+      "date_status": "exact",
+      "note": "'Nov 12 in class'"
+    },
+    {
+      "title": "Final Exam, covers lecture 17 - 34, Modules 1-5",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'December exam period'"
+    }
+  ],
+  "notes": [
+    "Assessment cells wrap over several lines ('Midterm / Test / (2 / hrs), covers lecture / 1 - 16, Modules 1-2')."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "8294d1f35855773cb85e3c01c7ae0eaca0e3949b7b36bbd9625117a946b142fb"
+}

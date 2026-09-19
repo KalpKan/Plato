@@ -1,0 +1,92 @@
+{
+  "file": "2277A001002.pdf",
+  "labelled_by": "test agent round 3, 2026-09-19, by reading the PDF (random draw, seed 20260919, from the 24 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "MOS 2277A",
+  "course_name": "Personal Financial Planning",
+  "department": "Management and Organizational Studies",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Fall 2025 Course Syllabus'; Key Dates 'Classes begin: September 4, 2025 ... Classes end: December 9, 2025, Exam period: December 11 - 22, 2025' (the Winter dates that follow belong to the template)"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "id": "001",
+      "days": [
+        "Wed"
+      ],
+      "start": "09:30",
+      "end": "12:30",
+      "location": "SSC 3022",
+      "source": "'Section 001: Wednesday 9:30 am - 12:30 pm, SSC 3022'"
+    },
+    {
+      "type": "lecture",
+      "id": "002",
+      "days": [
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": "16:30",
+      "location": "BGSB 0153",
+      "source": "'Section 002: Wednesday 1:30 pm - 4:30 pm, BGSB 0153'"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Success Assignment",
+      "type": "assignment",
+      "weight": 8,
+      "due": "2025-09-24",
+      "due_time": "23:59",
+      "date_status": "exact",
+      "note": "'(Due September 24, 2025, at 11:59pm)'; no-late-penalty until Oct 1"
+    },
+    {
+      "title": "Budget Assignment",
+      "type": "assignment",
+      "weight": 12,
+      "due": "2025-10-29",
+      "due_time": "23:59",
+      "date_status": "exact",
+      "note": "'(Due October 29, 2025, at 11:59pm)'"
+    },
+    {
+      "title": "Midterm Exam",
+      "type": "midterm",
+      "weight": 40,
+      "due": "2025-10-22",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'(October 22, 2025 DURING CLASS TIME)'; class time depends on the section (09:30 or 13:30)"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'(during examination period scheduled by the Registrar)'"
+    }
+  ],
+  "notes": [
+    "Evaluation is a 'Name (date) = weight' list, not a table."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "d0f90c33732d377d5e013ab065be2a6367ff5254f0c6f8962b97f72a0a9cd7a4"
+}

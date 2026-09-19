@@ -1,0 +1,92 @@
+{
+  "file": "B3603A.pdf",
+  "labelled_by": "test agent round 3, 2026-09-19, by reading the PDF (random draw, seed 20260919, from the 24 unlabelled outlines; not chosen for parser behaviour)",
+  "course_code": "Biology 3603A",
+  "course_name": "Ecophysiology of Plants",
+  "department": "Biology",
+  "term": {
+    "name": "Fall 2025",
+    "start": "2025-09-04",
+    "end": "2025-12-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2025-12-11",
+      "2025-12-22"
+    ],
+    "source": "'Biology 3603A - Ecophysiology of Plants. Fall, 2025'; no sessional dates printed (page header says '2024', a leftover); Western sessional dates"
+  },
+  "sections": [],
+  "sections_note": "no lecture/lab day or time printed; labs run 'Sept 23/24' (two lab days) in the lab schedule",
+  "assessments": [
+    {
+      "title": "Pre-midterm quiz",
+      "type": "quiz",
+      "weight": 2,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "'In class (date to be decided)'"
+    },
+    {
+      "title": "Term paper",
+      "type": "assignment",
+      "weight": 15,
+      "due": "2025-11-10",
+      "due_time": null,
+      "date_status": "exact",
+      "dates": [
+        "2025-10-29",
+        "2025-11-10"
+      ],
+      "note": "'A.I. draft due Oct 29. Final version due Nov 10' - the paper is due Nov 10; Oct 29 is the draft (either date is a defensible event; the final version is the deliverable)"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 25,
+      "due": "2025-10-20",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Oct 20 (in class using laptop)'"
+    },
+    {
+      "title": "Laboratory",
+      "type": "lab_report",
+      "weight": 28,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2025-09-23",
+        "2025-12-05"
+      ],
+      "dates": [
+        "2025-11-25",
+        "2025-11-26",
+        "2025-12-05"
+      ],
+      "note": "lab schedule: sessions Sept 23/24 ... Nov 11/12 (1 pt each), presentations Nov 25/26 (7), final group lab report Dec 5 (12), peer evaluation Dec 5 (3) = 28"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-12-11",
+        "2025-12-22"
+      ],
+      "note": "'Final exam period with laptop'"
+    }
+  ],
+  "notes": [
+    "Page header reads 'Course Outline - 2024' while page 1 says 'Fall, 2025'."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "e8a6d104a565c8e3027518143dabc77c66956bb42668084c26a78ed9f9e82160"
+}
