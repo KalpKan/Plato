@@ -21,7 +21,7 @@ echo "✅ Node.js found at: $NODE_PATH"
 echo ""
 
 # Connection string (you can modify this)
-CONNECTION_STRING="postgresql://postgres:[Kk4132231441]@db.ftcqzuzpyebtwihizqfl.supabase.co:5432/postgres"
+CONNECTION_STRING="${DATABASE_URL}"
 
 echo "Connection String:"
 echo "$CONNECTION_STRING"

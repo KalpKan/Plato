@@ -12,7 +12,7 @@ except ImportError:
     import psycopg2
 
 # Connection string
-conn_str = 'postgresql://postgres:Kk4132231441@db.ftcqzuzpyebtwihizqfl.supabase.co:5432/postgres'
+conn_str = '${DATABASE_URL}'
 
 try:
     conn = psycopg2.connect(conn_str)

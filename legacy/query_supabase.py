@@ -55,7 +55,7 @@ connection_strings = [
     # Connection pooler (recommended)
     f"postgresql://postgres.ftcqzuzpyebtwihizqfl:[Kk4132231441]@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
     # Direct connection
-    f"postgresql://postgres:[Kk4132231441]@db.ftcqzuzpyebtwihizqfl.supabase.co:5432/postgres",
+    f"${DATABASE_URL}",
 ]
 
 for i, conn_str in enumerate(connection_strings, 1):
