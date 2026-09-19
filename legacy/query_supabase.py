@@ -53,7 +53,7 @@ import psycopg2
 # Try connection pooler first (more reliable)
 connection_strings = [
     # Connection pooler (recommended)
-    f"postgresql://postgres.ftcqzuzpyebtwihizqfl:[Kk4132231441]@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+    f"${DATABASE_URL}",
     # Direct connection
     f"${DATABASE_URL}",
 ]
