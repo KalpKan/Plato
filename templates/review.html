@@ -121,7 +121,7 @@
                         <option value="none">Select a section</option>
                         {% for section in lecture_sections %}
                             <option value="{{ loop.index0 }}" 
-                                {% if user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id %}selected{% endif %}>
+                                {% if (user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lecture_section) %}selected{% endif %}>
                                 {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
                                 {% if section.days_of_week %}
                                     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
@@ -161,7 +161,7 @@
                         <option value="none">No lab section</option>
                         {% for section in lab_sections %}
                             <option value="{{ loop.index0 }}"
-                                {% if user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id %}selected{% endif %}>
+                                {% if (user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lab_section) %}selected{% endif %}>
                                 Section {{ section.section_id or 'N/A' }}: 
                                 {% if section.days_of_week %}
                                     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
@@ -201,7 +201,7 @@
                     <select name="tutorial_section" id="tutorial_section" class="form-control">
                         <option value="none">No tutorial section</option>
                         {% for section in tutorial_sections %}
-                            <option value="{{ loop.index0 }}">
+                            <option value="{{ loop.index0 }}" {% if loop.length == 1 %}selected{% endif %}>
                                 {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
                                 {% if section.days_of_week %}
                                     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
