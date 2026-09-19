@@ -1,0 +1,77 @@
+{
+  "file": "AM3615B_9576B_outline_red.pdf",
+  "labelled_by": "fix agent, 2026-09-18, by reading the PDF (chosen among the outlines the fixed parser scored worst on)",
+  "course_code": "AM 3615B",
+  "course_name": "Mathematical Biology",
+  "department": "Applied Mathematics",
+  "term": {
+    "name": "Winter 2026",
+    "start": "2026-01-05",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2026-02-14",
+      "2026-02-22"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "page 3: 'Classes begin: January 5, 2026', 'Classes end: April 9, 2026', 'Exam period: April 12 – 30, 2026'"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "start": "09:30",
+      "end": "10:30",
+      "location": "UCC-65",
+      "source": "'In-person lectures. UCC-65 M/W/F 9:30-10:30 AM'"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Assignments",
+      "type": "assignment",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2026-01-19",
+        "2026-04-09"
+      ],
+      "note": "'Assignments (5) 5x5%=25%'; the weekly table says which week each is due, not the day"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 30,
+      "due": "2026-02-13",
+      "due_time": null,
+      "date_status": "exact",
+      "note": "'Midterm covers all content covered in weeks 1-6. Date: Feb 13 (tentative)'"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 45,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ],
+      "note": "'Final covers all content covered in the course. Date: TBA'"
+    }
+  ],
+  "notes": [
+    "The weight of the assignments is written as a product: '5x5%=25%'."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "93b1b80a7677f77ca2d085423dda9aa3976eef331d81049f1507f9dcb1bd96c5"
+}

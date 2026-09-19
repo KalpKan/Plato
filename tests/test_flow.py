@@ -73,7 +73,9 @@ def test_session_cookie_stays_small(monkeypatch, tmp_path):
     c.post("/api/update-field", json={"field_type": "course_name", "value": "New name"})
     with c.session_transaction() as s:
         assert "extracted_data" not in s
-    assert mod.get_cache().lookup_extraction(HASH).course_name == "New name"
+    # the edit lands in this visitor's copy; the shared parser output is untouched (D6)
+    assert mod.get_cache().lookup_extraction(mod.visitor_key(HASH, "sid")).course_name == "New name"
+    assert mod.get_cache().lookup_extraction(HASH).course_name == "Testing"
 
 
 def test_review_get_without_hash_redirects(monkeypatch, tmp_path):
@@ -134,9 +136,10 @@ def test_upload_uses_unique_tmp_name_and_cleans_up(monkeypatch, tmp_path):
     paths = []
 
     class FakeExtractor:
-        def __init__(self, path):
+        def __init__(self, path, original_filename=None):
             paths.append(str(path))
             assert path.exists()
+            assert original_filename == "outline.pdf"
 
         def extract_all(self):
             return _data()

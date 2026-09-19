@@ -36,16 +36,19 @@ MAX_PAGES_TO_SEARCH = 8
 class PDFExtractor:
     """Extracts course information from PDF course outlines."""
     
-    def __init__(self, pdf_path: Path):
+    def __init__(self, pdf_path: Path, original_filename: Optional[str] = None):
         """Initialize extractor with PDF path.
         
         Args:
             pdf_path: Path to PDF file
+            original_filename: the name the visitor uploaded (the temp file has a random name);
+                the outline parser uses it as a last-resort hint for the course code and term
             
         Raises:
             ValueError: If file is too large
         """
         self.pdf_path = Path(pdf_path)
+        self.original_filename = original_filename or self.pdf_path.name
         self.pages_text = []
         
         # Check file size
@@ -57,29 +60,37 @@ class PDFExtractor:
         self._load_pdf()
     
     def _load_pdf(self):
-        """Load PDF and extract text page by page."""
-        with pdfplumber.open(self.pdf_path) as pdf:
-            for page_num, page in enumerate(pdf.pages, start=1):
-                text = page.extract_text()
-                if text:
-                    self.pages_text.append((page_num, text))
+        """Load PDF and extract text page by page (also used by the legacy helpers below)."""
+        from .outline.pipeline import load_pages
+        self.pages_text, self._tables, self._page_count, self._image_pages = load_pages(self.pdf_path)
     
     def extract_all(self) -> ExtractedCourseData:
         """Extract all course information from PDF.
         
+        The outline.* pipeline (term window, slots, dated assessments with a status) is the
+        parser. The legacy assessment extractor below is consulted only when that pipeline
+        finds no assessment at all, and only when its answer looks sane.
+        
         Returns:
             ExtractedCourseData with term, sections, and assessments
         """
-        # Try new document structure-based extraction first
-        if HAS_NEW_EXTRACTORS:
+        from .outline.pipeline import build
+        data = build(self.pages_text, self._tables, self.original_filename, self._page_count, self._image_pages)
+        if not data.assessments:
             try:
-                return self._extract_with_document_structure()
-            except Exception as e:
-                # Fall back to legacy extraction if new method fails
-                print(f"Document structure extraction failed, using legacy: {e}")
-        
-        # Legacy extraction
-        return self._extract_legacy()
+                legacy = self.extract_assessments()
+            except Exception:
+                legacy = []
+            total = sum(a.weight_percent or 0 for a in legacy)
+            if legacy and 80 <= total <= 120:
+                for a in legacy:
+                    a.date_status = "exact" if a.due_datetime else ("rule" if a.due_rule else "missing")
+                    a.date_note = "" if a.due_datetime else "No due date found next to this row"
+                    a.needs_review = a.due_datetime is None
+                data.assessments = legacy
+                data.notes = [n for n in data.notes if not n.startswith("No assessment table")]
+                data.notes.append("The assessment list came from a looser text scan; check every weight and date.")
+        return data
     
     def _extract_with_document_structure(self) -> ExtractedCourseData:
         """Extract using the new document structure layer.

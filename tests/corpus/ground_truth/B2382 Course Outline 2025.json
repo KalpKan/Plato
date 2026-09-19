@@ -1,0 +1,146 @@
+{
+  "file": "B2382 Course Outline 2025.pdf",
+  "labelled_by": "fix agent, 2026-09-18, by reading the PDF (chosen among the outlines the fixed parser scored worst on)",
+  "course_code": "Bio 2382B",
+  "course_name": "Cell Biology",
+  "department": "Biology",
+  "term": {
+    "name": "Winter 2025",
+    "start": "2025-01-06",
+    "end": "2025-04-04",
+    "reading_week": [
+      "2025-02-15",
+      "2025-02-23"
+    ],
+    "exam_period": [
+      "2025-04-07",
+      "2025-04-30"
+    ],
+    "source": "'Syllabus – 2025', 'January 6-April 2' lectures, Key Dates say 2025 (days redacted); Western sessional dates for Winter 2025"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed"
+      ],
+      "start": "11:30",
+      "end": null,
+      "location": null,
+      "note": "section 002: 'in-person lectures @ 11:30 AM (section 002)', 'one each Monday and Wednesday'; end time not printed"
+    },
+    {
+      "type": "lecture",
+      "days": [
+        "Mon",
+        "Wed"
+      ],
+      "start": "13:30",
+      "end": null,
+      "location": null,
+      "note": "section 001 @ 1:30 PM"
+    }
+  ],
+  "sections_extractable_without_ocr": false,
+  "sections_note": "The two lecture times are only in prose ('@ 11:30 AM (section 002) or 1:30 PM (section 001)') with the days in a separate sentence and no end time; not scored.",
+  "assessments": [
+    {
+      "title": "Lecture Test 1",
+      "type": "test",
+      "weight": 15,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "date redacted in this copy ('2025')"
+    },
+    {
+      "title": "Lecture Test 2",
+      "type": "test",
+      "weight": 15,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba"
+    },
+    {
+      "title": "Lecture Test 3",
+      "type": "test",
+      "weight": 15,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba"
+    },
+    {
+      "title": "Lecture Test 4",
+      "type": "test",
+      "weight": 15,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba"
+    },
+    {
+      "title": "Tutorial Quiz 1",
+      "type": "quiz",
+      "weight": 7.5,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-01-06",
+        "2025-01-31"
+      ],
+      "note": "'Written in January'"
+    },
+    {
+      "title": "Tutorial Quiz 2",
+      "type": "quiz",
+      "weight": 7.5,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-02-01",
+        "2025-02-28"
+      ],
+      "note": "'Written in February'"
+    },
+    {
+      "title": "Tutorial Quiz 3",
+      "type": "quiz",
+      "weight": 7.5,
+      "due": null,
+      "due_time": null,
+      "date_status": "range",
+      "window": [
+        "2025-03-01",
+        "2025-03-31"
+      ],
+      "note": "'Written in March'"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 40,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2025-04-07",
+        "2025-04-30"
+      ]
+    }
+  ],
+  "excluded_rows": [
+    "Makeup Test (cumulative) % as needed (only for missed tests)"
+  ],
+  "notes": [
+    "Best 3 of 4 lecture tests (45%) and best 2 of 3 tutorial quizzes (15%): the rows sum to 122.5, the course to 100.",
+    "Every test date was redacted to '2025' in this copy: the parser must not invent one."
+  ],
+  "expected_weight_total": 100,
+  "acceptable_weight_totals": [
+    100,
+    122.5
+  ],
+  "sha256": "e6b793170440404ba207fc0566a17d26a45c31b7762ccae8d4a357f6dba59ae2"
+}

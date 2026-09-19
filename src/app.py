@@ -26,10 +26,12 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from .models import (
     ExtractedCourseData, UserSelections, CourseTerm, SectionOption, AssessmentTask,
     serialize_date, serialize_datetime, serialize_time,
-    deserialize_date, deserialize_datetime, deserialize_time
+    deserialize_date, deserialize_datetime, deserialize_time,
+    extracted_to_dict, section_to_dict, section_from_dict,
 )
 from .cache import get_cache_manager, compute_pdf_hash
 from .pdf_extractor import PDFExtractor
+from .outline.pipeline import PasswordProtected, NoTextLayer
 from .rule_resolver import RuleResolver
 from .study_plan import StudyPlanGenerator
 from .icalendar_gen import ICalendarGenerator
@@ -54,8 +56,12 @@ app.secret_key = _secret
 
 # Configuration
 ALLOWED_EXTENSIONS = {'pdf'}
-MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB (Vercel itself caps request bodies at 4.5 MB)
+# Vercel's function request body is capped at 4.5 MB, so that is the real limit; the
+# browser refuses larger files before uploading (public/static/app.js, same number).
+MAX_FILE_SIZE_MB = 4
+MAX_FILE_SIZE = int(4.5 * 1024 * 1024)
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+app.config['MAX_FILE_SIZE_MB'] = MAX_FILE_SIZE_MB
 # Public PostHog project key for the browser snippet (not a secret; empty = analytics off)
 app.config['POSTHOG_API_KEY'] = os.getenv('POSTHOG_API_KEY', '')
 app.config['POSTHOG_UI_HOST'] = os.getenv('POSTHOG_UI_HOST', 'https://us.posthog.com')
@@ -109,25 +115,47 @@ def get_cache():
     return _cache
 
 
-def load_extracted() -> Optional[ExtractedCourseData]:
-    """Load the current PDF's extracted data from the database.
+def visitor_key(pdf_hash: str, session_id: Optional[str]) -> str:
+    """Cache key for one visitor's edited copy of one PDF's data.
 
-    The signed session cookie only carries the PDF hash (plus the filename,
-    a session id and the user's choices); the data itself lives in the
-    extraction cache keyed by that hash, so any server instance can serve
-    any request.
+    The parser's own output stays under the bare pdf_hash and is shared by everyone who
+    uploads the same file; every edit (title, weight, date, added row) is written to this
+    per-visitor key instead, so one student can never rewrite another's outline.
+    """
+    return f"{pdf_hash}:{session_id or 'anon'}"
+
+
+def load_extracted() -> Optional[ExtractedCourseData]:
+    """Load the current PDF's data: the visitor's edited copy if there is one, else the
+    shared parser output.
+
+    The signed session cookie only carries the PDF hash (plus the filename, a session id
+    and the user's choices); the data itself lives in the extraction cache, so any server
+    instance can serve any request.
     """
     pdf_hash = session.get('pdf_hash')
     if not pdf_hash:
         return None
-    return get_cache().lookup_extraction(pdf_hash)
+    cache = get_cache()
+    own = cache.lookup_extraction(visitor_key(pdf_hash, session.get('session_id')))
+    if own is not None:
+        return own
+    return cache.lookup_extraction(pdf_hash)
 
 
 def save_extracted(extracted_data: ExtractedCourseData) -> None:
-    """Persist the current PDF's extracted data (replaces the old cookie copy)."""
+    """Persist the visitor's edited copy (never the shared parser output)."""
     pdf_hash = session.get('pdf_hash')
     if pdf_hash:
-        get_cache().store_extraction(pdf_hash, extracted_data)
+        get_cache().store_extraction(visitor_key(pdf_hash, session.get('session_id')), extracted_data)
+
+
+def discard_visitor_copy(pdf_hash: str, session_id: Optional[str]) -> None:
+    """Forget a visitor's edits (force refresh)."""
+    try:
+        get_cache().delete_extraction(visitor_key(pdf_hash, session_id))
+    except Exception:
+        pass
 
 
 def _lead_time_generator(custom_lead_time_mapping: Dict[str, Any]) -> StudyPlanGenerator:
@@ -161,9 +189,10 @@ def build_calendar(extracted_data: ExtractedCourseData,
     to disk: the caller streams the bytes back in the same HTTP response.
     """
     resolver = RuleResolver()
-    all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
+    chosen = [s for s in (user_selections.selected_lecture_section, user_selections.selected_lab_section,
+                          getattr(user_selections, 'selected_tutorial_section', None)) if s]
     extracted_data.assessments = resolver.resolve_rules(
-        extracted_data.assessments, all_sections, extracted_data.term
+        extracted_data.assessments, chosen or extracted_data.all_sections(), extracted_data.term
     )
 
     study_plan = _lead_time_generator(custom_lead_time_mapping).generate_study_plan(
@@ -177,17 +206,15 @@ def build_calendar(extracted_data: ExtractedCourseData,
         lecture_section=user_selections.selected_lecture_section,
         lab_section=user_selections.selected_lab_section,
         assessments=extracted_data.assessments,
-        study_plan=study_plan
+        study_plan=study_plan,
+        tutorial_section=getattr(user_selections, 'selected_tutorial_section', None),
+        course_code=extracted_data.course_code,
     )
 
     hash_short = (pdf_hash or 'unknown')[:8]
     course_code = (extracted_data.course_code or 'Unknown').replace(' ', '_').replace('/', '_')
     term_name = extracted_data.term.term_name.replace(' ', '').replace('/', '_')
-    lec = user_selections.selected_lecture_section
-    lab = user_selections.selected_lab_section
-    lec_id = lec.section_id if lec and lec.section_id else 'None'
-    lab_id = lab.section_id if lab and lab.section_id else 'None'
-    filename = f"{course_code}_{term_name}_Lec{lec_id}_Lab{lab_id}_{hash_short}.ics"
+    filename = f"{course_code}_{term_name}_{hash_short}.ics"
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
     return filename, calendar.to_ical(), extracted_data
 
@@ -213,98 +240,18 @@ def allowed_file(filename: str) -> bool:
 
 
 def serialize_section(section: Optional[SectionOption]) -> Optional[Dict[str, Any]]:
-    """Serialize SectionOption to dict.
-    
-    Args:
-        section: SectionOption object to serialize, or None
-        
-    Returns:
-        Dictionary representation of section, or None
-    """
-    if section is None:
-        return None
-    return {
-        "section_type": section.section_type,
-        "section_id": section.section_id,
-        "days_of_week": section.days_of_week,
-        "start_time": serialize_time(section.start_time),
-        "end_time": serialize_time(section.end_time),
-        "location": section.location
-    }
+    """Serialize SectionOption to dict (None stays None)."""
+    return section_to_dict(section) if section is not None else None
 
 
 def deserialize_section(data: Optional[Dict[str, Any]]) -> Optional[SectionOption]:
     """Inverse of serialize_section (used to rebuild choices from the cookie)."""
-    if not data:
-        return None
-    return SectionOption(
-        section_type=data.get("section_type", ""),
-        section_id=data.get("section_id", ""),
-        days_of_week=data.get("days_of_week", []),
-        start_time=deserialize_time(data["start_time"]) if data.get("start_time") else None,
-        end_time=deserialize_time(data["end_time"]) if data.get("end_time") else None,
-        location=data.get("location")
-    )
+    return section_from_dict(data) if data else None
 
 
 def serialize_extracted_data(data: ExtractedCourseData) -> Dict[str, Any]:
-    """Serialize ExtractedCourseData to JSON-serializable dict.
-    
-    This function converts the ExtractedCourseData object into a dictionary
-    that can be easily converted to JSON for storage in session or database.
-    
-    Args:
-        data: ExtractedCourseData object to serialize
-        
-    Returns:
-        Dictionary representation of the data
-    """
-    return {
-        "term": {
-            "term_name": data.term.term_name,
-            "start_date": serialize_date(data.term.start_date),
-            "end_date": serialize_date(data.term.end_date),
-            "timezone": data.term.timezone
-        },
-        "lecture_sections": [
-            {
-                "section_type": s.section_type,
-                "section_id": s.section_id,
-                "days_of_week": s.days_of_week,
-                "start_time": serialize_time(s.start_time),
-                "end_time": serialize_time(s.end_time),
-                "location": s.location
-            }
-            for s in data.lecture_sections
-        ],
-        "lab_sections": [
-            {
-                "section_type": s.section_type,
-                "section_id": s.section_id,
-                "days_of_week": s.days_of_week,
-                "start_time": serialize_time(s.start_time),
-                "end_time": serialize_time(s.end_time),
-                "location": s.location
-            }
-            for s in data.lab_sections
-        ],
-        "assessments": [
-            {
-                "title": a.title,
-                "type": a.type,
-                "weight_percent": a.weight_percent,
-                "due_datetime": serialize_datetime(a.due_datetime) if a.due_datetime else None,
-                "due_rule": a.due_rule,
-                "rule_anchor": a.rule_anchor,
-                "confidence": a.confidence,
-                "source_evidence": a.source_evidence,
-                "needs_review": a.needs_review
-            }
-            for a in data.assessments
-        ],
-        "course_code": data.course_code,
-        "course_name": data.course_name
-    }
+    """JSON-serializable dict of the extracted data (one shared serializer in models.py)."""
+    return extracted_to_dict(data)
 
 
 def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
@@ -339,10 +286,15 @@ def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
         'has_extra_credit': False,
     }
     
-    # Analyze assessments
+    # Analyze assessments (bonus / optional rows are shown but not counted)
+    metrics['bonus_weight'] = 0.0
     for assessment in data.assessments:
         has_weight = assessment.weight_percent is not None
-        has_date = assessment.due_datetime is not None
+        has_date = assessment.due_datetime is not None or bool(getattr(assessment, 'dates', None))
+        if getattr(assessment, 'is_bonus', False):
+            if has_weight:
+                metrics['bonus_weight'] += assessment.weight_percent
+            continue
         
         if has_weight:
             metrics['assessments_with_weight'] += 1
@@ -405,79 +357,19 @@ def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
     
     metrics['overall_completeness'] = (found_items / total_items) * 100 if total_items > 0 else 0.0
     metrics['assessment_completeness'] = assessment_completeness
+    metrics['num_tutorial_sections'] = len(getattr(data, 'tutorial_sections', []) or [])
+    t = metrics['total_weight']
+    metrics['total_class'] = 'over' if t > 102 else 'high' if t >= 95 else 'medium' if t >= 70 else 'low'
+    metrics['assessments_undated'] = sum(1 for a in data.assessments
+                                         if not a.due_datetime and not getattr(a, 'dates', None) and not getattr(a, 'is_bonus', False))
     
     return metrics
 
 
 def deserialize_extracted_data(data: Dict[str, Any]) -> ExtractedCourseData:
-    """Deserialize dict to ExtractedCourseData.
-    
-    This function converts a dictionary (from JSON) back into an
-    ExtractedCourseData object. Used when loading data from cache or session.
-    
-    Args:
-        data: Dictionary representation of ExtractedCourseData
-        
-    Returns:
-        ExtractedCourseData object
-    """
-    from .models import CourseTerm, SectionOption, AssessmentTask
-    
-    term_dict = data["term"]
-    term = CourseTerm(
-        term_name=term_dict["term_name"],
-        start_date=deserialize_date(term_dict["start_date"]),
-        end_date=deserialize_date(term_dict["end_date"]),
-        timezone=term_dict.get("timezone", "America/Toronto")
-    )
-    
-    lecture_sections = [
-        SectionOption(
-            section_type=s["section_type"],
-            section_id=s["section_id"],
-            days_of_week=s["days_of_week"],
-            start_time=deserialize_time(s["start_time"]),
-            end_time=deserialize_time(s["end_time"]),
-            location=s.get("location")
-        )
-        for s in data.get("lecture_sections", [])
-    ]
-    
-    lab_sections = [
-        SectionOption(
-            section_type=s["section_type"],
-            section_id=s["section_id"],
-            days_of_week=s["days_of_week"],
-            start_time=deserialize_time(s["start_time"]),
-            end_time=deserialize_time(s["end_time"]),
-            location=s.get("location")
-        )
-        for s in data.get("lab_sections", [])
-    ]
-    
-    assessments = [
-        AssessmentTask(
-            title=a["title"],
-            type=a["type"],
-            weight_percent=a.get("weight_percent"),
-            due_datetime=deserialize_datetime(a["due_datetime"]) if a.get("due_datetime") else None,
-            due_rule=a.get("due_rule"),
-            rule_anchor=a.get("rule_anchor"),
-            confidence=a.get("confidence", 0.0),
-            source_evidence=a.get("source_evidence"),
-            needs_review=a.get("needs_review", False)
-        )
-        for a in data.get("assessments", [])
-    ]
-    
-    return ExtractedCourseData(
-        term=term,
-        lecture_sections=lecture_sections,
-        lab_sections=lab_sections,
-        assessments=assessments,
-        course_code=data.get("course_code"),
-        course_name=data.get("course_name")
-    )
+    """Inverse of serialize_extracted_data."""
+    from .models import extracted_from_dict
+    return extracted_from_dict(data)
 
 
 # ---------------------------------------------------------------------------
@@ -532,6 +424,11 @@ def ingest_proxy(subpath: str):
         return jsonify(error=str(e)), 502
 
 
+@app.context_processor
+def _inject_limits():
+    return {'max_mb': MAX_FILE_SIZE_MB}
+
+
 @app.route('/')
 def index():
     """Home page with PDF upload form.
@@ -560,6 +457,13 @@ def upload_file():
     Returns:
         Redirect to review page or error page
     """
+    # Refuse an oversize body before the form is parsed (Vercel itself answers 413 above
+    # 4.5 MB, and the browser checks the size before sending; this is the last line)
+    if request.content_length and request.content_length > MAX_FILE_SIZE:
+        flash(f'That file is larger than {MAX_FILE_SIZE_MB} MB, which is the most this free hosting can accept. '
+              'Print the outline to a smaller PDF (or remove images) and try again.', 'error')
+        return redirect(url_for('index'))
+
     # Check if file was uploaded
     if 'pdf_file' not in request.files:
         flash('No file selected. Please choose a PDF file.', 'error')
@@ -601,10 +505,12 @@ def upload_file():
         
         # Check cache (unless force refresh)
         extracted_data = None
-        if not force_refresh:
+        if force_refresh:
+            discard_visitor_copy(pdf_hash, session.get('session_id'))
+        else:
             extracted_data = get_cache().lookup_extraction(pdf_hash)
             if extracted_data:
-                flash('Found cached extraction data for this PDF.', 'info')
+                flash('This outline was parsed before; showing the saved result. Use "re-read the PDF" to parse it again.', 'info')
                 analytics.capture(session['session_id'], 'pdf_parsed', {
                     'cached': True,
                     'assessments': len(extracted_data.assessments),
@@ -613,33 +519,49 @@ def upload_file():
         
         # Extract from PDF if not cached or force refresh
         if extracted_data is None:
+            started = datetime.utcnow()
             try:
-                extractor = PDFExtractor(filepath)
+                extractor = PDFExtractor(filepath, original_filename=file.filename)
                 extracted_data = extractor.extract_all()
-                
-                # Resolve relative rules
-                resolver = RuleResolver()
-                all_sections = extracted_data.lecture_sections + extracted_data.lab_sections
-                extracted_data.assessments = resolver.resolve_rules(
-                    extracted_data.assessments,
-                    all_sections,
-                    extracted_data.term
-                )
-                
-                # Cache extraction results
-                get_cache().store_extraction(pdf_hash, extracted_data)
-                flash('PDF extracted successfully.', 'success')
-                analytics.capture(session['session_id'], 'pdf_parsed', {
-                    'cached': False,
-                    'assessments': len(extracted_data.assessments),
-                    'lecture_sections': len(extracted_data.lecture_sections),
-                    'lab_sections': len(extracted_data.lab_sections),
-                    'course_code': extracted_data.course_code,
-                })
-                
-            except Exception as e:
-                flash(f'Error extracting PDF: {str(e)}', 'error')
+            except PasswordProtected:
+                flash('This PDF is password-protected, so its text cannot be read. Remove the password '
+                      '(print it to a new PDF) and upload it again, or enter the course by hand in manual mode.', 'error')
                 return redirect(url_for('index'))
+            except NoTextLayer:
+                flash('This PDF has no text layer (a scanned image or an empty file), so nothing can be read from it. '
+                      'Download the outline from OWL as a real PDF, or enter the course by hand in manual mode.', 'error')
+                return redirect(url_for('index'))
+            except Exception as e:
+                reason = str(e).strip() or type(e).__name__
+                flash(f'This PDF could not be read ({reason}). Try another copy of the outline, '
+                      'or enter the course by hand in manual mode.', 'error')
+                return redirect(url_for('index'))
+
+            if not extracted_data.assessments and not extracted_data.all_sections() and not extracted_data.course_code:
+                flash('No course information was found in this PDF (no course code, no timetable and no '
+                      'assessment table). Check that it is a Western course outline, or enter the course by hand in manual mode.', 'error')
+                return redirect(url_for('index'))
+
+            # Resolve relative rules
+            resolver = RuleResolver()
+            extracted_data.assessments = resolver.resolve_rules(
+                extracted_data.assessments, extracted_data.all_sections(), extracted_data.term
+            )
+            
+            # Cache extraction results (shared, parser output only)
+            get_cache().store_extraction(pdf_hash, extracted_data)
+            flash('Outline read. Check every date below before you download.', 'success')
+            analytics.capture(session['session_id'], 'pdf_parsed', {
+                'cached': False,
+                'seconds': round((datetime.utcnow() - started).total_seconds(), 1),
+                'assessments': len(extracted_data.assessments),
+                'undated': sum(1 for a in extracted_data.assessments if not a.due_datetime and not a.dates),
+                'lecture_sections': len(extracted_data.lecture_sections),
+                'lab_sections': len(extracted_data.lab_sections),
+                'tutorial_sections': len(extracted_data.tutorial_sections),
+                'term_source': extracted_data.term.source,
+                'course_code': extracted_data.course_code,
+            })
         
         # Store in session for review page
         session['pdf_hash'] = pdf_hash
@@ -659,10 +581,11 @@ def upload_file():
         return redirect(url_for('review'))
         
     except RequestEntityTooLarge:
-        flash('File too large. Maximum size is 16MB.', 'error')
+        flash(f'That file is larger than {MAX_FILE_SIZE_MB} MB, which is the most this free hosting can accept. '
+              'Print the outline to a smaller PDF (or remove images) and try again.', 'error')
         return redirect(url_for('index'))
     except Exception as e:
-        flash(f'Error processing file: {str(e)}', 'error')
+        flash(f'The file could not be processed ({str(e).strip() or type(e).__name__}). Try again or use manual mode.', 'error')
         return redirect(url_for('index'))
     finally:
         if filepath is not None:
@@ -752,8 +675,17 @@ def review():
         # Get selected sections
         lecture_idx = request.form.get('lecture_section')
         lab_idx = request.form.get('lab_section')
+        tutorial_idx = request.form.get('tutorial_section')
         
         user_selections = UserSelections()
+        user_selections.selected_tutorial_section = None
+        if tutorial_idx and tutorial_idx != 'none':
+            try:
+                idx = int(tutorial_idx)
+                if 0 <= idx < len(extracted_data.tutorial_sections):
+                    user_selections.selected_tutorial_section = extracted_data.tutorial_sections[idx]
+            except ValueError:
+                pass
         
         # Set selected lecture section
         if lecture_idx and lecture_idx != 'none':
@@ -811,6 +743,7 @@ def review():
         session['user_choices'] = {
             'selected_lecture_section': serialize_section(user_selections.selected_lecture_section),
             'selected_lab_section': serialize_section(user_selections.selected_lab_section),
+            'selected_tutorial_section': serialize_section(user_selections.selected_tutorial_section),
             'lead_time_overrides': lead_time_overrides,
             'custom_lead_time_mapping': custom_lead_time_mapping,
         }
@@ -875,7 +808,12 @@ def review():
             'confidence': a.confidence,
             'source_evidence': a.source_evidence,
             'needs_review': a.needs_review,
-            'lead_time_days': current_lead_time  # Add lead time for display
+            'lead_time_days': current_lead_time,  # Add lead time for display
+            'date_status': a.date_status,
+            'date_note': a.date_note,
+            'dates': a.dates,
+            'is_bonus': a.is_bonus,
+            'end_datetime': a.end_datetime,
         })
     
     # Prepare data for template (convert to dict for easier template handling)
@@ -887,7 +825,8 @@ def review():
             'term_name': extracted_data.term.term_name,
             'start_date': extracted_data.term.start_date,
             'end_date': extracted_data.term.end_date,
-            'timezone': extracted_data.term.timezone
+            'timezone': extracted_data.term.timezone,
+            'exam_periods': extracted_data.term.exam_periods,
         },
         'completeness': completeness,
         'lecture_sections': [
@@ -897,7 +836,8 @@ def review():
                 'days_of_week': s.days_of_week,
                 'start_time': s.start_time,
                 'end_time': s.end_time,
-                'location': s.location
+                'location': s.location,
+                'note': s.note,
             }
             for s in extracted_data.lecture_sections
         ],
@@ -908,13 +848,30 @@ def review():
                 'days_of_week': s.days_of_week,
                 'start_time': s.start_time,
                 'end_time': s.end_time,
-                'location': s.location
+                'location': s.location,
+                'note': s.note,
             }
             for s in extracted_data.lab_sections
         ],
+        'tutorial_sections': [
+            {
+                'section_type': s.section_type,
+                'section_id': s.section_id,
+                'days_of_week': s.days_of_week,
+                'start_time': s.start_time,
+                'end_time': s.end_time,
+                'location': s.location,
+                'note': s.note,
+            }
+            for s in extracted_data.tutorial_sections
+        ],
         'assessments': assessments_list,
         'lead_time_mapping': lead_time_mapping,
-        'user_choices': session.get('user_choices', {})
+        'user_choices': session.get('user_choices', {}),
+        'notes': list(extracted_data.notes or []),
+        'term_source': extracted_data.term.source,
+        'pdf_filename': session.get('pdf_filename', ''),
+        'is_manual': str(pdf_hash).startswith('manual-'),
     }
     
     return render_template('review.html', **context)
@@ -931,12 +888,75 @@ def manual():
         Rendered manual.html template or redirect to download
     """
     if request.method == 'POST':
-        # Process manual form data
-        # This will be implemented to handle manual input
-        flash('Manual mode is not yet fully implemented.', 'info')
-        return redirect(url_for('index'))
+        form = request.form
+        term_name = (form.get('term_name') or '').strip() or 'Unknown'
+        try:
+            start = deserialize_date(form['term_start']) if form.get('term_start') else None
+            end = deserialize_date(form['term_end']) if form.get('term_end') else None
+        except ValueError:
+            flash('Term dates must be real dates (YYYY-MM-DD).', 'error')
+            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB), 400
+        term = CourseTerm(term_name=term_name, start_date=start, end_date=end, source='manual')
+        assessments = []
+        titles = form.getlist('assessment_title[]')
+        types = form.getlist('assessment_type[]')
+        dues = form.getlist('assessment_due[]')
+        weights = form.getlist('assessment_weight[]')
+        for i, title in enumerate(titles):
+            title = title.strip()
+            if not title:
+                continue
+            due = None
+            raw_due = dues[i] if i < len(dues) else ''
+            if raw_due:
+                try:
+                    due = deserialize_datetime(raw_due.replace('T', ' ') + ('' if ':' in raw_due else ' 23:59'))
+                except ValueError:
+                    due = None
+            weight = None
+            raw_w = weights[i] if i < len(weights) else ''
+            if raw_w:
+                try:
+                    weight = float(raw_w)
+                except ValueError:
+                    weight = None
+            assessments.append(AssessmentTask(
+                title=title, type=(types[i] if i < len(types) else 'other') or 'other',
+                weight_percent=weight, due_datetime=due, confidence=1.0, source_evidence='Entered by hand',
+                needs_review=due is None, date_status='exact' if due else 'missing',
+                date_note='' if due else 'No date entered yet',
+            ))
+        from .outline.schedule import parse_days
+        slots = {'lecture': [], 'lab': [], 'tutorial': []}
+        for kind in slots:
+            days = parse_days(form.get(f'{kind}_days') or '')
+            st, en = form.get(f'{kind}_start') or '', form.get(f'{kind}_end') or ''
+            if days and st and en:
+                try:
+                    slots[kind].append(SectionOption(
+                        section_type=kind.capitalize(), section_id='', days_of_week=days,
+                        start_time=deserialize_time(st if st.count(':') == 2 else st + ':00'),
+                        end_time=deserialize_time(en if en.count(':') == 2 else en + ':00'),
+                        location=(form.get(f'{kind}_location') or '').strip() or None))
+                except ValueError:
+                    pass
+        data = ExtractedCourseData(term=term, lecture_sections=slots['lecture'], lab_sections=slots['lab'],
+                                   tutorial_sections=slots['tutorial'], assessments=assessments,
+                                   course_code=(form.get('course_code') or '').strip() or None,
+                                   course_name=(form.get('course_name') or '').strip() or None,
+                                   notes=['Entered by hand: add lecture, lab or tutorial slots with "Add Section" if you want weekly events.'])
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        pdf_hash = f"manual-{uuid.uuid4().hex}"
+        session['pdf_hash'] = pdf_hash
+        session['pdf_filename'] = 'manual entry'
+        session['user_choices'] = {}
+        get_cache().store_extraction(visitor_key(pdf_hash, session['session_id']), data)
+        analytics.capture(session['session_id'], 'manual_entry', {'assessments': len(assessments)})
+        flash('Course entered. Review it below, then download the calendar.', 'success')
+        return redirect(url_for('review'))
     
-    return render_template('manual.html')
+    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB)
 
 
 @app.route('/api/update-field', methods=['POST'])
@@ -977,6 +997,9 @@ def update_field():
             
         elif field_type == 'course_name':
             extracted_data.course_name = value if value else None
+
+        elif field_type == 'term_name':
+            extracted_data.term.term_name = (value or '').strip() or 'Unknown'
             
         elif field_type == 'term_start':
             if value:
@@ -1028,10 +1051,18 @@ def update_field():
                                 extracted_data.assessments[idx].due_datetime = deserialize_datetime(dt_str)
                                 # Clear rule if setting absolute date
                                 extracted_data.assessments[idx].due_rule = None
+                                extracted_data.assessments[idx].date_status = 'exact'
+                                extracted_data.assessments[idx].date_note = 'Date entered by you'
+                                extracted_data.assessments[idx].dates = []
+                                extracted_data.assessments[idx].needs_review = False
                             except (ValueError, AttributeError) as e:
                                 return jsonify({'success': False, 'error': f'Invalid datetime format: {str(e)}'}), 400
                         else:
                             extracted_data.assessments[idx].due_datetime = None
+                            extracted_data.assessments[idx].dates = []
+                            extracted_data.assessments[idx].date_status = 'missing'
+                            extracted_data.assessments[idx].date_note = 'Date cleared by you'
+                            extracted_data.assessments[idx].needs_review = True
                 except (ValueError, IndexError) as e:
                     return jsonify({'success': False, 'error': f'Invalid assessment index: {str(e)}'}), 400
             else:
@@ -1273,7 +1304,9 @@ def add_assessment():
             rule_anchor=data.get('rule_anchor'),
             confidence=confidence,
             source_evidence=data.get('source_evidence', 'Manual entry'),
-            needs_review=bool(data.get('needs_review', False))
+            needs_review=bool(data.get('needs_review', False)) or due_datetime is None,
+            date_status='exact' if due_datetime else ('rule' if data.get('due_rule') else 'missing'),
+            date_note='Entered by you' if due_datetime else ('Relative rule entered by you' if data.get('due_rule') else 'No date entered yet'),
         )
         
         # Add to assessments list
@@ -1374,10 +1407,12 @@ def download(filename: str):
     user_choices_dict = session.get('user_choices', {})
     lec = user_choices_dict.get('selected_lecture_section')
     lab = user_choices_dict.get('selected_lab_section')
-    if not lec and not lab:
-        flash('Please choose your lecture or lab section and generate the calendar first.', 'error')
+    tut = user_choices_dict.get('selected_tutorial_section')
+    if 'selected_lecture_section' not in user_choices_dict:
+        flash('Please generate the calendar from the review page first.', 'error')
         return redirect(url_for('review'))
     user_selections = UserSelections()
+    user_selections.selected_tutorial_section = deserialize_section(tut) if tut else None
     if lec:
         user_selections.selected_lecture_section = deserialize_section(lec)
     if lab:
@@ -1405,6 +1440,14 @@ def health():
     except Exception:
         db = 'error'
     return jsonify(ok=(db == 'ok'), db=db, service='plato'), (200 if db == 'ok' else 503)
+
+
+@app.errorhandler(413)
+def too_large(error):
+    """A body over MAX_CONTENT_LENGTH: say the limit in MB instead of a bare 413."""
+    flash(f'That file is larger than {MAX_FILE_SIZE_MB} MB, which is the most this free hosting can accept. '
+          'Print the outline to a smaller PDF (or remove images) and try again.', 'error')
+    return redirect(url_for('index'))
 
 
 @app.errorhandler(404)

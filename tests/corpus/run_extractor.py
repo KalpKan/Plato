@@ -52,6 +52,9 @@ def _assessment(a):
         "due": a.due_datetime.strftime("%Y-%m-%d") if a.due_datetime else None,
         "due_time": a.due_datetime.strftime("%H:%M") if a.due_datetime else None,
         "confidence": getattr(a, "confidence", None),
+        "date_status": getattr(a, "date_status", None),
+        "dates": [d.isoformat() for d in (getattr(a, "dates", None) or [])],
+        "is_bonus": getattr(a, "is_bonus", False),
     }
 
 
@@ -71,8 +74,9 @@ def extract_one(pdf: Path) -> dict:
                 "start": term.start_date.isoformat() if term and term.start_date else None,
                 "end": term.end_date.isoformat() if term and term.end_date else None,
             },
-            "sections": [_section(s) for s in (data.lecture_sections or []) + (data.lab_sections or [])],
+            "sections": [_section(s) for s in (data.lecture_sections or []) + (data.lab_sections or []) + (getattr(data, "tutorial_sections", None) or [])],
             "assessments": [_assessment(a) for a in data.assessments or []],
+            "notes": list(getattr(data, "notes", []) or []),
         }
     except Exception as e:  # noqa: BLE001
         return {"file": pdf.name, "ok": False, "seconds": round(time.time() - t0, 2),

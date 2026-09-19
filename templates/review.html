@@ -5,7 +5,8 @@
 {% block content %}
 <div class="review-section">
     <h2>Review & Confirm</h2>
-    <p>Review the extracted information below. Click any highlighted field to edit it.</p>
+    <p>Check every date against your outline; click any highlighted field to correct it. Your edits are saved for you only.
+    {% if not is_manual %}Wrong from the start? <a href="{{ url_for('index') }}#upload-section">Re-upload the PDF</a> with "re-read the PDF" ticked.{% endif %}</p>
 
     <!-- Summary Section -->
     {% if completeness %}
@@ -16,18 +17,27 @@
                 <span class="stat-label">Assessments</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value completeness-{{ 'high' if completeness.total_weight >= 95 else 'medium' if completeness.total_weight >= 70 else 'low' }}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
-                <span class="stat-label">Weight Found</span>
+                <span class="stat-value completeness-{{ completeness.total_class }}" title="{% if completeness.total_class == 'over' %}More than 100 %: a row is probably counted twice, or the outline uses best-N-of-M{% elif completeness.bonus_weight %}Bonus rows ({{ completeness.bonus_weight|round|int }} %) are not counted{% else %}Sum of the weights below{% endif %}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
+                <span class="stat-label">of 100% found{% if completeness.bonus_weight %} (+{{ completeness.bonus_weight|round(1) }} bonus){% endif %}</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value">{{ completeness.num_lecture_sections }}</span>
-                <span class="stat-label">Lectures</span>
+                <span class="stat-value">{{ completeness.num_lecture_sections }} / {{ completeness.num_lab_sections }} / {{ completeness.num_tutorial_sections }}</span>
+                <span class="stat-label">Lecture / lab / tutorial slots</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value">{{ completeness.num_lab_sections }}</span>
-                <span class="stat-label">Labs</span>
+                <span class="stat-value {% if completeness.assessments_undated %}completeness-medium{% endif %}">{{ completeness.assessments_undated }}</span>
+                <span class="stat-label">Need a date</span>
             </div>
         </div>
+    </section>
+    {% endif %}
+
+    {% if notes %}
+    <section class="review-section-item parser-notes">
+        <h3><i data-lucide="info"></i> What could not be read from the PDF</h3>
+        <ul class="notes-list">
+            {% for note in notes %}<li>{{ note }}</li>{% endfor %}
+        </ul>
     </section>
     {% endif %}
 
@@ -40,6 +50,15 @@
             </h3>
             <div class="info-grid">
                 <div>
+                    <label>Course Code</label>
+                    <span class="value editable-field {% if course_code == 'Not found' %}missing-field{% endif %}"
+                          data-field-type="course_code"
+                          data-current-value="{{ '' if course_code == 'Not found' else course_code }}"
+                          title="Click to edit">
+                        {{ course_code }}
+                    </span>
+                </div>
+                <div>
                     <label>Course Name</label>
                     <span class="value editable-field {% if course_name == 'Not found' %}missing-field{% endif %}" 
                           data-field-type="course_name" 
@@ -50,7 +69,14 @@
                 </div>
                 <div>
                     <label>Term</label>
-                    <span class="value">{{ term.term_name }}</span>
+                    <span class="value editable-field {% if term.term_name == 'Unknown' %}missing-field{% endif %}"
+                          data-field-type="term_name"
+                          data-current-value="{{ '' if term.term_name == 'Unknown' else term.term_name }}"
+                          title="Click to edit">
+                        {{ term.term_name }}
+                    </span>
+                    {% if term_source == 'sessional' %}<small class="field-note">Western sessional dates (outline gives none)</small>
+                    {% elif term_source == 'estimated' %}<small class="field-note">Estimated: confirm the dates</small>{% endif %}
                 </div>
                 <div>
                     <label>Start Date</label>
@@ -70,7 +96,16 @@
                         {{ term.end_date.strftime('%b %d, %Y') if term.end_date else 'Not found' }}
                     </span>
                 </div>
+                {% if term.exam_periods %}
+                <div>
+                    <label>Exam period</label>
+                    <span class="value">{% for a, b in term.exam_periods %}{{ a.strftime('%b %d') }} – {{ b.strftime('%b %d, %Y') }}{% if not loop.last %}; {% endif %}{% endfor %}</span>
+                </div>
+                {% endif %}
             </div>
+            {% if not term.start_date or not term.end_date %}
+            <p class="field-warning">Weekly lecture, lab and tutorial events need the first and last day of classes. Click the dates above to enter them.</p>
+            {% endif %}
         </section>
 
         <!-- Lecture Section Selection -->
@@ -96,14 +131,15 @@
                                 {% else %}
                                     Days N/A
                                 {% endif %}
-                                {{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}
+                                {% if section.start_time %}{{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}{% else %}time not in the outline{% endif %}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
                     </select>
+                    {% for section in lecture_sections if section.note %}<small class="field-note">{{ section.note }}</small>{% endfor %}
                 </div>
             {% else %}
-                <p class="no-data">No lecture sections found. Add one manually if needed.</p>
+                <p class="no-data">No lecture time was found in the outline. Add one if you want weekly events.</p>
                 <button type="button" class="btn btn-tertiary btn-sm" id="add-lecture-section">
                     <i data-lucide="plus"></i>
                     Add Section
@@ -144,12 +180,42 @@
                     </select>
                 </div>
             {% else %}
-                <p class="no-data">No lab sections found. Add one manually if needed.</p>
+                <p class="no-data">No lab time was found in the outline (labs are usually only on draftmyschedule.uwo.ca). Add one if you have a lab.</p>
                 <button type="button" class="btn btn-tertiary btn-sm" id="add-lab-section">
                     <i data-lucide="plus"></i>
                     Add Section
                 </button>
                 <input type="hidden" name="lab_section" value="none">
+            {% endif %}
+        </section>
+
+        <!-- Tutorial Section Selection -->
+        <section class="review-section-item">
+            <h3>
+                <i data-lucide="message-circle"></i>
+                Tutorial Section
+            </h3>
+            {% if tutorial_sections %}
+                <div class="form-group">
+                    <label for="tutorial_section">Select your section</label>
+                    <select name="tutorial_section" id="tutorial_section" class="form-control">
+                        <option value="none">No tutorial section</option>
+                        {% for section in tutorial_sections %}
+                            <option value="{{ loop.index0 }}">
+                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
+                                {% if section.days_of_week %}
+                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                                    {% for day_num in section.days_of_week %}{{ day_names[day_num] }}{% if not loop.last %}/{% endif %}{% endfor %}
+                                {% else %}Days N/A{% endif %}
+                                {% if section.start_time %}{{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}{% else %}time not in the outline{% endif %}
+                                {% if section.location %}({{ section.location }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% else %}
+                <p class="no-data">No tutorial time was found in the outline.</p>
+                <input type="hidden" name="tutorial_section" value="none">
             {% endif %}
         </section>
 
@@ -168,9 +234,9 @@
             {% if assessments %}
                 <div class="assessments-list">
                     {% for assessment in assessments %}
-                        {% set missing_date = not assessment.due_datetime and not assessment.due_rule %}
-                        {% set should_flag = assessment.needs_review or missing_date or not assessment.weight_percent %}
-                        <div class="assessment-item {% if should_flag %}needs-review{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
+                        {% set missing_date = not assessment.due_datetime and not assessment.due_rule and not assessment.dates %}
+                        {% set should_flag = (assessment.needs_review or missing_date or not assessment.weight_percent) and not assessment.is_bonus %}
+                        <div class="assessment-item {% if should_flag %}needs-review{% endif %}{% if assessment.is_bonus %} is-bonus{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
                             <div class="assessment-header">
                                 <span class="editable-field assessment-title" 
                                       data-field-type="assessment_title" 
@@ -179,7 +245,11 @@
                                       title="Click to edit">
                                     <strong>{{ assessment.title }}</strong>
                                 </span>
-                                {% if should_flag %}
+                                {% if assessment.is_bonus %}
+                                    <span class="badge badge-info" title="Shown but not counted in the total">Bonus / optional</span>
+                                {% elif missing_date %}
+                                    <span class="badge badge-warning">Needs a date</span>
+                                {% elif should_flag %}
                                     <span class="badge badge-warning">Review</span>
                                 {% endif %}
                                 <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove">
@@ -195,14 +265,23 @@
                                     <i data-lucide="percent"></i>
                                     {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Add weight{% endif %}
                                 </span>
-                                {% if assessment.due_datetime %}
+                                {% if assessment.dates and assessment.dates|length > 1 %}
+                                    <span class="editable-field"
+                                          data-field-type="assessment_due_date"
+                                          data-assessment-index="{{ loop.index0 }}"
+                                          data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
+                                          title="{{ assessment.dates|length }} dates: {% for d in assessment.dates %}{{ d.strftime('%b %d') }}{% if not loop.last %}, {% endif %}{% endfor %}. Click to replace them with one date">
+                                        <i data-lucide="calendar"></i>
+                                        {{ assessment.dates|length }} dates, {{ assessment.dates[0].strftime('%b %d') }} – {{ assessment.dates[-1].strftime('%b %d, %Y') }}
+                                    </span>
+                                {% elif assessment.due_datetime %}
                                     <span class="editable-field" 
                                           data-field-type="assessment_due_date" 
                                           data-assessment-index="{{ loop.index0 }}"
                                           data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
                                           title="Click to edit date">
                                         <i data-lucide="calendar"></i>
-                                        {{ assessment.due_datetime.strftime('%b %d, %Y') }}
+                                        {{ assessment.due_datetime.strftime('%b %d, %Y') }}{% if assessment.due_datetime.hour != 23 or assessment.due_datetime.minute != 59 %} {{ assessment.due_datetime|time_12h }}{% endif %}
                                     </span>
                                 {% elif assessment.due_rule %}
                                     <span class="editable-field" 
@@ -224,6 +303,9 @@
                                     </span>
                                 {% endif %}
                             </div>
+                            {% if assessment.date_note and (missing_date or assessment.date_status in ['recurring', 'rule'] or 'you' in assessment.date_note) %}
+                                <p class="date-reason">{{ assessment.date_note }}{% if missing_date and not assessment.is_bonus %} — no calendar event until you add a date.{% endif %}</p>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>

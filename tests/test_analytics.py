@@ -93,7 +93,7 @@ def test_upload_emits_pdf_uploaded_and_pdf_parsed(monkeypatch, tmp_path):
     monkeypatch.setattr(mod.analytics, "capture", lambda d, e, p=None: events.append(e) or True)
 
     class FakeExtractor:
-        def __init__(self, path):
+        def __init__(self, path, original_filename=None):
             pass
 
         def extract_all(self):

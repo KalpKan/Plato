@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const reviewForm = document.getElementById('review-form');
     if (generateBtn && reviewForm) {
         generateBtn.addEventListener('click', function(e) {
-            console.log('Generate Calendar button clicked');
             // Check if any field is currently being edited
             const editingField = document.querySelector('.editable-field.editing');
             if (editingField) {
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // For date fields, allow saving even if empty (to clear the date)
                     if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
-                        console.log('Auto-saving field before generating calendar');
                         // Get original content from a stored attribute or reconstruct
                         const originalContent = editingField.getAttribute('data-original-content') || editingField.textContent;
                         
@@ -50,25 +48,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 };
                                 reviewForm.submit();
                             } else {
-                                // Still editing, show alert
-                                alert('Please wait for the field to finish saving, or cancel your edit before generating the calendar.');
+                                showReviewNotice('Still saving your edit; click Download Calendar again in a moment.');
                             }
                         }, 500);
                         e.preventDefault();
                         return false;
                     } else {
                         // No value entered, just cancel the edit
-                        console.log('Cancelling edit with no value');
                         const originalContent = editingField.getAttribute('data-original-content') || '';
                         editingField.innerHTML = originalContent;
                         editingField.classList.remove('editing');
                         // Continue with form submission
                     }
                 } else {
-                    // Can't find input, show alert
-                    e.preventDefault();
-                    alert('Please refresh to save your changes.');
-                    return false;
+                    // A field is mid-save (no input yet): leave editing mode and go on
+                    editingField.classList.remove('editing');
                 }
             }
             
@@ -130,7 +124,7 @@ function initFormValidation() {
             
             if (!isValid) {
                 e.preventDefault();
-                alert('Please fill in all required fields.');
+                showReviewNotice('Please fill in all required fields.');
             }
         });
     });
@@ -228,14 +222,14 @@ function validatePDFFile(file) {
     // Check file extension
     const extension = file.name.split('.').pop().toLowerCase();
     if (extension !== 'pdf') {
-        alert('Please upload a PDF file.');
+        showReviewNotice('Only PDF files can be read.');
         return false;
     }
     
-    // Check file size (16MB max)
-    const maxSize = 16 * 1024 * 1024; // 16MB in bytes
+    // Check file size: Vercel's function accepts 4.5 MB request bodies, so 4 MB of PDF
+    const maxSize = 4 * 1024 * 1024;
     if (file.size > maxSize) {
-        alert('File is too large. Maximum size is 16MB.');
+        showReviewNotice('That file is ' + (file.size / 1024 / 1024).toFixed(1) + ' MB; the free hosting accepts up to 4 MB.');
         return false;
     }
     
@@ -292,20 +286,13 @@ function parseDaysOfWeek(daysStr) {
  * Makes missing or reviewable fields clickable for inline editing
  */
 function initEditableFields() {
-    console.log('=== initEditableFields called ===');
-    
     // First, find all editable fields and add direct click listeners
     const editableFields = document.querySelectorAll('.editable-field');
-    console.log('Found', editableFields.length, 'editable fields');
-    
     if (editableFields.length === 0) {
-        console.warn('WARNING: No editable fields found! Check HTML structure.');
         return;
     }
     
     editableFields.forEach((field, index) => {
-        console.log(`Setting up field ${index}:`, field.textContent.substring(0, 30), 'classes:', field.className, 'data-field-type:', field.getAttribute('data-field-type'));
-        
         // Make sure cursor shows it's clickable
         field.style.cursor = 'pointer';
         field.style.userSelect = 'none';
@@ -324,20 +311,13 @@ function initEditableFields() {
                 target.closest('.btn-cancel') ||
                 target.closest('button') ||
                 target.closest('input')) {
-                console.log('Click on button/form element, ignoring editable field handler');
                 return true; // Allow the click to proceed
             }
-            
-            console.log('=== onclick handler triggered ===', this);
-            console.log('Event:', e);
-            console.log('Field type:', this.getAttribute('data-field-type'));
-            
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             
             if (!this.classList.contains('editing')) {
-                console.log('Calling startEditing...');
                 startEditing(this);
             }
             return false;
@@ -352,11 +332,8 @@ function initEditableFields() {
                 target.closest('.btn-cancel') ||
                 target.closest('button') ||
                 target.closest('input')) {
-                console.log('Click on button/form element (addEventListener), ignoring');
                 return true; // Allow the click to proceed
             }
-            
-            console.log('addEventListener click on field:', this);
             e.preventDefault();
             e.stopPropagation();
             if (!this.classList.contains('editing')) {
@@ -367,12 +344,9 @@ function initEditableFields() {
         
         // Prevent form submission when clicking
         field.addEventListener('mousedown', function(e) {
-            console.log('mousedown on field');
             e.stopPropagation();
         }, true);
     });
-    
-    console.log('=== Finished setting up editable fields ===');
 }
 
 /**
@@ -382,8 +356,6 @@ function initEditableFields() {
  * @param {HTMLElement} fieldElement - The field element to edit
  */
 function startEditing(fieldElement) {
-    console.log('startEditing called with:', fieldElement);
-    
     if (!fieldElement) {
         console.error('startEditing: fieldElement is null or undefined');
         return;
@@ -391,7 +363,6 @@ function startEditing(fieldElement) {
     
     // Don't start editing if already in edit mode
     if (fieldElement.classList.contains('editing')) {
-        console.log('Field already in editing mode, skipping');
         return;
     }
     
@@ -407,9 +378,6 @@ function startEditing(fieldElement) {
     }
     
     const assessmentIndex = fieldElement.getAttribute('data-assessment-index');
-    
-    console.log('Field details:', { fieldType, currentValue, assessmentIndex });
-    
     // Determine input type based on field type
     let inputType = 'text';
     let placeholder = '';
@@ -464,7 +432,6 @@ function startEditing(fieldElement) {
     editForm.style.position = 'relative';
     editForm.style.zIndex = '1000';
     editForm.onsubmit = function(e) {
-        console.log('Edit form onsubmit handler called');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -508,15 +475,9 @@ function startEditing(fieldElement) {
     fieldElement.innerHTML = '';
     fieldElement.appendChild(editForm);
     fieldElement.classList.add('editing');
-    
-    console.log('Edit form created and appended:', editForm);
-    
     const input = editForm.querySelector('.inline-edit-input');
     const saveBtn = editForm.querySelector('.btn-save');
     const cancelBtn = editForm.querySelector('.btn-cancel');
-    
-    console.log('Form elements found:', { input: !!input, saveBtn: !!saveBtn, cancelBtn: !!cancelBtn });
-    
     if (input) {
         // Use setTimeout to ensure focus works after DOM update
         setTimeout(() => {
@@ -527,12 +488,10 @@ function startEditing(fieldElement) {
     
     // Handle form submission - prevent bubbling to parent form
     editForm.addEventListener('submit', function(e) {
-        console.log('Edit form submit event triggered');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         const newValue = input.value.trim();
-        console.log('Saving field:', fieldType, 'new value:', newValue);
         saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
         return false;
     }, true); // Use capture phase
@@ -542,30 +501,25 @@ function startEditing(fieldElement) {
     if (saveBtn) {
         // Use both capture and bubble phases to ensure we catch the event
         saveBtn.addEventListener('click', function(e) {
-            console.log('Save button clicked - handler 1');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             const newValue = input.value.trim();
-            console.log('Saving field via button:', fieldType, 'new value:', newValue);
             saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
             return false;
         }, true); // Capture phase
         
         saveBtn.addEventListener('click', function(e) {
-            console.log('Save button clicked - handler 2');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             const newValue = input.value.trim();
-            console.log('Saving field via button (bubble):', fieldType, 'new value:', newValue);
             saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
             return false;
         }, false); // Bubble phase
         
         // Also use onclick as a fallback
         saveBtn.onclick = function(e) {
-            console.log('Save button onclick handler');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -580,7 +534,6 @@ function startEditing(fieldElement) {
     if (cancelBtn) {
         // Use both capture and bubble phases to ensure we catch the event
         cancelBtn.addEventListener('click', function(e) {
-            console.log('Cancel button clicked - handler 1');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -590,7 +543,6 @@ function startEditing(fieldElement) {
         }, true); // Capture phase
         
         cancelBtn.addEventListener('click', function(e) {
-            console.log('Cancel button clicked - handler 2');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -601,7 +553,6 @@ function startEditing(fieldElement) {
         
         // Also use onclick as a fallback
         cancelBtn.onclick = function(e) {
-            console.log('Cancel button onclick handler');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -616,7 +567,6 @@ function startEditing(fieldElement) {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                console.log('Escape pressed');
                 fieldElement.innerHTML = originalContent;
                 fieldElement.classList.remove('editing');
             } else if (e.key === 'Enter') {
@@ -625,7 +575,6 @@ function startEditing(fieldElement) {
                 const newValue = input.value.trim();
                 if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
                     // Allow empty dates to be saved (clears the field)
-                    console.log('Enter pressed - auto-saving field');
                     saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
                 }
             }
@@ -640,11 +589,9 @@ function startEditing(fieldElement) {
                     const newValue = input.value.trim();
                     // For date fields, allow saving even if empty (to clear the date)
                     if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
-                        console.log('Input blurred - auto-saving field');
                         saveField(fieldElement, fieldType, newValue, assessmentIndex, originalContent);
                     } else {
                         // If no value and not a date field, cancel the edit
-                        console.log('Input blurred with no value - cancelling edit');
                         fieldElement.innerHTML = originalContent;
                         fieldElement.classList.remove('editing');
                     }
@@ -696,8 +643,10 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update display with new value
+            // Update display with new value and leave editing mode (the Download button
+            // refuses to submit while any field still carries the "editing" class)
             updateFieldDisplay(fieldElement, fieldType, newValue);
+            fieldElement.classList.remove('editing');
             // Show success message briefly
             fieldElement.classList.add('saved');
             setTimeout(() => {
@@ -705,17 +654,37 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
             }, 2000);
         } else {
             // Show error and restore original
-            alert('Error: ' + (data.error || 'Failed to save'));
+            showReviewNotice('Could not save: ' + (data.error || 'unknown error'));
             fieldElement.innerHTML = originalContent;
             fieldElement.classList.remove('editing');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error saving field. Please try again.');
+        showReviewNotice('Could not save the field (network error). Please try again.');
         fieldElement.innerHTML = originalContent;
         fieldElement.classList.remove('editing');
     });
+}
+
+/**
+ * Inline notice on the review page (replaces native alert(), which freezes the tab)
+ */
+function showReviewNotice(message, kind) {
+    let box = document.getElementById('review-notice');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'review-notice';
+        box.className = 'alert alert-warning review-notice';
+        box.setAttribute('role', 'status');
+        const form = document.getElementById('review-form');
+        (form ? form.parentNode : document.body).insertBefore(box, form || null);
+    }
+    box.className = 'alert alert-' + (kind || 'warning') + ' review-notice';
+    box.textContent = message;
+    box.style.display = 'block';
+    clearTimeout(box._hide);
+    box._hide = setTimeout(() => { box.style.display = 'none'; }, 6000);
 }
 
 /**
@@ -910,7 +879,7 @@ function showManualSectionForm(sectionType) {
         // Get selected days
         const dayCheckboxes = form.querySelectorAll('input[name="day"]:checked');
         if (dayCheckboxes.length === 0) {
-            alert('Please select at least one day of the week.');
+            showReviewNotice('Please select at least one day of the week.');
             return;
         }
         
@@ -920,7 +889,7 @@ function showManualSectionForm(sectionType) {
         const location = form.querySelector('#section-location').value || null;
         
         if (!startTime || !endTime) {
-            alert('Please enter both start and end times.');
+            showReviewNotice('Please enter both start and end times.');
             return;
         }
         
@@ -1226,12 +1195,12 @@ function addAssessment() {
             // Reload page to show new assessment
             window.location.reload();
         } else {
-            alert('Error adding assessment: ' + (result.error || 'Unknown error'));
+            showReviewNotice('Could not add the assessment: ' + (result.error || 'unknown error'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error adding assessment: ' + error.message);
+        showReviewNotice('Could not add the assessment: ' + error.message);
     });
 }
 
@@ -1255,12 +1224,12 @@ function removeAssessment(index) {
             // Reload page to reflect changes
             window.location.reload();
         } else {
-            alert('Error removing assessment: ' + (result.error || 'Unknown error'));
+            showReviewNotice('Could not remove the assessment: ' + (result.error || 'unknown error'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error removing assessment: ' + error.message);
+        showReviewNotice('Could not remove the assessment: ' + error.message);
     });
 }
 

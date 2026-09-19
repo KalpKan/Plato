@@ -17,18 +17,16 @@ The extracted data is then converted into a calendar file with:
 
 ## Features
 
-- Automatic PDF extraction using multi-layered approach
-- Document structure analysis with layout-aware extraction
-- Section segmentation for accurate field extraction
-- Policy text filtering to reduce false positives
-- Constrained selection to ensure assessment weights total ~100%
-- Interactive review interface with inline editing
-- Manual section and assessment addition
-- Configurable study plan lead times
-- Session-based caching for performance
-- Force refresh option to re-extract cached PDFs
-- Dark mode, responsive design
-- Clean, minimalist UI
+- Reads the **term window** from the outline's own "Important Dates" / "Classes begin" text, or falls back to Western's sessional dates for the named term (never today's date)
+- Reads every **lecture, lab and tutorial slot** printed in the outline (tables, "Lectures: MWF 12:30 - 1:20 pm in AHB-1R40", "Class Meetings: Tuesday 2:30-3:30pm, Thursday 2:30-4:30pm"), each typed correctly
+- Reads every **assessment** with its weight and the due date the outline states (day, month, the right year, the time when given); footnote digits and bullets are stripped from titles
+- An assessment the outline does not date (**"scheduled by the Registrar", "Date TBA", "during the exam period"**) is shown with that reason and gets **no calendar event** rather than an invented date
+- Weekly quizzes with listed dates become one event per date; bonus / optional rows are shown but not counted
+- Review page with inline editing (course code, name, term, dates, titles, weights, due dates, lead times), "Add Section" / "Add Assessment", and a list of everything the parser could not read
+- Your edits are private to your browser session: the parser's output for a given PDF is shared, your corrections are not
+- Manual mode for scanned or locked PDFs
+- Configurable study-reminder lead times
+- RFC 5545 `.ics`: `VTIMEZONE`, `DTSTAMP`, weekly series that end on the last day of classes, titles that carry the course code
 
 ## How to run this (on your own computer)
 
@@ -92,21 +90,19 @@ request body over 4.5 MB, so on the live site a PDF must be under 4.5 MB
 
 ### Basic Workflow
 
-1. **Upload PDF**: Click "Choose File" and select your course outline PDF
-2. **Review Extraction**: The system extracts course information and displays it for review
-3. **Edit Fields**: Click on any field to edit inline (dates, weights, titles, etc.)
-4. **Add Missing Data**: Use "Add Section" or "Add Assessment" buttons if needed
-5. **Select Sections**: If multiple lecture/lab sections exist, select yours from dropdowns
-6. **Review Assessments**: Review and edit any ambiguous assessments
-7. **Configure Lead Times**: Adjust study plan lead times if desired
-8. **Generate Calendar**: Click "Generate Calendar" to download the .ics file
+1. **Upload PDF**: drop your course outline PDF (text PDF, up to 4 MB) on the upload page
+2. **Review**: the review page shows the course, term, slots and assessments, plus a box "What could not be read from the PDF"
+3. **Fix what is wrong**: click any highlighted field to edit it; rows marked "Needs a date" say why (e.g. "Outline says: scheduled by the Registrar") and get no event until you add a date
+4. **Add missing data**: "Add Section" / "Add Assessment"
+5. **Select sections**: choose your lecture / lab / tutorial slot if the outline lists several
+6. **Study reminders**: adjust the lead times if you like
+7. **Download Calendar**: the `.ics` streams back immediately; import it into Google, Apple or Outlook
+
+Uploading the same PDF again shows the saved parse (about 2 s); tick "Re-read the PDF" to parse it again (10–25 s on the free hosting).
 
 ### Manual Mode
 
-If PDF extraction fails or you prefer to enter data manually:
-1. Click "Manual Mode" button on the upload page
-2. Enter term dates, section schedules, and assessments
-3. Generate .ics file from manual inputs
+If the PDF is a scan, is password-protected or has no assessment table, the upload page links to **Enter the course by hand** (`/manual`): term dates, optional weekly slots and the assessments, then the same review page and download.
 
 ### Importing to Calendar
 
@@ -167,94 +163,69 @@ Plato/
 
 ## How It Works
 
-### Extraction Pipeline
+### Extraction Pipeline (`src/outline/`)
 
-1. **Document Structure Analysis**
-   - Extracts text blocks with layout metadata (font sizes, positions)
-   - Reconstructs lines from blocks via y-coordinate clustering
-   - Detects tables (pdfplumber + reconstructed from aligned lines)
-   - Identifies sections (Evaluation, Course Information, etc.)
+1. **`pipeline.load_pages`** — page text and tables via pdfplumber; a password-protected file or a file with no text layer raises a specific error that the upload page turns into a plain-language message; pages without text are reported on the review page.
+2. **`course.extract_course`** — course code and name from the first text page (spelled-out subjects like "Classical Studies 1000", abbreviations like "KIN 2000", the department line plus a bare number, the file name as a last resort); prerequisite lists and room numbers are ignored.
+3. **`term.extract_term`** — first the outline's own "Classes Begin / Reading Week / Classes End / Exam Period" table or "Class Begin:" lines, then a weekly table with date ranges, then the season + year (text or file name, "A" = Fall, "B" = Winter) mapped to Western's sessional dates (2022–2027 table). Unknown stays Unknown.
+4. **`schedule.extract_slots_and_notes`** — lecture / lab / tutorial slots from timetable tables and prose (day letters, dotted times, per-section rows); a component with no day or time becomes a note, never a slot.
+5. **`assessments.extract_assessments`** — evaluation tables (weight column, continuation rows, footnote digits), inline lists ("Assignment 1 (10%) -- due Oct. 9", "First test: 20% (12 November 2025)"), numeric text tables, then dates for still-undated rows from the weekly schedule and from prose. `dates.DateResolver` turns each date cell into a date + time + status (`exact`, `registrar`, `tba`, `range`, `rule`, `recurring`, `missing`), choosing the year from the term window (Sept–Dec → first year) or the printed weekday.
+6. **Rule Resolution** (`rule_resolver.py`) — relative rules such as "24 hours after each lab" once a lab slot is chosen.
+7. **Study Plan** (`study_plan.py`) — reminder lead times by weight, user-configurable.
+8. **Calendar** (`icalendar_gen.py`) — weekly series (UNTIL = last day of classes, UTC), one event per dated assessment (or per listed date), study-start events; `VTIMEZONE`, `DTSTAMP`, course code in every title; no event for an undated assessment.
 
-2. **Section Segmentation**
-   - Identifies headings using font size, bold flags, and keywords
-   - Creates section ranges (start/end pages and positions)
-   - Scopes extraction to relevant sections (e.g., assessments only from Evaluation section)
-
-3. **Assessment Extraction**
-   - **Candidate Generation**: From tables, reconstructed tables, and inline patterns
-   - **Scoring**: Based on weight validity, assessment nouns, section context
-   - **Filtering**: Policy-window filtering to eliminate false positives
-   - **Selection**: Constrained selection to ensure weights total ~100%
-
-4. **Course Information Extraction**
-   - Layout-based ranking (font size, position, proximity to course code)
-   - Filters out generic words (Department, Faculty, etc.)
-   - Falls back to PDF metadata if needed
-
-5. **Rule Resolution**
-   - Parses relative deadline rules (e.g., "24 hours after lab")
-   - Matches rules to existing assessments when possible
-   - Generates per-occurrence assessments when needed
-   - Resolves to absolute datetimes using recurring schedules
-
-6. **Study Plan Generation**
-   - Default lead times based on assessment weight:
-     - 0-10%: 3 days
-     - 10-20%: 5 days
-     - 20-30%: 7 days
-     - 30-40%: 10 days
-     - 40-50%: 14 days
-     - 50%+: 21 days
-   - Finals: Always 21 days
-   - User-configurable per weight range
-
-7. **Calendar Generation**
-   - Creates recurring events (RRULE) for lectures and labs
-   - Creates assessment due events
-   - Creates study plan start events
-   - Uses timezone-aware datetimes (America/Toronto)
-   - Includes VTIMEZONE component for compatibility
+The older `document_structure.py` / `assessment_extractor.py` path is kept only as a fallback when the new pipeline finds no assessment at all.
 
 ### Caching
 
-- **Extraction Cache**: Stores extracted data keyed by PDF hash (SHA-256)
-- **User Choices Cache**: Stores section selections and lead-time overrides keyed by session
-- **Force Refresh**: Option to bypass cache and re-extract
+- **Extraction cache**: the parser's output keyed by the PDF's SHA-256, shared by everyone who uploads the same file
+- **Per-visitor copy**: every edit is saved under `<pdf_hash>:<session_id>`, so one student's corrections never reach another
+- **User choices**: section selections and lead-time overrides keyed by session
+- **Re-read the PDF**: the checkbox on the upload page re-parses and drops your edited copy
 
 ## Performance
 
-Tested on 39 course outline PDFs:
-- **Extraction Success**: 100% (39/39)
-- **Perfect Weight Accuracy (90-110%)**: 87% (34/39)
-- **Good Weight Accuracy (80-120%)**: 92% (36/39)
-- **Assessment Extraction**: 97% (38/39 have 2+ assessments)
-- **Course Name Extraction**: 100% (39/39)
+Measured on the labelled corpus (15 real Western outlines with hand-written ground truth, `tests/corpus/`; the PDFs themselves are not committed) after the 2026-09-18 fix round:
+
+| metric | result | bar |
+|---|---|---|
+| course code | 15/15 | 90 % |
+| term window | 15/15 | 90 % |
+| slots recall / precision | 15/15 · 15/15 | 90 % |
+| assessments recall / precision | 73/74 · 73/73 | 95 % |
+| weights | 73/73 | 98 % |
+| due dates exact (day, month, year) | 36/36 | 95 % |
+| no fabricated dates | 37/37 | 100 % |
+| clean titles | 71/73 | 95 % |
+| weight totals | 14/15 | 90 % |
+
+All 42 corpus outlines parse without an exception. The baseline before the fix (commit `de32e96`) was 14 % exact due dates, 0/10 term windows, 27 % slot recall.
 
 ## Limitations
 
-- PDF format only (no DOCX support)
-- Maximum file size: 5MB
-- Requires structured course outlines (works best with clear assessment tables)
-- Some ambiguous data may require manual review
-- Lecture/lab schedules rarely included in PDFs (manual entry available)
+- PDF with a text layer only (a scanned outline has to be entered by hand)
+- Maximum file size 4 MB (Vercel's request limit)
+- Lab and tutorial slots that exist only on draftmyschedule are not in the outline; the review page says so and offers "Add Section"
+- Registrar-scheduled exams never have a date in the outline; they are listed with the exam period and get no event
 
 ## Development
 
 ### Running Tests
 
 ```bash
-# Comprehensive extraction test
-python3 test_comprehensive.py
-
-# New extraction pipeline test
-python3 test_new_extraction.py
+.venv/bin/pytest -q tests/                         # unit + flow tests (about 1 s)
+.venv/bin/pytest -q tests/test_corpus.py -s        # the corpus gate (needs ~/projects/plato-corpus/pdfs; skips otherwise)
+.venv/bin/python tests/corpus/run_extractor.py --out /tmp/out && .venv/bin/python tests/corpus/score.py --output /tmp/out
 ```
+
+The corpus gate enforces the bar in `tests/test_corpus.py::BAR`; set `PLATO_CORPUS_GATE=0` for report-only mode while experimenting.
 
 ### Code Structure
 
 The codebase is organized into focused modules:
-- `models.py` - Data structures (dataclasses)
-- `pdf_extractor.py` - Main extraction orchestrator
+- `models.py` - Data structures (dataclasses) and the one JSON (de)serializer
+- `outline/` - The parser: `dates.py`, `term.py`, `schedule.py`, `course.py`, `assessments.py`, `tables.py`, `pipeline.py`
+- `pdf_extractor.py` - Entry point (`PDFExtractor(path, original_filename).extract_all()`), delegates to `outline.pipeline`
 - `document_structure.py` - Layout analysis and section segmentation
 - `assessment_extractor.py` - Assessment candidate generation, scoring, selection
 - `course_extractor.py` - Course information extraction

@@ -1,0 +1,137 @@
+{
+  "file": "ANATCELL 3309 Syllabus FW25-26.pdf",
+  "labelled_by": "fix agent, 2026-09-18, by reading the PDF (chosen among the outlines the fixed parser scored worst on)",
+  "course_code": "ANATCELL 3309",
+  "course_name": "Mammalian Histology",
+  "department": "Anatomy and Cell Biology",
+  "term": {
+    "name": "Fall/Winter 2025-2026",
+    "start": "2025-09-04",
+    "end": "2026-04-09",
+    "reading_week": [
+      "2025-11-03",
+      "2025-11-09"
+    ],
+    "exam_period": [
+      "2026-04-12",
+      "2026-04-30"
+    ],
+    "source": "'Course Syllabus for Fall 2025/Winter 2026'; schedule runs 'Sept 4th' to 'Apr 6–10'; Western sessional dates"
+  },
+  "sections": [
+    {
+      "type": "lecture",
+      "days": [
+        "Tue",
+        "Thu"
+      ],
+      "start": "11:30",
+      "end": "12:30",
+      "location": "SEB 2200",
+      "source": "Timetabled Sessions: 'Lectures In person/Online Tuesdays/Thursdays 11:30 AM - 12:30 PM EST SEB 2200'"
+    },
+    {
+      "type": "lab",
+      "days": [
+        "Mon"
+      ],
+      "start": "11:30",
+      "end": "13:20",
+      "location": "MSB-M117",
+      "note": "Section 002"
+    },
+    {
+      "type": "lab",
+      "days": [
+        "Mon"
+      ],
+      "start": "13:30",
+      "end": "15:20",
+      "location": "MSB-M117",
+      "note": "Section 003"
+    },
+    {
+      "type": "lab",
+      "days": [
+        "Mon"
+      ],
+      "start": "15:30",
+      "end": "17:20",
+      "location": "MSB-M117",
+      "note": "Section 004"
+    }
+  ],
+  "assessments": [
+    {
+      "title": "Quizzes",
+      "type": "quiz",
+      "weight": 30,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "dates": [
+        "2025-10-06",
+        "2025-11-10",
+        "2025-12-08",
+        "2026-01-26",
+        "2026-02-23",
+        "2026-03-22",
+        "2026-04-09"
+      ],
+      "note": "7 quizzes x 5%, lowest dropped; 'Quiz 1 Oct 6th ... Quiz 7 April 9th' in the Due Date cell"
+    },
+    {
+      "title": "Term 1 Lab Assignments",
+      "type": "lab_report",
+      "weight": 10,
+      "due": null,
+      "due_time": "23:59",
+      "date_status": "recurring",
+      "window": [
+        "2025-09-08",
+        "2025-12-05"
+      ],
+      "rule": "Day of lab at 11:59pm"
+    },
+    {
+      "title": "Midterm Test 1",
+      "type": "midterm",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "note": "'TBD'"
+    },
+    {
+      "title": "Term 2 Lab Assignments",
+      "type": "lab_report",
+      "weight": 10,
+      "due": null,
+      "due_time": "23:59",
+      "date_status": "recurring",
+      "window": [
+        "2026-01-05",
+        "2026-04-09"
+      ],
+      "rule": "Day of lab at 11:59pm"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 25,
+      "due": null,
+      "due_time": null,
+      "date_status": "tba",
+      "window": [
+        "2026-04-12",
+        "2026-04-30"
+      ],
+      "note": "'TBD', in person"
+    }
+  ],
+  "notes": [
+    "The Due Date cell of the Quizzes row lists seven dates; the two lab-assignment rows carry a rule ('Day of lab at 11:59pm')."
+  ],
+  "expected_weight_total": 100,
+  "sha256": "25cf0851df6f194ca341e6c6fdbacd4b50f1d65a63157e8e9ec25b83614c2500"
+}

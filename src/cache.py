@@ -21,7 +21,9 @@ from .models import (
     CourseTerm, SectionOption, AssessmentTask,
     serialize_date, deserialize_date,
     serialize_datetime, deserialize_datetime,
-    serialize_time, deserialize_time
+    serialize_time, deserialize_time,
+    extracted_to_dict, extracted_from_dict, section_to_dict, section_from_dict,
+    assessment_to_dict, assessment_from_dict,
 )
 
 
@@ -231,6 +233,13 @@ class CacheManager:
         conn.commit()
         conn.close()
     
+    def delete_extraction(self, pdf_hash: str) -> None:
+        """Remove one cached extraction (used to drop a visitor's edited copy)."""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("DELETE FROM extraction_cache WHERE pdf_hash = ?", (pdf_hash,))
+        conn.commit()
+        conn.close()
+
     def store_user_choices(self, pdf_hash: str, user_selections: UserSelections,
                           session_id: Optional[str] = None):
         """Store user choices in cache.
@@ -284,115 +293,26 @@ class CacheManager:
         self.store_extraction(pdf_hash, extracted_data)
         self.store_user_choices(pdf_hash, user_selections)
     
+    # The (de)serializers live in models.py so the SQLite cache, the Postgres cache and the
+    # Flask layer never disagree about a field again.
     def _serialize_extracted_data(self, data: ExtractedCourseData) -> dict:
-        """Serialize ExtractedCourseData to dict."""
-        return {
-            "term": {
-                "term_name": data.term.term_name,
-                "start_date": serialize_date(data.term.start_date),
-                "end_date": serialize_date(data.term.end_date),
-                "timezone": data.term.timezone
-            },
-            "lecture_sections": [self._serialize_section(s) for s in data.lecture_sections],
-            "lab_sections": [self._serialize_section(s) for s in data.lab_sections],
-            "assessments": [self._serialize_assessment(a) for a in data.assessments],
-            "course_code": data.course_code,
-            "course_name": data.course_name
-        }
-    
+        return extracted_to_dict(data)
+
     def _deserialize_extracted_data(self, data: dict) -> ExtractedCourseData:
-        """Deserialize dict to ExtractedCourseData."""
-        term_dict = data["term"]
-        term = CourseTerm(
-            term_name=term_dict["term_name"],
-            start_date=deserialize_date(term_dict["start_date"]),
-            end_date=deserialize_date(term_dict["end_date"]),
-            timezone=term_dict.get("timezone", "America/Toronto")
-        )
-        
-        lecture_sections = [self._deserialize_section(s) for s in data.get("lecture_sections", [])]
-        lab_sections = [self._deserialize_section(s) for s in data.get("lab_sections", [])]
-        assessments = [self._deserialize_assessment(a) for a in data.get("assessments", [])]
-        
-        return ExtractedCourseData(
-            term=term,
-            lecture_sections=lecture_sections,
-            lab_sections=lab_sections,
-            assessments=assessments,
-            course_code=data.get("course_code"),
-            course_name=data.get("course_name")
-        )
-    
+        return extracted_from_dict(data)
+
     def _serialize_section(self, section: SectionOption) -> dict:
-        """Serialize SectionOption to dict."""
-        result = {
-            "section_type": section.section_type,
-            "section_id": section.section_id,
-            "days_of_week": section.days_of_week,
-            "start_time": serialize_time(section.start_time),
-            "end_time": serialize_time(section.end_time),
-            "location": section.location
-        }
-        if section.date_range:
-            result["date_range"] = [
-                serialize_date(section.date_range[0]),
-                serialize_date(section.date_range[1])
-            ]
-        return result
-    
+        return section_to_dict(section)
+
     def _deserialize_section(self, data: dict) -> SectionOption:
-        """Deserialize dict to SectionOption."""
-        date_range = None
-        if "date_range" in data and data["date_range"]:
-            date_range = (
-                deserialize_date(data["date_range"][0]),
-                deserialize_date(data["date_range"][1])
-            )
-        
-        return SectionOption(
-            section_type=data["section_type"],
-            section_id=data["section_id"],
-            days_of_week=data["days_of_week"],
-            start_time=deserialize_time(data["start_time"]),
-            end_time=deserialize_time(data["end_time"]),
-            location=data.get("location"),
-            date_range=date_range
-        )
-    
+        return section_from_dict(data)
+
     def _serialize_assessment(self, assessment: AssessmentTask) -> dict:
-        """Serialize AssessmentTask to dict."""
-        result = {
-            "title": assessment.title,
-            "type": assessment.type,
-            "weight_percent": assessment.weight_percent,
-            "confidence": assessment.confidence,
-            "source_evidence": assessment.source_evidence,
-            "needs_review": assessment.needs_review,
-            "due_rule": assessment.due_rule,
-            "rule_anchor": assessment.rule_anchor
-        }
-        if assessment.due_datetime:
-            result["due_datetime"] = serialize_datetime(assessment.due_datetime)
-        return result
-    
+        return assessment_to_dict(assessment)
+
     def _deserialize_assessment(self, data: dict) -> AssessmentTask:
-        """Deserialize dict to AssessmentTask."""
-        due_datetime = None
-        if "due_datetime" in data and data["due_datetime"]:
-            due_datetime = deserialize_datetime(data["due_datetime"])
-        
-        return AssessmentTask(
-            title=data["title"],
-            type=data["type"],
-            weight_percent=data.get("weight_percent"),
-            due_datetime=due_datetime,
-            due_rule=data.get("due_rule"),
-            rule_anchor=data.get("rule_anchor"),
-            confidence=data.get("confidence", 0.0),
-            source_evidence=data.get("source_evidence"),
-            needs_review=data.get("needs_review", False)
-        )
-    
+        return assessment_from_dict(data)
+
     def _serialize_selections(self, selections: UserSelections) -> dict:
         """Serialize UserSelections to dict."""
         result = {

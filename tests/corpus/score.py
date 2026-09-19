@@ -49,10 +49,21 @@ def norm_title(t: str) -> str:
     return t
 
 
+SUBJECT_ALIASES = {
+    "computerscience": "cs", "classicalstudies": "cs", "healthsciences": "hs", "kinesiology": "kin",
+    "biochemistry": "biochem", "mathematics": "math", "physiology": "physiol", "calculus": "calc",
+    "appliedmathematics": "am", "electricalandcomputerengineering": "ece",
+}
+
+
 def norm_code(c: str) -> str:
+    """Case/space-insensitive; a spelled-out subject equals its Western abbreviation
+    ("Computer Science 3340B" == "CS 3340B"), since outlines print either form."""
     c = (c or "").lower().replace("-", " ")
     c = re.sub(r"\s+", "", c)
-    # allow "kin2000" == "kinesiology2000"? no: keep strict but tolerant of spacing/case
+    m = re.match(r"^([a-z&]+)(\d.*)$", c)
+    if m and m.group(1) in SUBJECT_ALIASES:
+        c = SUBJECT_ALIASES[m.group(1)] + m.group(2)
     return c
 
 
@@ -113,6 +124,10 @@ def score_one(gt: dict, ex: dict) -> dict:
 
     gts = [s for s in gt.get("sections", []) if s.get("days") or s.get("start")]
     exs = ex.get("sections", [])
+    if gt.get("sections_extractable_without_ocr") is False:
+        # the slots live on an image-only page (CS 3342A page 1): no text layer, so the
+        # parser is not scored on them (it must say so on the review page instead)
+        gts, exs = [], []
     sm = match_sections(gts, exs)
     c["sections_recall"] = (len(gts), len(sm))
     c["sections_precision"] = (len(exs), len(sm))
@@ -120,7 +135,7 @@ def score_one(gt: dict, ex: dict) -> dict:
     gta = gt["assessments"]
     # rows the outline lists but that are not calendar events (bonus weight, optional extras):
     # extracting them is neither rewarded nor punished.
-    excluded = [norm_title(x.split("(")[0]) for x in gt.get("excluded_rows", [])]
+    excluded = [norm_title(re.sub(r"\+?\d+(?:\.\d+)?\s*%", " ", x.split("(")[0])) for x in gt.get("excluded_rows", [])]
     exa = [a for a in ex.get("assessments", [])
            if not any(difflib.SequenceMatcher(None, norm_title(a.get("title", "")), x).ratio() >= 0.8 for x in excluded)]
     am = match_assessments(gta, exa)

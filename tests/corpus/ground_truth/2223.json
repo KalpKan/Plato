@@ -1,0 +1,69 @@
+{
+  "file": "2223.pdf",
+  "labelled_by": "fix agent, 2026-09-18, by reading the PDF (chosen among the outlines the fixed parser scored worst on)",
+  "course_code": "Chem 2223B",
+  "course_name": "Organic Chemistry of Biological Molecules",
+  "department": "Chemistry",
+  "term": {
+    "name": "Winter 2024",
+    "start": "2024-01-08",
+    "end": "2024-04-08",
+    "reading_week": [
+      "2024-02-17",
+      "2024-02-25"
+    ],
+    "exam_period": [
+      "2024-04-11",
+      "2024-04-30"
+    ],
+    "source": "'Chem 2223B (Winter 2023−24)' on page 1 (the dash is U+2212); Western sessional dates for Winter 2024"
+  },
+  "sections": [],
+  "sections_note": "'Lecture Section | Time (MWF) | Room' table has an empty time cell; no slot in the PDF",
+  "assessments": [
+    {
+      "title": "Laboratory",
+      "type": "lab_report",
+      "weight": 20,
+      "due": null,
+      "due_time": null,
+      "date_status": "recurring",
+      "window": [
+        "2024-01-15",
+        "2024-03-29"
+      ],
+      "note": "five experiments, 'Week of January 15' ... 'Week of March 25' per lab section; no exact day"
+    },
+    {
+      "title": "Midterm Test",
+      "type": "midterm",
+      "weight": 32.5,
+      "due": "2024-03-02",
+      "due_time": "19:30",
+      "end_time": "21:30",
+      "date_status": "exact",
+      "note": "'Saturday, March 2, 7:30 – 9:30 PM'; Method 1 weight (Method 2 is 17.5)"
+    },
+    {
+      "title": "Final Exam",
+      "type": "final",
+      "weight": 47.5,
+      "due": null,
+      "due_time": null,
+      "date_status": "registrar",
+      "window": [
+        "2024-04-11",
+        "2024-04-30"
+      ]
+    }
+  ],
+  "notes": [
+    "Evaluation is a text table with two numeric weight columns (Method 1 / Method 2) and no % signs.",
+    "The Final Exam row's notes wrap onto the lines above and below it."
+  ],
+  "expected_weight_total": 100,
+  "acceptable_weight_totals": [
+    100
+  ],
+  "sha256": "52243eab9dd86c981ee7b4286ede025303c5000275b2c72a058bd8d677f2047e"
+}

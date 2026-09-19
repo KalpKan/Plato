@@ -1,10 +1,9 @@
 """Consumer-grade gate for the extractor, measured on the labelled corpus.
 
 Skips when the corpus PDFs are not on this machine (they are never committed).
-In report mode (default) it prints the pooled scores and always passes, so `pytest -q`
-stays green while the parser is being fixed. Set PLATO_CORPUS_GATE=1 to enforce the
-consumer-grade bar from docs/reports/plato-spec.md (the fixing agent flips this on in
-CI / verification.md once the bar is met).
+The consumer-grade bar from docs/reports/plato-spec.md is enforced by default (the
+parser met it on 2026-09-18, fix round 1: 15 labelled outlines). Set PLATO_CORPUS_GATE=0
+to run in report-only mode while experimenting with the parser.
 """
 import json
 import os
@@ -16,7 +15,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = Path(os.environ.get("PLATO_CORPUS_DIR", Path.home() / "projects/plato-corpus/pdfs"))
-GATE = os.environ.get("PLATO_CORPUS_GATE") == "1"
+GATE = os.environ.get("PLATO_CORPUS_GATE", "1") != "0"
 
 # The bar (see docs/reports/plato-spec.md, section C). Percent of pooled items.
 BAR = {

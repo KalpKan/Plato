@@ -112,7 +112,7 @@
                 </div>
                 <div class="feature-text-wrapper">
                     <h3 class="feature-title">Upload Course Outline</h3>
-                    <p class="feature-description">Support for PDF, DOCX, and TXT formats</p>
+                    <p class="feature-description">A Western course outline as a PDF (text, not a scan), up to {{ max_mb }} MB</p>
                 </div>
             </div>
             <div class="feature-item">
@@ -121,7 +121,7 @@
                 </div>
                 <div class="feature-text-wrapper">
                     <h3 class="feature-title">Automatic Extraction</h3>
-                    <p class="feature-description">AI-powered parsing of assignments, lectures, and labs</p>
+                    <p class="feature-description">Rule-based reading of the term dates, weekly slots and every assessment with its weight and due date; anything it cannot read is flagged for you</p>
                 </div>
             </div>
             <div class="feature-item">
@@ -130,7 +130,7 @@
                 </div>
                 <div class="feature-text-wrapper">
                     <h3 class="feature-title">Calendar Export</h3>
-                    <p class="feature-description">Download .ics file compatible with all calendar apps</p>
+                    <p class="feature-description">Check the dates, then download an .ics for Google, Apple or Outlook calendars</p>
                 </div>
             </div>
         </div>
@@ -143,6 +143,7 @@
         <h2 class="section-title">Upload Your Course Outline</h2>
         
         <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="upload-form-new" id="upload-form">
+            <p class="upload-error" id="upload-error" role="alert" style="display: none;"></p>
             <div class="upload-dropzone" id="upload-dropzone">
                 <input
                     type="file"
@@ -160,7 +161,7 @@
                     <label for="pdf_file" class="upload-browse-btn">
                         Browse Files
                     </label>
-                    <p class="upload-hint">Supports PDF files</p>
+                    <p class="upload-hint">PDF only, up to {{ max_mb }} MB. Not a PDF, or a scan? <a href="{{ url_for('manual') }}">Enter the course by hand</a>.</p>
                 </div>
                 
                 <div class="upload-file-info" id="upload-file-info" style="display: none;">
@@ -172,16 +173,17 @@
                 </div>
             </div>
 
-            <input type="hidden" name="force_refresh" value="">
+            <label class="force-refresh"><input type="checkbox" name="force_refresh" value="on"> Re-read the PDF even if it was parsed before</label>
 
             <div class="upload-actions" id="upload-actions" style="display: none;">
                 <button type="button" class="btn-remove-file" id="btn-remove-file">
                     Remove File
                 </button>
-                <button type="submit" class="btn-generate">
+                <button type="submit" class="btn-generate" id="btn-generate">
                     <i data-lucide="download"></i>
-                    Generate Calendar
+                    Read the outline
                 </button>
+                <p class="upload-progress" id="upload-progress" style="display: none;">Reading your outline… this takes 10–25 seconds on the free hosting.</p>
             </div>
         </form>
     </div>
@@ -235,9 +237,21 @@
         }
     });
     
+    const MAX_MB = {{ max_mb }};
+    function showUploadError(msg) {
+        const el = document.getElementById('upload-error');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
     // Handle file selection
     function handleFileSelect(file) {
-        if (file && file.type === 'application/pdf') {
+        document.getElementById('upload-error').style.display = 'none';
+        if (file && file.size > MAX_MB * 1024 * 1024) {
+            showUploadError('That file is ' + (file.size / 1024 / 1024).toFixed(1) + ' MB; the free hosting accepts up to ' + MAX_MB + ' MB. Print the outline to a smaller PDF and try again.');
+            return;
+        }
+        if (file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name))) {
             fileInput.files = new DataTransfer().files; // Clear first
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
@@ -253,9 +267,17 @@
             
             lucide.createIcons();
         } else {
-            alert('Please select a PDF file.');
+            showUploadError('Only PDF files can be read. Enter the course by hand if your outline is not a PDF.');
         }
     }
+
+    // One click only, and say what is happening during the 10-25 s parse
+    document.getElementById('upload-form').addEventListener('submit', () => {
+        const btn = document.getElementById('btn-generate');
+        btn.disabled = true;
+        btn.textContent = 'Reading…';
+        document.getElementById('upload-progress').style.display = 'block';
+    });
     
     // Remove file
     btnRemoveFile.addEventListener('click', () => {

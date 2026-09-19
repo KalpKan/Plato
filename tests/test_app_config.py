@@ -26,9 +26,11 @@ def test_upload_dir_under_tmp(monkeypatch, tmp_path):
     assert str(d).startswith(str(tmp_path))
 
 
-def test_max_upload_is_16mb(monkeypatch, tmp_path):
+def test_max_upload_matches_vercel_body_limit(monkeypatch, tmp_path):
+    """Vercel functions accept 4.5 MB request bodies; a bigger app limit only produces a raw 413."""
     mod = _reload_app(monkeypatch, SECRET_KEY="x", PLATO_TMP_DIR=str(tmp_path))
-    assert mod.app.config["MAX_CONTENT_LENGTH"] == 16 * 1024 * 1024
+    assert mod.app.config["MAX_CONTENT_LENGTH"] == int(4.5 * 1024 * 1024)
+    assert mod.MAX_FILE_SIZE_MB == 4
 
 
 def test_cache_is_lazy(monkeypatch, tmp_path):
