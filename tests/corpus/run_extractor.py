@@ -34,14 +34,19 @@ def _days(days):
 
 
 def _section(s):
-    return {
-        "type": (s.section_type or "").lower(),
-        "id": s.section_id,
-        "days": _days(s.days_of_week),
-        "start": s.start_time.strftime("%H:%M") if s.start_time else None,
-        "end": s.end_time.strftime("%H:%M") if s.end_time else None,
-        "location": s.location,
-    }
+    """One scored slot per weekly meeting (a section that meets Mon and Wed at different times is
+    one SectionOption with two meetings since D22; the ground truth lists each meeting)."""
+    out = []
+    for m in s.all_meetings():
+        out.append({
+            "type": (s.section_type or "").lower(),
+            "id": s.section_id,
+            "days": _days(m.days_of_week),
+            "start": m.start_time.strftime("%H:%M") if m.start_time else None,
+            "end": m.end_time.strftime("%H:%M") if m.end_time else None,
+            "location": m.location,
+        })
+    return out
 
 
 def _assessment(a):
@@ -74,7 +79,7 @@ def extract_one(pdf: Path) -> dict:
                 "start": term.start_date.isoformat() if term and term.start_date else None,
                 "end": term.end_date.isoformat() if term and term.end_date else None,
             },
-            "sections": [_section(s) for s in (data.lecture_sections or []) + (data.lab_sections or []) + (getattr(data, "tutorial_sections", None) or [])],
+            "sections": [m for s in (data.lecture_sections or []) + (data.lab_sections or []) + (getattr(data, "tutorial_sections", None) or []) for m in _section(s)],
             "assessments": [_assessment(a) for a in data.assessments or []],
             "notes": list(getattr(data, "notes", []) or []),
         }

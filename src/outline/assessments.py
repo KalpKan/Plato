@@ -246,6 +246,8 @@ def _from_tables(tables: Sequence[Sequence[Sequence[Optional[str]]]], resolver: 
                     if alt.status != "missing":
                         dr = alt
                         break
+            if dr.status == "missing" and not dr.note:
+                dr.note = "No due date in the outline"
             if dr.status == "exact" and dr.time is None and default_time:
                 dr.time = default_time
             cands.append(Assessment(title=title, weight=weight, kind=infer_kind(title), date=dr, source="table",
@@ -379,13 +381,19 @@ def _schedule_rows(tables, lines: List[str], resolver: DateResolver) -> List[Tup
     return out
 
 
+_NOT_A_SCHEDULE_DATE = re.compile(r"\btb[ad]\b|to be (?:determined|announced|scheduled)|registrar|exam(?:ination)?\s+period", re.I)
+
+
 def _enrich_from_schedule(items: List[Assessment], rows: List[Tuple[DateResult, str]]) -> None:
+    """Date a still-undated row from the weekly schedule. A row the outline already leaves to the
+    Registrar, a window or TBA keeps that status: the schedule's 'April 7-30 | Final Exam scheduled by
+    the registrar' is not a date (D21)."""
     for a in items:
-        if a.date.status in ("exact", "recurring", "rule"):
+        if a.date.status in ("exact", "recurring", "rule", "registrar", "range", "tba"):
             continue
         best, best_score = None, 0.0
         for dr, text in rows:
-            if re.search(r"\btb[ad]\b|to be (?:determined|announced)", text, re.I):
+            if _NOT_A_SCHEDULE_DATE.search(text) or _NOT_A_SCHEDULE_DATE.search(dr.raw or ""):
                 continue
             score = 0.0
             # weight printed in the schedule cell is a strong tie ("MID-TERM TEST (20%)")
@@ -429,6 +437,8 @@ def _enrich_from_prose(items: List[Assessment], text: str, resolver: DateResolve
         key = "|".join(keys)
         for m in re.finditer(rf"\b(?:the\s+)?(?:{key})\b", flat, re.I):
             seg = flat[m.start():m.start() + 130]
+            if _MAKEUP.search(flat[max(0, m.start() - 60):m.start()]):
+                continue  # 'The make-up exam for the final exam will likely be held in January': not this item's date
             head = m.group(0)
             body = seg[len(head):]
             # one sentence, except that a following "Date: ..." sentence belongs to it
@@ -440,7 +450,7 @@ def _enrich_from_prose(items: List[Assessment], text: str, resolver: DateResolve
             if other:
                 body = body[:other.start()]
             seg = head + body
-            if not re.search(r"\b(on|due|held|take place|takes place|scheduled|written|will be|tb[ad]|registrar|date\s*:)", seg, re.I):
+            if not re.search(r"\b(on|due|held|take place|takes place|scheduled|written|will be|tb[ad]|registrar|date\s*:|exam(?:ination)? period)", seg, re.I):
                 continue
             dr = resolver.resolve(seg)
             if dr.status == "exact" and not re.search(r"\bdate\s*(?:and\s+time)?\s*:?\s*(?:is\s+)?tb[ad]\b", seg, re.I):
@@ -453,6 +463,49 @@ def _enrich_from_prose(items: List[Assessment], text: str, resolver: DateResolve
         if a.date.status in ("missing", "tba"):
             _enrich_from_paragraph(a, text, resolver)
 
+
+_PLURAL_HELD = re.compile(r"\b(?:the\s+|both\s+|all\s+)?(?:(?:term|mid-?term|in-class|online)\s+)?(?P<stem>tests|exams|examinations|midterms|quizzes|assignments|reports|essays|papers|presentations|labs|projects)\b[^.;]{0,60}?\b(?:held|written|take\s+place|scheduled|due|take\s+place)\b[^.;]{0,40}?\b(?:on|for)\s+(?P<dates>[^.;]{6,160}?)(?=[.;]|\s+(?:both|each|the\s+first|the\s+second)\b)", re.I)
+_HELD_FROM = re.compile(r"\b(?:both|each|they|all|the\s+tests?)\b[^.;]{0,30}?\b(?:held|written|run|scheduled|take\s+place)\s+(?:from|at|between)\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?(?:\s*(?:-|–|to|and)\s*\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?)", re.I)
+
+
+def _enrich_from_plural_sentence(items: List[Assessment], text: str, resolver: DateResolver) -> None:
+    """'The tests are tentatively set to be held on October 2nd, 2025 and October 30th, 2025. Both will be
+    held from 1:30 pm to 3:30 pm': one sentence names every date of a numbered family ('Term Test 1',
+    'Term Test 2'), in order (MSE 2214, D24). Only fires when the count of dates equals the count of
+    still-undated members, so nothing is guessed."""
+    flat = re.sub(r"\s+", " ", text)
+    families: Dict[str, List[Assessment]] = {}
+    for a in items:
+        if a.date.status not in ("missing", "tba"):
+            continue
+        stem = _noun_stem(a.title)
+        if stem and _numbering(a.norm()):
+            families.setdefault(stem, []).append(a)
+    for stem, members in families.items():
+        if len(members) < 2:
+            continue
+        members.sort(key=lambda a: int((_numbering(a.norm()) or ["0"])[0]) if (_numbering(a.norm()) or ["0"])[0].isdigit() else 0)
+        for m in _PLURAL_HELD.finditer(flat):
+            if _noun_stem(m.group("stem")) != stem:
+                continue
+            dates = [d for _, d in resolver._find_dates(m.group("dates"))]
+            if len(dates) != len(members) or len(set(dates)) != len(dates):
+                continue
+            tail = flat[m.end():m.end() + 160]
+            t = None
+            tm = _HELD_FROM.search(tail) or _HELD_FROM.search(m.group(0))
+            if tm:
+                t, _ = parse_time_span(tm.group(1))
+            if t is None:
+                t, _ = parse_time_span(m.group("dates"))
+            for a, d in zip(members, sorted(dates)):
+                a.date = DateResult(status="exact", date=d, time=t, raw=m.group(0),
+                                    note="Date taken from the course description text" + (" (tentative)" if re.search(r"tentativ", m.group(0), re.I) else ""))
+                a.evidence = f"{a.evidence} | {m.group(0).strip()}"
+            break
+
+
+_MAKEUP = re.compile(r"\bmake-?up\b|\balternative\b|\bdeferred\b|\bspecial\s+exam", re.I)
 
 _SUBMIT_DATE = re.compile(rf"\b(?:submit(?:ted)?|hand(?:ed)?\s+in|due|deadline|upload(?:ed)?)\b[\s\S]{{0,80}}?\b(?:on|by|before)\s+((?:{MONTH_RE})\.?\s*\d{{1,2}}(?:st|nd|rd|th)?(?:,?\s*\d{{4}})?)", re.I)
 
@@ -966,6 +1019,7 @@ def extract_assessments(pages_text: Sequence[Tuple[int, str]],
 
     _enrich_from_schedule(items, _schedule_rows(tables, lines, resolver))
     _enrich_from_prose(items, text, resolver)
+    _enrich_from_plural_sentence(items, text, resolver)
     _enrich_section_dependent(items, lines, resolver)
     _enrich_chapter_lists(items, lines, resolver)
     _reconcile_recurring(items, text, resolver)

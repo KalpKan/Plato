@@ -56,3 +56,35 @@ def test_corpus_scores(tmp_path):
             failures.append(line)
     if GATE:
         assert not failures, "consumer-grade bar not met:\n" + "\n".join(failures)
+
+
+@pytest.mark.skipif(not CORPUS.exists(), reason=f"labelled corpus not present at {CORPUS}")
+def test_default_download_carries_every_labelled_lecture_meeting():
+    """D22: a course that meets Mon and Wed is one preselected section with two weekly series; the
+    scorer's slot matching cannot see a picker that drops the lecture, so this checks the .ics itself."""
+    from src.icalendar_gen import ICalendarGenerator
+    from src.outline.pipeline import parse_outline
+    problems = []
+    for gt_path in sorted((ROOT / "tests/corpus/ground_truth").glob("*.json")):
+        gt = json.loads(gt_path.read_text())
+        if gt.get("sections_extractable_without_ocr") is False:
+            continue
+        want = [s for s in gt.get("sections", []) if s["type"] == "lecture" and s.get("start")]
+        if not want:
+            continue
+        data = parse_outline(CORPUS / gt["file"])
+        if len(data.lecture_sections) != 1:
+            # several printed sections (001/002/...): the student picks one, nothing is preselected
+            ids = [s.section_id for s in data.lecture_sections]
+            if not all(ids) or len(set(ids)) != len(ids):
+                problems.append(f"{gt['file']}: {len(data.lecture_sections)} lecture options without distinct section ids")
+            continue
+        expected = sum(len(s.get("days") or []) for s in want)
+        cal = ICalendarGenerator().generate_calendar(term=data.term, lecture_section=data.lecture_sections[0],
+                                                     lab_section=None, assessments=[], study_plan=[],
+                                                     course_code=data.course_code)
+        ics = cal.to_ical().decode()
+        rrules = len([l for l in ics.splitlines() if l.startswith("RRULE:")])
+        if rrules != expected:
+            problems.append(f"{gt['file']}: {rrules} weekly series in the default download, outline has {expected} lecture meetings")
+    assert not problems, "\n".join(problems)

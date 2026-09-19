@@ -127,10 +127,15 @@ class RuleResolver:
         if not occurrences:
             return [assessment_template]
         
+        # "at 11:59pm" / "by 11:59 pm" in the rule sets the clock time of every due event (D23)
+        clock = self._parse_rule_time(assessment_template.due_rule)
+
         # Create one assessment per occurrence
         assessments = []
         for i, occurrence in enumerate(occurrences, start=1):
             due_datetime = occurrence + offset
+            if clock is not None:
+                due_datetime = due_datetime.replace(hour=clock.hour, minute=clock.minute, second=0)
             
             # Create new assessment with numbered title
             base_title = assessment_template.title
@@ -182,6 +187,15 @@ class RuleResolver:
         
         return None
     
+    def _parse_rule_time(self, rule_text: str):
+        """'Day of lab at 11:59pm' -> 23:59; 'due by 11:59 PM' -> 23:59; None when no clock time is given."""
+        m = re.search(r"\b(?:at|by|before)\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)", rule_text or "", re.I)
+        if not m:
+            return None
+        from .outline.dates import parse_time_span
+        t, _ = parse_time_span(m.group(1))
+        return t
+
     def _parse_rule_offset(self, rule_text: str) -> Optional[timedelta]:
         """Parse rule text to extract time offset.
         
@@ -231,17 +245,19 @@ class RuleResolver:
             start_date, end_date = section.date_range
         else:
             start_date, end_date = term.start_date, term.end_date
-        if not start_date or not end_date or not section.start_time:
+        if not start_date or not end_date:
             return []
-        days = _day_numbers(section.days_of_week)
-        if not days:
+        meetings = [(d, m.start_time) for m in section.all_meetings() if m.start_time for d in _day_numbers(m.days_of_week)]
+        if not meetings:
             return []
         reading = list(getattr(term, "reading_weeks", None) or [])
 
         current_date = start_date
         while current_date <= end_date:
-            if current_date.weekday() in days and not any(a <= current_date <= b for a, b in reading):
-                occurrences.append(datetime.combine(current_date, section.start_time))
+            if not any(a <= current_date <= b for a, b in reading):
+                for d, start_time in meetings:
+                    if current_date.weekday() == d:
+                        occurrences.append(datetime.combine(current_date, start_time))
             current_date += timedelta(days=1)
         return occurrences
 

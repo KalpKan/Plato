@@ -118,24 +118,16 @@
                 <div class="form-group">
                     <label for="lecture_section">Select your section</label>
                     <select name="lecture_section" id="lecture_section" class="form-control" required>
-                        <option value="none">Select a section</option>
+                        <option value="">Select a section</option>
                         {% for section in lecture_sections %}
-                            <option value="{{ loop.index0 }}" 
+                            <option value="{{ loop.index0 }}"
                                 {% if (user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lecture_section) %}selected{% endif %}>
-                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
-                                {% if section.days_of_week %}
-                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-                                    {% for day_num in section.days_of_week %}
-                                        {{ day_names[day_num] }}{% if not loop.last %}/{% endif %}
-                                    {% endfor %}
-                                {% else %}
-                                    Days N/A
-                                {% endif %}
-                                {% if section.start_time %}{{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}{% else %}time not in the outline{% endif %}
+                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}{{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
                     </select>
+                    {% if lecture_sections|length == 1 and lecture_sections[0].meetings %}<small class="field-note">This course meets {{ lecture_sections[0].meetings|length + 1 }} times a week; one weekly event per meeting is added.</small>{% endif %}
                     {% for section in lecture_sections if section.note %}<small class="field-note">{{ section.note }}</small>{% endfor %}
                 </div>
             {% else %}
@@ -162,18 +154,7 @@
                         {% for section in lab_sections %}
                             <option value="{{ loop.index0 }}"
                                 {% if (user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lab_section) %}selected{% endif %}>
-                                Section {{ section.section_id or 'N/A' }}: 
-                                {% if section.days_of_week %}
-                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-                                    {% for day_num in section.days_of_week %}
-                                        {{ day_names[day_num] }}{% if not loop.last %}/{% endif %}
-                                    {% endfor %}
-                                {% else %}
-                                    Days N/A
-                                {% endif %}
-                                {% if section.start_time %}{{ section.start_time|time_12h }}{% else %}Time N/A{% endif %}
-                                -
-                                {% if section.end_time %}{{ section.end_time|time_12h }}{% else %}Time N/A{% endif %}
+                                Section {{ section.section_id or 'N/A' }}: {{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}
@@ -202,12 +183,7 @@
                         <option value="none">No tutorial section</option>
                         {% for section in tutorial_sections %}
                             <option value="{{ loop.index0 }}" {% if loop.length == 1 %}selected{% endif %}>
-                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}
-                                {% if section.days_of_week %}
-                                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-                                    {% for day_num in section.days_of_week %}{{ day_names[day_num] }}{% if not loop.last %}/{% endif %}{% endfor %}
-                                {% else %}Days N/A{% endif %}
-                                {% if section.start_time %}{{ section.start_time|time_12h }} - {{ section.end_time|time_12h }}{% else %}time not in the outline{% endif %}
+                                {% if section.section_id %}Section {{ section.section_id }}: {% endif %}{{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
                         {% endfor %}

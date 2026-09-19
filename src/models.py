@@ -38,6 +38,16 @@ class CourseTerm:
 
 
 @dataclass
+class Meeting:
+    """One weekly meeting of a section (a course that meets Mon 10:30-11:30 and Wed 9:30-11:30 is one
+    section with two meetings, not two sections)."""
+    days_of_week: List[int]
+    start_time: Optional[time]
+    end_time: Optional[time]
+    location: Optional[str] = None
+
+
+@dataclass
 class SectionOption:
     """Represents a lecture or lab section with its schedule.
     
@@ -53,6 +63,40 @@ class SectionOption:
     location: Optional[str] = None  # Room/building where it meets (e.g., "UC 202"), or None if unknown
     date_range: Optional[Tuple[date, date]] = None  # Custom date range if different from term dates
     note: str = ""              # e.g. "the outline gives no clock time"
+    meetings: List[Meeting] = field(default_factory=list)  # further weekly meetings beyond days_of_week/start/end
+
+    def all_meetings(self) -> List[Meeting]:
+        """The primary meeting (days_of_week, start_time, end_time, location) followed by the extra ones."""
+        return [Meeting(list(self.days_of_week), self.start_time, self.end_time, self.location)] + list(self.meetings)
+
+    def describe(self) -> str:
+        """'Mon 10:30 AM–11:30 AM + Wed 9:30 AM–11:30 AM' for the review page and the .ics."""
+        names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        parts = []
+        for m in self.all_meetings():
+            days = "/".join(names[d] for d in _day_ints(m.days_of_week)) or "Days N/A"
+            if m.start_time and m.end_time:
+                parts.append(f"{days} {_fmt12(m.start_time)}–{_fmt12(m.end_time)}")
+            else:
+                parts.append(f"{days} (time not in the outline)")
+        return " + ".join(parts)
+
+
+def _day_ints(days) -> List[int]:
+    names = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
+    out = []
+    for d in days or []:
+        if isinstance(d, int):
+            out.append(d)
+        else:
+            n = names.get(str(d)[:3].lower())
+            if n is not None:
+                out.append(n)
+    return out
+
+
+def _fmt12(t: time) -> str:
+    return t.strftime("%-I:%M %p")
 
 
 @dataclass
@@ -211,6 +255,9 @@ def section_to_dict(s: SectionOption) -> dict:
     }
     if s.date_range:
         out["date_range"] = [serialize_date(s.date_range[0]), serialize_date(s.date_range[1])]
+    if s.meetings:
+        out["meetings"] = [{"days_of_week": list(m.days_of_week), "start_time": _opt(serialize_time, m.start_time),
+                            "end_time": _opt(serialize_time, m.end_time), "location": m.location} for m in s.meetings]
     return out
 
 
@@ -225,6 +272,9 @@ def section_from_dict(d: dict) -> SectionOption:
         location=d.get("location"),
         date_range=(deserialize_date(dr[0]), deserialize_date(dr[1])) if dr else None,
         note=d.get("note", "") or "",
+        meetings=[Meeting(days_of_week=list(m.get("days_of_week") or []), start_time=_opt(deserialize_time, m.get("start_time")),
+                          end_time=_opt(deserialize_time, m.get("end_time")), location=m.get("location"))
+                  for m in (d.get("meetings") or [])],
     )
 
 

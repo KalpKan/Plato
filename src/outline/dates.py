@@ -33,8 +33,15 @@ DAY_RE = r"(\d{1,2})(?:st|nd|rd|th)?"
 # full names as well as the short forms: "Wednesdays" used to fall through ("wed" + "day"? no)
 WEEKDAY_RE = r"(?:mon(?:day)?|tue(?:sday|s)?|wed(?:nesday)?|thu(?:rsday|rs|r)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)"
 
+# "January 20 mins", "March 3 hours", "Oct 5 %": a number with a unit after a month name is a duration
+_NOT_DAY = r"(?!\s*(?:min(?:ute)?s?|hrs?|hours?|%|marks?|points?|questions?|pages?|words?|weeks?|days?|students?)\b)"
 # "Oct. 27th", "October 27", "Sept 16th"
-_MD = re.compile(rf"\b({MONTH_RE})\.?\s*{DAY_RE}\b(?:,?\s*(\d{{4}}))?", re.I)
+_MD = re.compile(rf"\b({MONTH_RE})\.?\s*{DAY_RE}\b{_NOT_DAY}(?:,?\s*(\d{{4}}))?", re.I)
+# "April 7-30", "Dec. 11-22, 2025", "Sept 16 - Oct 3": a window of days, never one date
+_DAY_RANGE = re.compile(
+    rf"\b({MONTH_RE})\.?\s*(\d{{1,2}})(?:st|nd|rd|th)?\s*[-–—]\s*(?:({MONTH_RE})\.?\s*)?(\d{{1,2}})(?:st|nd|rd|th)?(?![\d:]|\s*[ap]\.?m)(?:,?\s*(\d{{4}}))?", re.I)
+# "Written in January", "during February": a month with no day is a month-long window
+_MONTH_ONLY = re.compile(rf"\b(?:in|during|throughout|by\s+the\s+end\s+of)\s+({MONTH_RE})\b(?:\s+of\s+|,?\s*)?(20\d{{2}})?", re.I)
 # "12 November 2025", "8 Dec"
 _DM = re.compile(rf"\b{DAY_RE}\s+({MONTH_RE})\.?(?:,?\s*(\d{{4}}))?\b", re.I)
 # "2025-10-27"
@@ -42,7 +49,7 @@ _ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 _WEEKDAY = re.compile(rf"\b({WEEKDAY_RE})\b\.?", re.I)
 # "11:59 PM", "6 – 8 PM", "7-8:30pm", "11:30 - 1:30pm", "2:30-4:20PM", "1 pm"
 _TIME_RANGE = re.compile(
-    r"\b(\d{1,2})(?:[:.](\d{2}))?\s*([ap]\.?m\.?)?\s*[-–—]\s*(\d{1,2})(?:[:.](\d{2}))?\s*([ap]\.?m\.?)?(?![\d%])", re.I)
+    r"\b(\d{1,2})(?:[:.](\d{2}))?\s*([ap]\.?m\.?)?\s*(?:[-–—]|\bto\b|\buntil\b)\s*(\d{1,2})(?:[:.](\d{2}))?\s*([ap]\.?m\.?)?(?![\d%])", re.I)
 _TIME_ONE = re.compile(r"\b(\d{1,2})(?:[:.](\d{2}))\s*([ap]\.?m\.?)?(?!\s*%)|\b(\d{1,2})\s*([ap]\.?m\.?)\b", re.I)
 
 _REGISTRAR = re.compile(r"registrar|final\s+exam(?:ination)?\s+period|exam\s+period\b.*\bfinal|scheduled\s+by\s+the\s+(?:office|university)", re.I)
@@ -237,6 +244,34 @@ class DateResolver:
                 continue
         return out
 
+    def _day_window(self, text: str, month_only: bool = True) -> Optional[Tuple[date, date]]:
+        """'April 7-30' -> (Apr 7, Apr 30); 'Sept 16 - Oct 3' -> (Sep 16, Oct 3); 'in January' -> the month
+        (unless month_only is False: 'during December exam period' is the exam window, not December)."""
+        m = _DAY_RANGE.search(text)
+        if m:
+            m1 = MONTHS[m.group(1).lower().rstrip(".")]
+            m2 = MONTHS[m.group(3).lower().rstrip(".")] if m.group(3) else m1
+            d1, d2 = int(m.group(2)), int(m.group(4))
+            year = int(m.group(5)) if m.group(5) else self._pick_year(m1, min(d1, 28), None)
+            if year is None:
+                return None
+            try:
+                a = date(year, m1, d1)
+                b = date(year + (1 if m2 < m1 else 0), m2, d2)
+            except ValueError:
+                return None
+            return (a, b) if a <= b else None
+        if not month_only or _MD.search(text) or _DM.search(text) or _ISO.search(text):
+            return None
+        m = _MONTH_ONLY.search(text)
+        if m:
+            mon = MONTHS[m.group(1).lower().rstrip(".")]
+            year = int(m.group(2)) if m.group(2) else self._pick_year(mon, 1, None)
+            if year is None:
+                return None
+            return date(year, mon, 1), date(year, mon, calendar.monthrange(year, mon)[1])
+        return None
+
     def _exam_window(self, text: str) -> Optional[Tuple[date, date]]:
         m = _EXAM_PERIOD.search(text)
         if not m or not self.exam_periods:
@@ -274,6 +309,22 @@ class DateResolver:
         registrar = bool(_REGISTRAR.search(low))
         tba = bool(_TBA.search(low))
         dates = self._find_dates(t)
+
+        # "April 7-30", "Dec. 11-22, 2025", "Written in January": a window, never the first day of it (D21)
+        win = self._day_window(t, month_only=not (registrar or exam_mention))
+        if win and all(win[0] <= d <= win[1] for _, d in dates):
+            if registrar:
+                return DateResult(status="registrar", window=win, raw=raw,
+                                  note=f"Outline says: scheduled by the Registrar (exam period {win[0]:%b %-d} – {win[1]:%b %-d, %Y})")
+            if exam_mention:
+                return DateResult(status="range", window=win, raw=raw,
+                                  note=f"Outline says: during the exam period ({win[0]:%b %-d} – {win[1]:%b %-d, %Y})")
+            if tba:
+                return DateResult(status="tba", window=win, raw=raw,
+                                  note=f"Outline says the date is TBA (between {win[0]:%b %-d} and {win[1]:%b %-d, %Y})")
+            if _RULE.search(low) is None:
+                return DateResult(status="range", window=win, raw=raw,
+                                  note=f"Outline gives a window, not a day ({win[0]:%b %-d} – {win[1]:%b %-d, %Y}); pick the day yourself")
 
         if registrar and not dates:
             win = self._exam_window(low)

@@ -18,7 +18,9 @@ def compress_table(table: Sequence[Sequence[Optional[str]]]) -> List[List[str]]:
     rows = [r + [""] * (width - len(r)) for r in rows]
     head_pos = [i for i, c in enumerate(rows[0]) if c]
     body_pos = sorted({i for r in rows[1:] for i, c in enumerate(r) if c})
-    if len(rows) >= 2 and head_pos and len(head_pos) >= 2 and head_pos != body_pos and len(body_pos) >= len(head_pos):
+    shifted = bool(body_pos) and any(i not in head_pos for i in body_pos)
+    if len(rows) >= 2 and head_pos and len(head_pos) >= 2 and head_pos != body_pos and (
+            len(body_pos) >= len(head_pos) or (shifted and len(body_pos) >= len(head_pos) - 1)):
         # header cells shifted relative to the body: assign every body cell to the nearest header column
         out = [[rows[0][i] for i in head_pos]]
         for r in rows[1:]:

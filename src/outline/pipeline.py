@@ -8,11 +8,11 @@ from typing import List, Optional, Sequence, Tuple
 
 import pdfplumber
 
-from ..models import AssessmentTask, CourseTerm, ExtractedCourseData, SectionOption
+from ..models import AssessmentTask, CourseTerm, ExtractedCourseData, Meeting, SectionOption
 from .assessments import extract_assessments
 from .course import extract_course
 from .schedule import extract_slots_and_notes
-from .term import extract_term
+from .term import TermInfo, extract_term, sessional_dates
 
 MAX_PAGES = 30
 
@@ -79,6 +79,40 @@ def parse_outline(pdf_path: Path, original_filename: Optional[str] = None) -> Ex
     return build(pages_text, tables, filename, page_count, image_pages)
 
 
+# "Course Outline Fall/Winter 2025" (the Engineering template header) with ONE year: the template, not the
+# course's length. A second-term word anywhere in the outline keeps the full year.
+_FW_ONE_YEAR = re.compile(r"\bfall\s*(?:/|&|and|-)\s*winter\s+(20\d{2})(?!\s*[-–/]\s*\d)", re.I)
+_SECOND_TERM = re.compile(r"\b(?:term\s*2|second\s+term|winter\s+term|both\s+terms|full[- ]year|two[- ]term\s+course|"
+                          r"january|february|march|april)\b", re.I)
+
+
+def _collapse_fall_winter(term_info: TermInfo, items, text: str, course_code) -> Optional[TermInfo]:
+    """MSE 2214: header 'Fall/Winter 2025', both tests in October, no January-April date anywhere ->
+    Fall 2025 (D25). Returns the Fall term, or None when the evidence does not support the collapse."""
+    if not (term_info.start and term_info.end) or term_info.start.month < 8 or term_info.end.month > 6:
+        return None
+    if term_info.source not in ("sessional", "estimated"):
+        return None
+    head = text[:6000]
+    m = _FW_ONE_YEAR.search(head)
+    if not m or re.search(r"\b[A-Z]{2,8}\s?\d{4}(?:A|B)?[/ ]?(?:A/B|E)\b", course_code or ""):
+        return None
+    if _SECOND_TERM.search(text):
+        return None
+    dated = [a.date.date for a in items if a.date.status == "exact" and a.date.date] + \
+            [d for a in items if a.date.status == "recurring" for d in a.date.dates]
+    if not dated or any(d.month < 8 for d in dated):
+        return None
+    y = int(m.group(1))
+    f = sessional_dates("Fall", y)
+    if not f:
+        return None
+    info = TermInfo(name=f"Fall {y}", start=f["start"], end=f["end"], source="estimated" if f["estimated"] else "sessional",
+                    year_hints=[y], exam_periods=[f["exams"]] if f.get("exams") else [],
+                    reading_weeks=[f["reading"]] if f.get("reading") else [])
+    return info
+
+
 _IN_CLASS = re.compile(r"\bin[- ]class\b|\bduring\s+(?:the\s+)?(?:class|lecture)|\bin\s+lecture\b", re.I)
 
 
@@ -91,6 +125,34 @@ def _rule_anchor(rule: Optional[str]) -> Optional[str]:
     return None
 
 
+def group_slots(slots) -> List[list]:
+    """Slots that are one section meeting several times a week, grouped (D22).
+
+    Two slots of the same kind belong to one section when they carry the same section id and meet on
+    different weekdays (CS 2211A: 'Section 001' Tue 11:30-12:30 + Thu 10:30-12:30). Id-less lectures on
+    disjoint days are the same course too ('Lectures: Mondays (10:30-11:30 AM) and Wednesdays (9:30-11:30
+    AM)'); id-less labs and tutorials are alternative sections a student picks one of, so they stay apart.
+    Two slots on the same weekday are always alternatives."""
+    groups: List[list] = []
+    for s in slots:
+        home = None
+        for g in groups:
+            head = g[0]
+            if head.kind != s.kind or head.section_id != s.section_id:
+                continue
+            if not s.section_id and s.kind != "lecture":
+                continue
+            if any(set(x.days) & set(s.days) for x in g):
+                continue
+            home = g
+            break
+        if home is None:
+            groups.append([s])
+        else:
+            home.append(s)
+    return groups
+
+
 def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_count: int = 0,
           image_pages: Sequence[int] = ()) -> ExtractedCourseData:
     notes: List[str] = []
@@ -100,6 +162,13 @@ def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_cou
     slots, slot_notes = extract_slots_and_notes(pages_text, tables, term_year_hint=years)
     notes += slot_notes
     items, a_notes = extract_assessments(pages_text, tables, term_info)
+    text_all = "\n".join(t for _, t in pages_text)
+    fall_only = _collapse_fall_winter(term_info, items, text_all, code)
+    if fall_only:
+        notes.append(f"The header says \"Fall/Winter {fall_only.year_hints[0]}\" (the faculty's template) but every date in the "
+                     f"outline falls in the Fall, so the course is treated as one term ({fall_only.name}).")
+        term_info = fall_only
+        items, a_notes = extract_assessments(pages_text, tables, term_info)
     notes += a_notes
 
     term = CourseTerm(term_name=term_info.name, start_date=term_info.start, end_date=term_info.end,
@@ -117,9 +186,11 @@ def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_cou
     lectures: List[SectionOption] = []
     labs: List[SectionOption] = []
     tutorials: List[SectionOption] = []
-    for s in slots:
+    for group in group_slots(slots):
+        s = group[0]
         so = SectionOption(section_type=s.kind.capitalize(), section_id=s.section_id, days_of_week=list(s.days),
-                           start_time=s.start, end_time=s.end, location=s.location, note=s.note)
+                           start_time=s.start, end_time=s.end, location=s.location, note=s.note,
+                           meetings=[Meeting(list(x.days), x.start, x.end, x.location) for x in group[1:]])
         {"lecture": lectures, "lab": labs, "tutorial": tutorials}[s.kind].append(so)
     if not slots:
         notes.append("No lecture, lab or tutorial times were found in the outline (many Western outlines leave them to "
@@ -141,7 +212,7 @@ def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_cou
                 note = f"Relative rule: {d.rule}. Set the dates by hand (the outline ties them to something the calendar cannot see)."
         if d.status == "exact" and d.date:
             t = d.time
-            if t is None and a.kind in ("midterm", "test") and _IN_CLASS.search(f"{a.evidence} {d.raw} {d.note}"):
+            if t is None and a.kind in ("midterm", "test", "quiz") and _IN_CLASS.search(f"{a.evidence} {d.raw} {d.note}"):
                 # "Mid-term Exam (In-class)": it sits in the lecture slot, not at 23:59 (D18)
                 lecture_starts = {s.start for s in slots if s.kind == "lecture" and s.start}
                 if len(lecture_starts) == 1:

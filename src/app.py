@@ -18,8 +18,10 @@ import urllib.error
 import hashlib
 import uuid
 from pathlib import Path
-from datetime import date, datetime, time
-from typing import Optional, Dict, Any, List
+from datetime import date, datetime, time, timedelta
+from typing import Optional, Dict, Any, List, Tuple
+from dataclasses import replace
+from .outline.term import sessional_dates
 from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -179,7 +181,29 @@ def _lead_time_generator(custom_lead_time_mapping: Dict[str, Any]) -> StudyPlanG
     return StudyPlanGenerator(lead_time_mapping=lead_time_mapping_for_gen)
 
 
-_STATED_TOTAL = re.compile(r"total\s*=\s*(\d{1,2})|\((\d{1,2})\)|\b(\d{1,2})\s+(?:lab|report|session|tutorial|quiz)", re.I)
+# "Labs (Total = 8)", "(8)", "10 sessions": a count the outline states. The digit in "Term 1 Lab
+# Assignments" or "Week 2 lab" is a label, not a count (D23), hence the plural and the lookbehind.
+_STATED_TOTAL = re.compile(r"total\s*=\s*(\d{1,2})|\((\d{1,2})\)|(?<!term )(?<!week )(?<!unit )\b(\d{1,2})\s+(?:labs|reports|sessions|tutorials|quizzes)\b", re.I)
+_TERM_HALF = re.compile(r"\b(?:term\s*(1|2)|(first|second)\s+term|(fall|winter)\s+term)\b", re.I)
+
+
+def _term_half(a: AssessmentTask, term: CourseTerm) -> Optional[Tuple[date, date]]:
+    """'Term 1 Lab Assignments' in a September-to-April course: the labs of the first half only."""
+    if not term.start_date or not term.end_date or term.start_date.month < 8 or term.end_date.month > 6:
+        return None
+    m = _TERM_HALF.search(f"{a.title} {(a.source_evidence or '').split('|')[0]}")
+    if not m:
+        return None
+    first = (m.group(1) == "1") or (m.group(2) or "").lower() == "first" or (m.group(3) or "").lower() == "fall"
+    y1, y2 = term.start_date.year, term.end_date.year
+    dec_exams = next((a for a, _ in (term.exam_periods or []) if a.month == 12), None)
+    fall = sessional_dates("Fall", y1)
+    fall_end = (dec_exams - timedelta(days=1)) if dec_exams else (fall["end"] if fall else date(y1, 12, 10))
+    winter = sessional_dates("Winter", y2)
+    winter_start = winter["start"] if winter else date(y2, 1, 5)
+    if first:
+        return term.start_date, min(fall_end, term.end_date)
+    return max(winter_start, term.start_date), term.end_date
 
 
 def rule_hint(a: AssessmentTask, sections: List[SectionOption]) -> Optional[str]:
@@ -208,6 +232,10 @@ def expand_rule_assessments(assessments: List[AssessmentTask], chosen: List[Sect
         if not anchor or not term.start_date or not term.end_date:
             out.append(a)
             continue
+        half = _term_half(a, term)
+        if half:
+            # clip a "Term 1" / "Term 2" row to its half of a full-year course (D23)
+            anchor = replace(anchor, date_range=half)
         base = f"{a.rule_anchor.capitalize()} report" if re.search(r"report", a.due_rule, re.I) \
             else re.sub(r"\s*\(.*?\)", "", a.title).strip().rstrip("s") or a.title
         template = AssessmentTask(title=base, type=a.type, weight_percent=a.weight_percent, due_rule=a.due_rule,
@@ -598,12 +626,11 @@ def upload_file():
                       'assessment table). Check that it is a Western course outline, or enter the course by hand in manual mode.', 'error')
                 return redirect(url_for('index'))
 
-            # Resolve relative rules
-            resolver = RuleResolver()
-            extracted_data.assessments = resolver.resolve_rules(
-                extracted_data.assessments, extracted_data.all_sections(), extracted_data.term
-            )
-            
+            # A relative rule ("Day of lab at 11:59pm") is NOT resolved here: the stored row keeps its
+            # rule and no date, and the calendar expands it to one event per occurrence of the slot
+            # the visitor picks at download time (D16, D23). Resolving it here dated the first lab
+            # only, as a placeholder that was then shown and exported as the due date.
+
             # Cache extraction results (shared, parser output only)
             get_cache().store_extraction(pdf_hash, extracted_data)
             flash('Outline read. Check every date below before you download.', 'success')
@@ -743,7 +770,10 @@ def review():
             except ValueError:
                 pass
         
-        # Set selected lecture section
+        # Set selected lecture section. One option and nothing chosen (a browser that ignored
+        # `required`): that only option is the course's lecture, never "no lecture" (D22).
+        if not lecture_idx and len(extracted_data.lecture_sections) == 1:
+            lecture_idx = '0'
         if lecture_idx and lecture_idx != 'none':
             try:
                 # Check if it's a manual section (starts with "manual_")
@@ -894,6 +924,8 @@ def review():
                 'end_time': s.end_time,
                 'location': s.location,
                 'note': s.note,
+                'label': s.describe(),
+                'meetings': s.meetings,
             }
             for s in extracted_data.lecture_sections
         ],
@@ -906,6 +938,8 @@ def review():
                 'end_time': s.end_time,
                 'location': s.location,
                 'note': s.note,
+                'label': s.describe(),
+                'meetings': s.meetings,
             }
             for s in extracted_data.lab_sections
         ],
@@ -918,6 +952,8 @@ def review():
                 'end_time': s.end_time,
                 'location': s.location,
                 'note': s.note,
+                'label': s.describe(),
+                'meetings': s.meetings,
             }
             for s in extracted_data.tutorial_sections
         ],

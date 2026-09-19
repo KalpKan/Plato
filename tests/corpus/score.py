@@ -16,8 +16,8 @@ Metrics (all per labelled PDF, then pooled across the corpus):
   assessments      match = fuzzy title (>= 0.55 after normalisation) or exact weight+type, greedy best-first
   weights          matched assessment has the expected weight
   dates_exact      GT items with date_status "exact": matched AND extracted due date equals expected
-  no_fabricated    GT items with date_status tba/registrar/range/recurring: matched item has no date,
-                   or its date lies inside the expected window (never a date outside it)
+  no_fabricated    GT items with date_status tba/registrar/range: matched item has NO date at all;
+                   recurring: no date, or a date in the expected list / window
   clean_titles     matched title equals expected after normalisation (no footnote digits, no '(' tails)
   weight_total     sum of extracted weights is within +/-2 of an acceptable total
   (rows named in ground-truth `excluded_rows`, e.g. bonus marks, are ignored: neither hit nor spurious)
@@ -176,6 +176,10 @@ def score_one(gt: dict, ex: dict) -> dict:
             dates = g.get("dates")
             if due is None:
                 good = True
+            elif st in ("registrar", "range", "tba"):
+                # the outline gives no day: any day the parser attaches is invented, even one inside
+                # the window (Biol 3415G 'April 7-30' -> Apr 7 was hidden by the old tolerance, D21)
+                good = False
             elif dates and due in dates:
                 good = True
             elif win and win[0] <= due <= win[1]:

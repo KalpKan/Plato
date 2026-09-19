@@ -19,7 +19,7 @@ from icalendar import Calendar, Event, Timezone, TimezoneStandard, TimezoneDayli
 from pytz import timezone
 
 from .models import (
-    SectionOption, AssessmentTask, StudyPlanItem, CourseTerm
+    SectionOption, AssessmentTask, StudyPlanItem, CourseTerm, _day_ints
 )
 
 
@@ -126,14 +126,16 @@ class ICalendarGenerator:
         if section.section_id:
             summary += f" ({section.section_id})"
 
-        for day_num in section.days_of_week:
+        meetings = [(d, m.start_time, m.end_time, m.location) for m in section.all_meetings()
+                    if m.start_time and m.end_time for d in _day_ints(m.days_of_week)]
+        for day_num, start_time, end_time, location in meetings:
             current_date = start_date
             while current_date.weekday() != day_num and current_date <= end_date:
                 current_date += timedelta(days=1)
             if current_date > end_date:
                 continue
-            dtstart = self.tz.localize(datetime.combine(current_date, section.start_time))
-            dtend = self.tz.localize(datetime.combine(current_date, section.end_time))
+            dtstart = self.tz.localize(datetime.combine(current_date, start_time))
+            dtend = self.tz.localize(datetime.combine(current_date, end_time))
             if dtend <= dtstart:
                 dtend = dtstart + timedelta(hours=1)
             # UNTIL must be a UTC date-time when DTSTART is a local date-time (§3.3.10)
@@ -144,8 +146,8 @@ class ICalendarGenerator:
             event.add('dtstart', dtstart)
             event.add('dtend', dtend)
             event.add('summary', summary)
-            if section.location:
-                event.add('location', section.location)
+            if location or section.location:
+                event.add('location', location or section.location)
             event.add('rrule', {'FREQ': 'WEEKLY', 'BYDAY': self._weekday_to_byday(day_num), 'UNTIL': until_utc})
             desc = f"{event_type}"
             if section.section_id:

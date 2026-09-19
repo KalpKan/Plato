@@ -1074,7 +1074,7 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
         formGroup.innerHTML = `
             <label for="${sectionId}">Select your ${sectionName.toLowerCase()} section:</label>
             <select name="${sectionId}" id="${sectionId}" class="form-control" ${sectionType === 'lecture' ? 'required' : ''}>
-                <option value="none">-- ${sectionType === 'lab' ? 'No Lab Section' : 'Select Lecture Section'} --</option>
+                <option value="${sectionType === 'lab' ? 'none' : ''}">-- ${sectionType === 'lab' ? 'No Lab Section' : 'Select Lecture Section'} --</option>
             </select>
         `;
         
