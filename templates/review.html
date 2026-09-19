@@ -13,19 +13,19 @@
     <section class="review-section-item summary-section">
         <div class="summary-stats">
             <div class="stat-item">
-                <span class="stat-value">{{ completeness.num_assessments }}</span>
+                <span class="stat-value" data-tile="assessments">{{ completeness.num_assessments }}</span>
                 <span class="stat-label">Assessments</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value completeness-{{ completeness.total_class }}" title="{% if completeness.total_class == 'over' %}More than 100 %: a row is probably counted twice, or the outline uses best-N-of-M{% elif completeness.bonus_weight %}Bonus rows ({{ completeness.bonus_weight|round|int }} %) are not counted{% else %}Sum of the weights below{% endif %}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
-                <span class="stat-label">of 100% found{% if completeness.bonus_weight %} (+{{ completeness.bonus_weight|round(1) }} bonus){% endif %}</span>
+                <span class="stat-value completeness-{{ completeness.total_class }}" data-tile="total" title="{% if completeness.total_class == 'over' %}More than 100 %: a row is probably counted twice, or the outline uses best-N-of-M{% elif completeness.bonus_weight %}Bonus rows ({{ completeness.bonus_weight|round|int }} %) are not counted{% else %}Sum of the weights below{% endif %}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
+                <span class="stat-label" data-tile="total-label">of 100% found{% if completeness.bonus_weight %} (+{{ completeness.bonus_weight|round(1) }} bonus){% endif %}</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value">{{ completeness.num_lecture_sections }} / {{ completeness.num_lab_sections }} / {{ completeness.num_tutorial_sections }}</span>
+                <span class="stat-value" data-tile="slots">{{ completeness.num_lecture_sections }} / {{ completeness.num_lab_sections }} / {{ completeness.num_tutorial_sections }}</span>
                 <span class="stat-label">Lecture / lab / tutorial slots</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value {% if completeness.assessments_undated %}completeness-medium{% endif %}">{{ completeness.assessments_undated }}</span>
+                <span class="stat-value {% if completeness.assessments_undated %}completeness-medium{% endif %}" data-tile="undated">{{ completeness.assessments_undated }}</span>
                 <span class="stat-label">Need a date</span>
             </div>
         </div>
@@ -248,9 +248,9 @@
                                 {% if assessment.is_bonus %}
                                     <span class="badge badge-info" title="Shown but not counted in the total">Bonus / optional</span>
                                 {% elif missing_date %}
-                                    <span class="badge badge-warning">Needs a date</span>
+                                    <span class="badge badge-warning badge-needs-date">Needs a date</span>
                                 {% elif should_flag %}
-                                    <span class="badge badge-warning">Review</span>
+                                    <span class="badge badge-warning badge-review">Review</span>
                                 {% endif %}
                                 <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove">
                                     <i data-lucide="trash-2"></i>

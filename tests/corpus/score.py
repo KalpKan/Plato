@@ -9,6 +9,8 @@ Ground truth lives in tests/corpus/ground_truth/<stem>.json.
 
 Metrics (all per labelled PDF, then pooled across the corpus):
   course_code      extracted code equals the expected code (spaces/case-insensitive)
+  course_name      extracted name equals or contains the expected name (letters/digits only); when the
+                   outline prints no name beyond the code (GT name == code), None or the code is a hit
   term             start and end dates both equal the expected term dates
   sections         match = same type + same day set + same start time (end/location not scored)
   assessments      match = fuzzy title (>= 0.55 after normalisation) or exact weight+type, greedy best-first
@@ -67,6 +69,17 @@ def norm_code(c: str) -> str:
     return c
 
 
+def norm_name(n) -> str:
+    return re.sub(r"[^a-z0-9]", "", (n or "").lower())
+
+
+def name_hit(gt: dict, ex: dict) -> int:
+    want, got = norm_name(gt.get("course_name")), norm_name(ex.get("course_name"))
+    if not want or want == norm_name(gt.get("course_code")) or want == norm_code(gt.get("course_code")):
+        return int(not got or got == want or got == norm_name(ex.get("course_code")))
+    return int(bool(got) and (got == want or want in got))
+
+
 def title_sim(a: str, b: str) -> float:
     na, nb = norm_title(a), norm_title(b)
     if not na or not nb:
@@ -119,6 +132,7 @@ def score_one(gt: dict, ex: dict) -> dict:
         return r
     c = {}
     c["course_code"] = (1, int(norm_code(ex.get("course_code")) == norm_code(gt["course_code"])))
+    c["course_name"] = (1, name_hit(gt, ex))
     term_ok = ex.get("term", {}).get("start") == gt["term"]["start"] and ex.get("term", {}).get("end") == gt["term"]["end"]
     c["term"] = (1, int(term_ok))
 
@@ -184,7 +198,7 @@ def score_one(gt: dict, ex: dict) -> dict:
 
 
 def pooled(results):
-    keys = ["course_code", "term", "sections_recall", "sections_precision", "assessments_recall",
+    keys = ["course_code", "course_name", "term", "sections_recall", "sections_precision", "assessments_recall",
             "assessments_precision", "weights", "dates_exact", "no_fabricated", "clean_titles", "weight_total"]
     out = {}
     for k in keys:
@@ -206,15 +220,15 @@ def markdown(results, pool, title):
     lines.append("|---|---|---|")
     for k, v in pool.items():
         lines.append(f"| {k} | {v['hit']} / {v['n']} | {fmt_pct(v['pct'])} |")
-    lines += ["", "## Per file", "", "| file | code | term | sections R/P | assessments R/P | weights | dates exact | no fabricated | clean titles | total |", "|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "## Per file", "", "| file | code | name | term | sections R/P | assessments R/P | weights | dates exact | no fabricated | clean titles | total |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in results:
         if not r.get("ok"):
-            lines.append(f"| {r['file']} | ERROR {r.get('error')} | | | | | | | | |")
+            lines.append(f"| {r['file']} | ERROR {r.get('error')} | | | | | | | | | |")
             continue
         c = r["counts"]
         def rp(a, b):
             return f"{c[a][1]}/{c[a][0]} · {c[b][1]}/{c[b][0]}"
-        lines.append(f"| {r['file']} | {'✓' if c['course_code'][1] else '✗'} | {'✓' if c['term'][1] else '✗'} | {rp('sections_recall','sections_precision')} | {rp('assessments_recall','assessments_precision')} | {c['weights'][1]}/{c['weights'][0]} | {c['dates_exact'][1]}/{c['dates_exact'][0]} | {c['no_fabricated'][1]}/{c['no_fabricated'][0]} | {c['clean_titles'][1]}/{c['clean_titles'][0]} | {r['extracted_total']:.0f} {'✓' if c['weight_total'][1] else '✗'} |")
+        lines.append(f"| {r['file']} | {'✓' if c['course_code'][1] else '✗'} | {'✓' if c.get('course_name', (1, 0))[1] else '✗'} | {'✓' if c['term'][1] else '✗'} | {rp('sections_recall','sections_precision')} | {rp('assessments_recall','assessments_precision')} | {c['weights'][1]}/{c['weights'][0]} | {c['dates_exact'][1]}/{c['dates_exact'][0]} | {c['no_fabricated'][1]}/{c['no_fabricated'][0]} | {c['clean_titles'][1]}/{c['clean_titles'][0]} | {r['extracted_total']:.0f} {'✓' if c['weight_total'][1] else '✗'} |")
     lines += ["", "## Details", ""]
     for r in results:
         if not r.get("ok"):

@@ -30,7 +30,8 @@ WEEKDAYS = {
 }
 MONTH_RE = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
 DAY_RE = r"(\d{1,2})(?:st|nd|rd|th)?"
-WEEKDAY_RE = r"(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day)?"
+# full names as well as the short forms: "Wednesdays" used to fall through ("wed" + "day"? no)
+WEEKDAY_RE = r"(?:mon(?:day)?|tue(?:sday|s)?|wed(?:nesday)?|thu(?:rsday|rs|r)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)"
 
 # "Oct. 27th", "October 27", "Sept 16th"
 _MD = re.compile(rf"\b({MONTH_RE})\.?\s*{DAY_RE}\b(?:,?\s*(\d{{4}}))?", re.I)

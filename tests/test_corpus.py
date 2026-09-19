@@ -2,8 +2,9 @@
 
 Skips when the corpus PDFs are not on this machine (they are never committed).
 The consumer-grade bar from docs/reports/plato-spec.md is enforced by default (the
-parser met it on 2026-09-18, fix round 1: 15 labelled outlines). Set PLATO_CORPUS_GATE=0
-to run in report-only mode while experimenting with the parser.
+parser met it on 2026-09-18, fix round 1: 15 labelled outlines; fix round 2 on 2026-09-19 raised
+the labelled set to 18 and added course_name). Set PLATO_CORPUS_GATE=0 to run in report-only
+mode while experimenting with the parser.
 """
 import json
 import os
@@ -21,6 +22,7 @@ GATE = os.environ.get("PLATO_CORPUS_GATE", "1") != "0"
 BAR = {
     "files_ok": 100,
     "course_code": 90,
+    "course_name": 90,
     "term": 90,
     "sections_recall": 90,
     "sections_precision": 90,

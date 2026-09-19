@@ -45,6 +45,7 @@ class Slot:
     location: Optional[str] = None
     section_id: str = ""
     note: str = ""
+    kind_certain: bool = True     # False when the kind is a default ("Section 001: ..." with no label near it)
 
     def key(self):
         return (self.kind, tuple(self.days), self.start, self.end)
@@ -96,6 +97,12 @@ def _location_in(text: str) -> Optional[str]:
 
 
 _SECTION_SPLIT = re.compile(r"(?=\bsection\s+\d{3}\b)", re.I)
+_BULLET = re.compile(r"^\s*(?:[•*\-–—▪●○]|o(?=\s))\s*")
+# "Hours: Tuesdays 9:30-11:30 am, and Thursdays 9:30-10:30 am", "Time: Tuesdays 12:30-2:30 pm and Thursdays 12:30-1:30 pm"
+_TIME_LABEL = re.compile(r"^\s*((?:class|lecture|meeting|course)?\s*(?:hours?|times?|days?\s*(?:/|and|&)\s*times?|day|when|schedule)\s*:)\s*(.+)$", re.I)
+# "Section 001: Tuesdays, 1:30pm-4:30pm, SSC 2036" (a timetable line, never the exam line "Section 001: Tues Oct 7, 2pm-4pm")
+_SECTION_LINE = re.compile(r"^\s*section\s+(\d{3})\s*[:\-–]\s*(.+)$", re.I)
+_MONTH_DATE = re.compile(rf"\b{MONTH_RE}\.?\s*\d{{1,2}}\b|\b\d{{1,2}}\s+{MONTH_RE}\b", re.I)
 
 
 def _slots_from_fragment(kind: str, fragment: str, default_location: Optional[str] = None) -> List[Slot]:
@@ -177,11 +184,16 @@ def _from_tables(tables: Sequence[Sequence[Sequence[Optional[str]]]]) -> List[Sl
                 cols["loc"] = i
         if "comp" not in cols:
             cols["comp"] = 0
+        carried_kind: Optional[str] = None
         for row in table[1:]:
             cells = [str(c or "").replace("\n", " ").strip() for c in row]
             if len(cells) <= cols["comp"]:
                 continue
             kind = _kind_of(cells[cols["comp"]]) or header_kind
+            if kind:
+                carried_kind = kind
+            elif not cells[cols["comp"]].strip():
+                kind = carried_kind      # a continuation row ("| | Section 002: Tuesday PM | 1:30 - 4:20 |")
             if not kind:
                 continue
             day_txt = cells[cols["day"]] if "day" in cols and len(cells) > cols["day"] else ""
@@ -196,7 +208,7 @@ def _from_tables(tables: Sequence[Sequence[Sequence[Optional[str]]]]) -> List[Sl
                 start, end = parse_time_span(time_txt.replace("–", "-"))
                 if days and start and end:
                     slots = [Slot(kind, days, start, end, loc or None)]
-            m = re.search(r"\b(\d{3})\b", cells[cols["comp"]])
+            m = re.search(r"\b(\d{3})\b", cells[cols["comp"]]) or re.search(r"\bsection\s+(\d{3})\b", day_txt, re.I)
             for s in slots:
                 if m:
                     s.section_id = m.group(1)
@@ -216,9 +228,34 @@ def _from_text(pages_text: Sequence[Tuple[int, str]]) -> Tuple[List[Slot], List[
             default_loc = _location_in(m.group(1)) or m.group(1).strip()
     header_kind: Optional[str] = None
     header_left = 0
-    for i, line in enumerate(lines):
+    for i, raw_line in enumerate(lines):
+        line = _BULLET.sub("", raw_line)
         if _OFFICE.search(line):
             continue
+        if _MONTH_DATE.search(line):
+            # a dated line ("Section 001: Tues Oct 7, 2pm-4pm") is an exam or an event, never a weekly slot
+            continue
+        # "Section 001: Tuesdays, 1:30pm-4:30pm, SSC 2036": one lecture (or lab / tutorial, per the
+        # nearest short heading above) per section line
+        sm = _SECTION_LINE.match(line)
+        if sm and _TIME_ANY.search(line) and parse_days(" ".join(m.group(0) for m in _DAY_TOKENS.finditer(sm.group(2)))):
+            ctx = _context_kind(lines, i)
+            for slot in _slots_from_fragment(ctx or "lecture", sm.group(2), default_location=default_loc):
+                slot.section_id = sm.group(1)
+                slot.kind_certain = ctx is not None
+                out.append(slot)
+            continue
+        # "Time: Tuesdays 12:30-2:30 pm and Thursdays 12:30-1:30 pm" with no lecture label at all
+        tm = _TIME_LABEL.match(line)
+        if tm and _TIME_ANY.search(line) and not _kind_of(tm.group(1)) \
+                and any(parse_days(d.group(0)) for d in _DAY_TOKENS.finditer(tm.group(2))):
+            ctx = _context_kind(lines, i)
+            slots = _slots_from_fragment(ctx or "lecture", tm.group(2), default_location=default_loc)
+            if slots:
+                for slot in slots:
+                    slot.kind_certain = ctx is not None
+                out.extend(slots)
+                continue
         # a text table "Lecture Section | Time and Room | Instructor" followed by "MWF 12:30 – 1:20 Professor X"
         hm = re.match(r"\s*(lectures?|labs?|laboratory|tutorials?)\s+(?:section|time|day)", line, re.I)
         if hm and re.search(r"\b(time|day|room)\b", line, re.I) and not _TIME_ANY.search(line):
@@ -251,9 +288,13 @@ def _from_text(pages_text: Sequence[Tuple[int, str]]) -> Tuple[List[Slot], List[
             continue
         frag = rest
         # a wrapped line continues on the next line when it has no time yet
-        if not _TIME_ANY.search(frag) and i + 1 < len(lines) and not _kind_of(lines[i + 1][:12]) \
-                and not re.match(r"\s*[A-Z][A-Za-z ]{2,25}:", lines[i + 1]):
-            frag = frag + " " + lines[i + 1]
+        if not _TIME_ANY.search(frag) and i + 1 < len(lines):
+            nxt = _BULLET.sub("", lines[i + 1])
+            tl = _TIME_LABEL.match(nxt)
+            if tl and not _kind_of(tl.group(1)):
+                frag = frag + " " + tl.group(2)          # "Lectures:" then "Hours: Tuesdays 9:30-11:30 am, ..."
+            elif not _kind_of(nxt[:12]) and not re.match(r"\s*[A-Z][A-Za-z ]{2,25}:", nxt):
+                frag = frag + " " + nxt
         slots = _slots_from_fragment(kind, frag, default_location=default_loc)
         if slots:
             out.extend(slots)
@@ -261,6 +302,22 @@ def _from_text(pages_text: Sequence[Tuple[int, str]]) -> Tuple[List[Slot], List[
             notes.append(f"The outline lists a {kind} ({rest.strip()[:60]}) but no day or time: "
                          f"check your timetable on draftmyschedule.uwo.ca and add it with \"Add Section\".")
     return out, notes
+
+
+def _context_kind(lines: List[str], i: int) -> Optional[str]:
+    """The nearest short heading above line i that names a component ("Lab sections", "Tutorials")."""
+    for j in range(i - 1, max(-1, i - 6), -1):
+        l = _BULLET.sub("", lines[j]).strip()
+        if not l or _TIME_ANY.search(l) or _SECTION_LINE.match(l):
+            continue
+        if len(l) <= 50:
+            k = _kind_of(l)
+            if k:
+                return k
+            if re.search(r"class\s+(?:location|time)|location\s+and\s+time", l, re.I):
+                return "lecture"
+            return None
+    return None
 
 
 def _from_weekly_dates(pages_text: Sequence[Tuple[int, str]], term_years: Sequence[int]) -> Optional[Slot]:
@@ -297,7 +354,10 @@ def extract_slots_and_notes(pages_text: Sequence[Tuple[int, str]],
     slots = _from_tables(tables)
     text_slots, notes = _from_text(pages_text)
     seen = {s.key() for s in slots}
+    timed = {(tuple(s.days), s.start, s.end) for s in slots}
     for s in text_slots:
+        if not s.kind_certain and (tuple(s.days), s.start, s.end) in timed:
+            continue   # the table already names this slot's kind; the prose line only guessed it
         if s.key() not in seen:
             seen.add(s.key())
             slots.append(s)

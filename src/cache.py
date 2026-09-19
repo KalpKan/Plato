@@ -34,6 +34,35 @@ def compute_pdf_hash(pdf_path: Path) -> str:
     return hashlib.sha256(pdf_bytes).hexdigest()
 
 
+# Every file whose code decides what the parser writes into the cache. A change to any
+# of them changes PARSER_VERSION, and with it the cache key, so a deploy never serves a
+# result the previous parser produced (D13, 2026-09-19).
+_PARSER_FILES = ("pdf_extractor.py", "rule_resolver.py", "models.py",
+                 "outline/assessments.py", "outline/course.py", "outline/dates.py", "outline/pipeline.py",
+                 "outline/schedule.py", "outline/tables.py", "outline/term.py")
+
+
+def parser_version(extra: bytes = b"") -> str:
+    """12 hex chars derived from the parser's own source (read once per process)."""
+    h = hashlib.sha256()
+    here = Path(__file__).resolve().parent
+    for name in _PARSER_FILES:
+        try:
+            h.update(name.encode()); h.update((here / name).read_bytes())
+        except OSError:
+            h.update(b"missing")
+    h.update(extra)
+    return h.hexdigest()[:12]
+
+
+PARSER_VERSION = parser_version()
+
+
+def versioned_key(pdf_hash: str) -> str:
+    """Cache key for an extraction row: the PDF hash plus the parser that produced it."""
+    return f"{pdf_hash}@{PARSER_VERSION}"
+
+
 class CacheManager:
     """Manages cache storage and retrieval for PDF processing."""
     
@@ -104,7 +133,7 @@ class CacheManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.execute(
             "SELECT extracted_json, timestamp FROM extraction_cache WHERE pdf_hash = ?",
-            (pdf_hash,)
+            (versioned_key(pdf_hash),)
         )
         row = cursor.fetchone()
         conn.close()
@@ -228,7 +257,7 @@ class CacheManager:
             INSERT OR REPLACE INTO extraction_cache (pdf_hash, extracted_json, timestamp)
             VALUES (?, ?, ?)
             """,
-            (pdf_hash, extracted_json, datetime.now().isoformat())
+            (versioned_key(pdf_hash), extracted_json, datetime.now().isoformat())
         )
         conn.commit()
         conn.close()
@@ -236,7 +265,7 @@ class CacheManager:
     def delete_extraction(self, pdf_hash: str) -> None:
         """Remove one cached extraction (used to drop a visitor's edited copy)."""
         conn = sqlite3.connect(self.db_path)
-        conn.execute("DELETE FROM extraction_cache WHERE pdf_hash = ?", (pdf_hash,))
+        conn.execute("DELETE FROM extraction_cache WHERE pdf_hash = ?", (versioned_key(pdf_hash),))
         conn.commit()
         conn.close()
 

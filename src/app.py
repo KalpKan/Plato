@@ -11,6 +11,7 @@ This is the main web interface for the application. It provides:
 """
 
 import os
+import re
 import json
 import urllib.request
 import urllib.error
@@ -18,7 +19,7 @@ import hashlib
 import uuid
 from pathlib import Path
 from datetime import date, datetime, time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from flask import Flask, Response, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -29,7 +30,7 @@ from .models import (
     deserialize_date, deserialize_datetime, deserialize_time,
     extracted_to_dict, section_to_dict, section_from_dict,
 )
-from .cache import get_cache_manager, compute_pdf_hash
+from .cache import get_cache_manager, compute_pdf_hash, PARSER_VERSION
 from .pdf_extractor import PDFExtractor
 from .outline.pipeline import PasswordProtected, NoTextLayer
 from .rule_resolver import RuleResolver
@@ -178,6 +179,60 @@ def _lead_time_generator(custom_lead_time_mapping: Dict[str, Any]) -> StudyPlanG
     return StudyPlanGenerator(lead_time_mapping=lead_time_mapping_for_gen)
 
 
+_STATED_TOTAL = re.compile(r"total\s*=\s*(\d{1,2})|\((\d{1,2})\)|\b(\d{1,2})\s+(?:lab|report|session|tutorial|quiz)", re.I)
+
+
+def rule_hint(a: AssessmentTask, sections: List[SectionOption]) -> Optional[str]:
+    """The line the review page prints under a rule-typed row (None when it is not one)."""
+    if not a.due_rule or a.due_datetime:
+        return None
+    anchor = a.rule_anchor
+    if not anchor:
+        return f"Relative rule: {a.due_rule}. Set the dates by hand (the outline ties them to something the calendar cannot see)."
+    have = any((s.section_type or '').lower().startswith(anchor) for s in sections)
+    if have:
+        return f"Relative rule: {a.due_rule}. One due event per {anchor} is generated from your {anchor} slot."
+    return f"Relative rule: {a.due_rule}. Add your {anchor} slot with \"Add Section\" and you get one due event per {anchor}."
+
+
+def expand_rule_assessments(assessments: List[AssessmentTask], chosen: List[SectionOption], term: CourseTerm,
+                            resolver: RuleResolver) -> List[AssessmentTask]:
+    """Replace each rule-typed row whose anchor slot was chosen with one dated copy per occurrence
+    (capped at a count the outline states, e.g. 'Labs (Total = 8)'); other rows pass through."""
+    out: List[AssessmentTask] = []
+    for a in assessments:
+        if not (a.due_rule and not a.due_datetime and a.rule_anchor):
+            out.append(a)
+            continue
+        anchor = resolver._find_anchor_section(a.rule_anchor, chosen)
+        if not anchor or not term.start_date or not term.end_date:
+            out.append(a)
+            continue
+        base = f"{a.rule_anchor.capitalize()} report" if re.search(r"report", a.due_rule, re.I) \
+            else re.sub(r"\s*\(.*?\)", "", a.title).strip().rstrip("s") or a.title
+        template = AssessmentTask(title=base, type=a.type, weight_percent=a.weight_percent, due_rule=a.due_rule,
+                                  rule_anchor=a.rule_anchor, confidence=a.confidence, source_evidence=a.source_evidence)
+        copies = resolver.generate_per_occurrence_assessments(template, anchor, term)
+        if not copies or copies[0].due_datetime is None:
+            out.append(a)
+            continue
+        cap = None
+        m = _STATED_TOTAL.search(f"{a.title} {a.source_evidence or ''}")
+        if m:
+            cap = int(next(g for g in m.groups() if g))
+        if cap:
+            copies = copies[:cap]
+        for i, c in enumerate(copies, 1):
+            c.title = f"{base} {i}"
+            c.date_status = "exact"
+            c.needs_review = False
+            c.from_rule = True      # no "start studying" event: it is due the day after the lab
+            if a.weight_percent:
+                c.weight_percent = round(a.weight_percent / len(copies), 2)
+        out.extend(copies)
+    return out
+
+
 def build_calendar(extracted_data: ExtractedCourseData,
                    user_selections: UserSelections,
                    lead_time_overrides: Dict[str, Any],
@@ -191,12 +246,13 @@ def build_calendar(extracted_data: ExtractedCourseData,
     resolver = RuleResolver()
     chosen = [s for s in (user_selections.selected_lecture_section, user_selections.selected_lab_section,
                           getattr(user_selections, 'selected_tutorial_section', None)) if s]
-    extracted_data.assessments = resolver.resolve_rules(
-        extracted_data.assessments, chosen or extracted_data.all_sections(), extracted_data.term
-    )
+    # A relative rule ("lab report due 24 h after each lab") becomes one due event per occurrence
+    # of the chosen anchor slot, for this calendar only: the stored row keeps its rule so the
+    # review page and a later download with another slot start from the outline's words (D16).
+    calendar_assessments = expand_rule_assessments(extracted_data.assessments, chosen, extracted_data.term, resolver)
 
     study_plan = _lead_time_generator(custom_lead_time_mapping).generate_study_plan(
-        extracted_data.assessments,
+        [a for a in calendar_assessments if not getattr(a, "from_rule", False)],
         user_lead_times=lead_time_overrides if lead_time_overrides else None
     )
 
@@ -205,7 +261,7 @@ def build_calendar(extracted_data: ExtractedCourseData,
         term=extracted_data.term,
         lecture_section=user_selections.selected_lecture_section,
         lab_section=user_selections.selected_lab_section,
-        assessments=extracted_data.assessments,
+        assessments=calendar_assessments,
         study_plan=study_plan,
         tutorial_section=getattr(user_selections, 'selected_tutorial_section', None),
         course_code=extracted_data.course_code,
@@ -810,7 +866,7 @@ def review():
             'needs_review': a.needs_review,
             'lead_time_days': current_lead_time,  # Add lead time for display
             'date_status': a.date_status,
-            'date_note': a.date_note,
+            'date_note': rule_hint(a, extracted_data.all_sections()) or a.date_note,
             'dates': a.dates,
             'is_bonus': a.is_bonus,
             'end_datetime': a.end_datetime,
@@ -1218,8 +1274,29 @@ def update_field():
         
         # Persist the modified data (one upsert; save_extracted writes the cache)
         save_extracted(extracted_data)
-        
-        return jsonify({'success': True, 'message': 'Field updated successfully'})
+
+        # The tiles and the row badges re-render from this without a reload (D19)
+        c = calculate_completeness(extracted_data)
+        row = None
+        if assessment_index is not None and field_type.startswith('assessment_'):
+            try:
+                a = extracted_data.assessments[int(assessment_index)]
+                row = {
+                    'has_date': bool(a.due_datetime or a.dates or a.due_rule),
+                    'due_display': (a.due_datetime.strftime('%b %d, %Y') + ('' if (a.due_datetime.hour, a.due_datetime.minute) == (23, 59)
+                                    else ' ' + a.due_datetime.strftime('%I:%M %p').lstrip('0'))) if a.due_datetime else None,
+                    'weight': a.weight_percent,
+                    'date_note': a.date_note,
+                    'needs_review': bool(a.needs_review),
+                    'is_bonus': bool(getattr(a, 'is_bonus', False)),
+                }
+            except (ValueError, IndexError):
+                row = None
+        return jsonify({'success': True, 'message': 'Field updated successfully', 'row': row, 'completeness': {
+            'num_assessments': c['num_assessments'], 'total_weight': round(c['total_weight']), 'total_class': c['total_class'],
+            'bonus_weight': round(c.get('bonus_weight', 0.0), 1), 'num_lecture_sections': c['num_lecture_sections'],
+            'num_lab_sections': c['num_lab_sections'], 'num_tutorial_sections': c['num_tutorial_sections'],
+            'assessments_undated': c['assessments_undated']}})
         
     except Exception as e:
         import traceback
@@ -1439,7 +1516,7 @@ def health():
             db = 'error'
     except Exception:
         db = 'error'
-    return jsonify(ok=(db == 'ok'), db=db, service='plato'), (200 if db == 'ok' else 503)
+    return jsonify(ok=(db == 'ok'), db=db, service='plato', parser=PARSER_VERSION), (200 if db == 'ok' else 503)
 
 
 @app.errorhandler(413)

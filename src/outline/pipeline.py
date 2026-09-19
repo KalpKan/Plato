@@ -1,6 +1,7 @@
 """Turn a course-outline PDF into ExtractedCourseData using the outline.* modules."""
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
@@ -78,6 +79,18 @@ def parse_outline(pdf_path: Path, original_filename: Optional[str] = None) -> Ex
     return build(pages_text, tables, filename, page_count, image_pages)
 
 
+_IN_CLASS = re.compile(r"\bin[- ]class\b|\bduring\s+(?:the\s+)?(?:class|lecture)|\bin\s+lecture\b", re.I)
+
+
+def _rule_anchor(rule: Optional[str]) -> Optional[str]:
+    """'Lab Report due 24hrs after each Lab Session' -> 'lab'; 'end of each tutorial' -> 'tutorial'."""
+    low = (rule or "").lower()
+    for anchor, pat in (("lab", r"\blab"), ("tutorial", r"\btutorial"), ("lecture", r"\blecture|\bclass\b")):
+        if re.search(pat, low):
+            return anchor
+    return None
+
+
 def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_count: int = 0,
           image_pages: Sequence[int] = ()) -> ExtractedCourseData:
     notes: List[str] = []
@@ -117,8 +130,27 @@ def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_cou
         d = a.date
         due = None
         end = None
+        anchor = _rule_anchor(d.rule) if d.status == "rule" else None
+        note = d.note
+        if d.status == "rule":
+            if anchor:
+                have = any(s.kind == anchor for s in slots)
+                note = (f"Relative rule: {d.rule}. " + ("One due event per " + anchor + " is generated from your " + anchor + " slot."
+                        if have else f"Add your {anchor} slot with \"Add Section\" and you get one due event per {anchor}."))
+            else:
+                note = f"Relative rule: {d.rule}. Set the dates by hand (the outline ties them to something the calendar cannot see)."
         if d.status == "exact" and d.date:
-            due = datetime.combine(d.date, d.time) if d.time else datetime.combine(d.date, datetime.min.time().replace(hour=23, minute=59))
+            t = d.time
+            if t is None and a.kind in ("midterm", "test") and _IN_CLASS.search(f"{a.evidence} {d.raw} {d.note}"):
+                # "Mid-term Exam (In-class)": it sits in the lecture slot, not at 23:59 (D18)
+                lecture_starts = {s.start for s in slots if s.kind == "lecture" and s.start}
+                if len(lecture_starts) == 1:
+                    t = lecture_starts.pop()
+                    lec = next(s for s in slots if s.kind == "lecture" and s.start == t)
+                    if lec.end:
+                        end = datetime.combine(d.date, lec.end)
+                    note = (note + " " if note else "") + "In class: the time is your lecture slot's."
+            due = datetime.combine(d.date, t) if t else datetime.combine(d.date, datetime.min.time().replace(hour=23, minute=59))
             if d.end_time:
                 end = datetime.combine(d.date, d.end_time)
         elif d.status == "recurring" and d.dates:
@@ -130,11 +162,12 @@ def build(pages_text: Sequence[Tuple[int, str]], tables, filename: str, page_cou
             weight_percent=a.weight,
             due_datetime=due,
             due_rule=d.rule if d.status == "rule" else None,
+            rule_anchor=anchor,
             confidence=a.confidence,
             source_evidence=a.evidence,
             needs_review=(d.status not in ("exact", "recurring")) or a.weight is None,
             date_status=d.status,
-            date_note=d.note,
+            date_note=note,
             date_window=d.window,
             dates=list(d.dates) if d.status == "recurring" else [],
             end_datetime=end,

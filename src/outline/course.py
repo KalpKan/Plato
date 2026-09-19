@@ -102,6 +102,82 @@ def _code_from_filename(filename: str) -> Optional[str]:
     return None
 
 
+_NAME_LABEL = re.compile(r"^\W*course\s*(?:name|title)\s*:\s*(.+)$", re.I)
+_HEADING_WORDS = re.compile(
+    r"^(?:course\s+(?:information|description|overview|outline|syllabus|materials?|content|format|objectives?|website|delivery|schedule|policies|name|title|number|code)|"
+    r"general\s+information|instructor\s+information|learning\s+outcomes|technical\s+requirements|important\s+dates|campus\s+supports?|"
+    r"in-?person|online|hybrid|delivery(?:\s+mode)?|welcome.*|table\s+of\s+contents|calendar\s+description|introduction)\W*$", re.I)
+_NAME_TAILS = [
+    re.compile(r"\s*\((?:[^)]*(?:20\d\d|january|april|september|december|in-?person|online|hybrid|blended|a?synchronous)[^)]*)\)\s*$", re.I),
+    re.compile(r"\s*[-–—:|(]?\s*(?:preliminary\s+)?(?:course\s+outline|course\s+syllabus|syllabus|outline|edition)\b.*$", re.I),
+    re.compile(r"[.\s,]*\b(?:fall|winter|summer|spring|intersession)?\s*(?:20\d\d(?:\s*[-–/]\s*(?:20)?\d\d)?)\s*(?:term|session)?\W*$", re.I),
+    re.compile(r"[.\s,]*\b(?:fall|winter|summer|spring|intersession)\b(?:\s*[/&,-]\s*(?:fall|winter|summer|spring))?\s*(?:term|session)?\W*$", re.I),
+    re.compile(r"\s*\([^)]*$"),                      # a parenthesis whose closing half was trimmed away
+    re.compile(r"^\W*course\s*(?:name|title)\s*:\s*", re.I),
+]
+_SUBJECT_TOKEN = re.compile(r"(?:^|[\s,\-–—/])(?:" + "|".join(re.escape(x) for x in sorted(SUBJECTS, key=len, reverse=True))
+                            + r"|" + "|".join(sorted(ABBREVIATIONS, key=len, reverse=True)) + r")\s*$", re.I)
+
+
+def _clean_name(cand: str) -> Optional[str]:
+    """Trim a candidate title line to the course name, or None when it is not one."""
+    c = (cand or "").strip()
+    c = re.sub(r"(?<=[a-z])\d$", "", c)                       # footnote digit glued to the last word
+    c = re.sub(r"\s*\(?\b(?:section|sec\.?)\s*\d{3}\b.*$", "", c, flags=re.I)
+    for _ in range(4):
+        before = c
+        for pat in _NAME_TAILS:
+            c = pat.sub("", c).strip(" :-–—.,|")
+        if c == before:
+            break
+    c = re.sub(r"\s*\((?:[A-Za-z ]+\s)?\d{4}[A-Za-z]?\)\s*$", "", c)   # "(Biochem 3381A)"
+    c = re.sub(r"\s+", " ", c).strip(" :-–—.,|")
+    if not (6 <= len(c) <= 90):
+        return None
+    if _HEADING_WORDS.match(c) or _SKIP_NAME.search(c) or re.search(r"\d{3,}", c):
+        return None
+    if re.match(r"^(?:an?|the)\s+\w+(?:,\s*\w+)*\s+course\b", c, re.I):
+        return None                                            # "An online, asynchronous course with ..."
+    words = c.split()
+    if sum(1 for w in words if w[:1].islower()) > len(words) // 2 and not c.isupper():
+        return None                                            # a sentence, not a title
+    if re.search(r"\b(?:is|are|will|covers|provides|examines|introduces)\b", c, re.I):
+        return None
+    return _title(c)
+
+
+def _name_from_label(text: str, code: Optional[str]) -> Optional[str]:
+    """'• Course Name: Applied Logic for Computer Science' / 'Course name: Mathematical Biology. Winter 2026.'"""
+    lines = text.split("\n")
+    for i, line in enumerate(lines[:60]):
+        m = _NAME_LABEL.match(line.strip())
+        if not m:
+            continue
+        val = m.group(1).strip()
+        if _looks_like_code(val, code):
+            # "Course Name: Applied Mathematics 3813B:" then "Nonlinear Ordinary Differential Equations and Chaos"
+            if val.endswith(":") and i + 1 < len(lines):
+                name = _clean_name(lines[i + 1])
+                if name:
+                    return name
+            continue
+        name = _clean_name(val)
+        if name:
+            return name
+    return None
+
+
+def _looks_like_code(val: str, code: Optional[str]) -> bool:
+    v = re.sub(r"\s+", "", val).lower().rstrip(":")
+    if code and v == re.sub(r"\s+", "", code).lower():
+        return True
+    return bool(re.fullmatch(r"[A-Za-z&. ]{2,40}\s?\d{4}[A-Za-z]?(?:\s*/\s*(?:[A-Za-z ]+\s)?\d{4}[A-Za-z]?)?\s*[A-Za-z]?\s*:?", val.strip()))
+
+
+def _title_like(line: str) -> bool:
+    return bool(re.match(r"^[A-Za-z][A-Za-z ,&:'’\-()]+\d?$", line.strip()))
+
+
 def _name_near_code(text: str, code: Optional[str]) -> Optional[str]:
     lines = [l.strip() for l in text.split("\n")]
     number = code.split()[-1] if code else None
@@ -109,23 +185,55 @@ def _name_near_code(text: str, code: Optional[str]) -> Optional[str]:
         if not number or number.lower() not in line.lower():
             continue
         # "KIN 2000 Physical Activity and Health" / "Classical Studies 1000 — 001: ANCIENT GREECE AND ROME"
-        after = re.split(rf"{re.escape(number)}\s*(?:[-–—]\s*\d{{3}})?\s*[:\-–—]?\s*", line, maxsplit=1, flags=re.I)
-        if len(after) == 2 and len(after[1].strip()) >= 6 and not _SKIP_NAME.search(after[1]):
+        after = re.split(rf"{re.escape(number)}\s*(?:/\s*[A-Za-z]{{0,4}}\s*\d{{4}}[A-Za-z]?)?\s*(?:[-–—]\s*\d{{3}})?\s*[:\-–—]?\s*", line, maxsplit=1, flags=re.I)
+        if len(after) == 2 and after[1].strip():
             cand = after[1].strip(" :-–—")
             cand = re.sub(r"\s*\(.*?\)\s*$", "", cand)
-            if 6 <= len(cand) <= 90 and not re.search(r"\d{3,}", cand):
-                return _title(cand)
+            # "Health Sciences 2800: Health" wraps onto "Sciences Research Methods";
+            # "HS 2610G: Introduction to Ethics" wraps onto "and Health"
+            if i + 1 < len(lines) and _title_like(lines[i + 1]) and len(lines[i + 1].split()) <= 5 \
+                    and not _SKIP_NAME.search(lines[i + 1]) and not _HEADING_WORDS.match(lines[i + 1]) \
+                    and (len(cand.split()) <= 2 or lines[i + 1].split()[0].lower() in ("and", "of", "for", "in", "to", "with", "the", "on", "&")):
+                cand = cand + " " + lines[i + 1]
+            name = _clean_name(cand)
+            if name:
+                return name
         # "Biological Macromolecules (Biochem 3381A)"
         m = re.match(r"^(.{6,90}?)\s*\((?:[A-Za-z ]+\s)?" + re.escape(number) + r"\)", line, re.I)
-        if m and not _SKIP_NAME.search(m.group(1)):
-            return _title(m.group(1))
-        # name on the next line ("Computer Science 3340b" / "Analysis of Algorithms I")
-        for j in (i + 1, i - 1):
-            if 0 <= j < len(lines):
-                cand = lines[j]
-                if 6 <= len(cand) <= 90 and not _SKIP_NAME.search(cand) and not re.search(r"\d{3,}", cand) \
-                        and re.match(r"^[A-Za-z][A-Za-z ,&:'\-]+$", cand):
-                    return _title(cand)
+        if m:
+            name = _clean_name(m.group(1))
+            if name:
+                return name
+        # "Aquatic Ecology 3415G Winter 2025 Course Outline", "Ecology, BIO 2483A, Fall 2025 term.",
+        # "Cellular Physiology-Physiology 3140A": the words before the number, minus the subject token
+        if len(after) == 2:
+            before = line[:line.lower().find(number.lower())]
+            before = _SUBJECT_TOKEN.sub("", before).strip(" :-–—,/")
+            if before and before.count("(") == before.count(")") and before.lower() not in {x.lower() for x in SUBJECTS} and _title_like(before) \
+                    and not re.match(r"^(?:department|school|faculty)\b", before, re.I):
+                name = _clean_name(before)
+                if name:
+                    return name
+        # the title line above the code ("Crime and Punishment ..." / "Applied Logic for Computer Science1"),
+        # else the line below ("Computer Science 3340b" / "Analysis of Algorithms I")
+        for j in (i - 1, i + 1):
+            if 0 <= j < len(lines) and _title_like(lines[j]):
+                name = _clean_name(lines[j])
+                if name:
+                    return name
+    return None
+
+
+def _name_in_parentheses(pages_text: Sequence[Tuple[int, str]], code: Optional[str]) -> Optional[str]:
+    """'Math 1228 (Methods of Finite Mathematics) covers ...' anywhere in the first three pages."""
+    if not code:
+        return None
+    number = code.split()[-1]
+    for _, text in pages_text[:3]:
+        for m in re.finditer(rf"\b{re.escape(number)}\s*\(([A-Z][A-Za-z ,&:'’\-]{{5,80}})\)", text):
+            name = _clean_name(m.group(1))
+            if name:
+                return name
     return None
 
 
@@ -179,7 +287,13 @@ def extract_course(pages_text: Sequence[Tuple[int, str]], filename: str = "") ->
         m = re.search(r"\b([a-z]{2,9})(\d{4})[a-z]?@uwo\.ca", first, re.I)
         if m and m.group(1).upper() in ABBREVIATIONS:
             code = _norm_code(m.group(1), m.group(2))
-    name = _name_near_code(first, code) if first_page_num == 1 else None
-    if name and code and name.lower().replace(" ", "") == code.lower().replace(" ", ""):
-        name = None
+    name = None
+    if first_page_num == 1:
+        name = _name_from_label(first, code) or _name_near_code(first, code)
+    if not name:
+        name = _name_in_parentheses(pages_text, code)
+    if name and code:
+        subject = " ".join(code.split()[:-1]).lower()
+        if name.lower().replace(" ", "") == code.lower().replace(" ", "") or name.lower() == subject:
+            name = None
     return code, name

@@ -14,6 +14,7 @@ from typing import Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from .cache import versioned_key
 from .models import (
     ExtractedCourseData, UserSelections, CacheEntry,
     CourseTerm, SectionOption, AssessmentTask,
@@ -143,7 +144,7 @@ class SupabaseCacheManager:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute(
                 "SELECT extracted_json, timestamp FROM extraction_cache WHERE pdf_hash = %s",
-                (pdf_hash,)
+                (versioned_key(pdf_hash),)
             )
             row = cur.fetchone()
             cur.close()
@@ -185,7 +186,7 @@ class SupabaseCacheManager:
                     extracted_json = EXCLUDED.extracted_json,
                     timestamp = NOW()
                 """,
-                (pdf_hash, extracted_json)
+                (versioned_key(pdf_hash), extracted_json)
             )
             conn.commit()
             cur.close()
@@ -197,7 +198,7 @@ class SupabaseCacheManager:
         conn = self._get_connection()
         try:
             cur = conn.cursor()
-            cur.execute("DELETE FROM extraction_cache WHERE pdf_hash = %s", (pdf_hash,))
+            cur.execute("DELETE FROM extraction_cache WHERE pdf_hash = %s", (versioned_key(pdf_hash),))
             conn.commit()
             cur.close()
         finally:

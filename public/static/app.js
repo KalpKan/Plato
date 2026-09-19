@@ -647,6 +647,8 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
             // refuses to submit while any field still carries the "editing" class)
             updateFieldDisplay(fieldElement, fieldType, newValue);
             fieldElement.classList.remove('editing');
+            applyCompleteness(data.completeness);
+            applyRowState(fieldElement, data.row);
             // Show success message briefly
             fieldElement.classList.add('saved');
             setTimeout(() => {
@@ -707,23 +709,16 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
         }
     } else if (fieldType === 'assessment_due_date') {
         if (newValue) {
-            // Format datetime for display
-            const dt = new Date(newValue);
-            displayValue = dt.toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            // Same shape as the server renders: "Mar 20, 2026" plus the time unless it is 23:59
+            displayValue = formatDueDate(newValue);
         } else {
-            displayValue = 'Due date not found';
+            displayValue = 'Add date';
         }
     } else if (fieldType === 'assessment_weight') {
         if (newValue) {
             displayValue = newValue + '%';
         } else {
-            displayValue = 'Not set';
+            displayValue = 'Add weight';
         }
     } else if (fieldType === 'assessment_lead_time') {
         if (newValue) {
@@ -746,11 +741,18 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     // Update the field
     const isMissing = !newValue || newValue === '' || displayValue === 'Not found' || displayValue === 'Not set';
     
-    // For assessment_title, preserve the <strong> tag structure
+    // For assessment_title, preserve the <strong> tag structure; date and weight keep their icon
     if (fieldType === 'assessment_title') {
-        fieldElement.innerHTML = `<strong>${displayValue}</strong>`;
+        fieldElement.innerHTML = `<strong>${escapeHtml(displayValue)}</strong>`;
+    } else if (fieldType === 'assessment_due_date') {
+        fieldElement.innerHTML = '<i data-lucide="calendar"></i> ' + escapeHtml(displayValue);
+    } else if (fieldType === 'assessment_weight') {
+        fieldElement.innerHTML = '<i data-lucide="percent"></i> ' + escapeHtml(displayValue);
     } else {
-        fieldElement.innerHTML = displayValue;
+        fieldElement.innerHTML = escapeHtml(displayValue);
+    }
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (e) { /* icons are decoration */ }
     }
     
     fieldElement.setAttribute('data-current-value', newValue || '');
@@ -764,6 +766,77 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     // Update completeness metrics without full page reload
     // The field display has been updated, so we're done
     // User can continue editing other fields
+}
+
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+
+/**
+ * "2026-04-20 09:00" / "2026-04-20T09:00" -> "Apr 20, 2026 9:00 AM"; 23:59 shows the date only.
+ */
+function formatDueDate(value) {
+    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+    if (!m) return value;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let out = `${months[parseInt(m[2], 10) - 1]} ${m[3]}, ${m[1]}`;
+    if (m[4] !== undefined && !(m[4] === '23' && m[5] === '59')) {
+        const h = parseInt(m[4], 10);
+        out += ` ${((h + 11) % 12) + 1}:${m[5]} ${h < 12 ? 'AM' : 'PM'}`;
+    }
+    return out;
+}
+
+/**
+ * Re-render the four summary tiles from the numbers the server just computed (D19).
+ */
+function applyCompleteness(c) {
+    if (!c) return;
+    const set = (name, text) => { const el = document.querySelector(`[data-tile="${name}"]`); if (el) el.textContent = text; };
+    set('assessments', c.num_assessments);
+    const total = document.querySelector('[data-tile="total"]');
+    if (total) {
+        total.textContent = `${c.total_weight}%`;
+        total.className = `stat-value completeness-${c.total_class}`;
+    }
+    set('total-label', 'of 100% found' + (c.bonus_weight ? ` (+${c.bonus_weight} bonus)` : ''));
+    set('slots', `${c.num_lecture_sections} / ${c.num_lab_sections} / ${c.num_tutorial_sections}`);
+    const undated = document.querySelector('[data-tile="undated"]');
+    if (undated) {
+        undated.textContent = c.assessments_undated;
+        undated.classList.toggle('completeness-medium', c.assessments_undated > 0);
+    }
+}
+
+/**
+ * Badge and note of the edited row: "Needs a date" and "no calendar event until you add a date"
+ * go away once a date exists, and come back when it is cleared (D19).
+ */
+function applyRowState(fieldElement, row) {
+    if (!row) return;
+    const item = fieldElement.closest('.assessment-item');
+    if (!item) return;
+    const header = item.querySelector('.assessment-header');
+    let badge = item.querySelector('.badge-needs-date');
+    const missing = !row.has_date && !row.is_bonus;
+    if (missing && !badge && header) {
+        badge = document.createElement('span');
+        badge.className = 'badge badge-warning badge-needs-date';
+        badge.textContent = 'Needs a date';
+        const title = header.querySelector('.assessment-title');
+        if (title && title.nextSibling) header.insertBefore(badge, title.nextSibling); else header.appendChild(badge);
+    } else if (!missing && badge) {
+        badge.remove();
+    }
+    const flagged = (row.needs_review || missing || !row.weight) && !row.is_bonus;
+    item.classList.toggle('needs-review', flagged);
+    let note = item.querySelector('.date-reason');
+    if (missing) {
+        if (!note) { note = document.createElement('p'); note.className = 'date-reason'; item.appendChild(note); }
+        note.textContent = (row.date_note || 'No due date') + ' — no calendar event until you add a date.';
+    } else if (note) {
+        note.remove();
+    }
 }
 
 /**

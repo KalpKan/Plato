@@ -44,3 +44,30 @@ def test_cache_lookup_miss(tmp_path):
 
 
 
+
+
+def test_extraction_cache_is_keyed_on_the_parser_version(tmp_path, monkeypatch):
+    """D13: a row written by an older parser must be a miss after a parser change."""
+    from src import cache as cache_mod
+    from src.models import CourseTerm, ExtractedCourseData
+    from datetime import date
+
+    assert isinstance(cache_mod.PARSER_VERSION, str) and len(cache_mod.PARSER_VERSION) >= 8
+    cm = CacheManager(cache_dir=tmp_path / "cache")
+    data = ExtractedCourseData(term=CourseTerm(term_name="Fall 2026", start_date=date(2026, 9, 8), end_date=date(2026, 12, 8)),
+                               lecture_sections=[], lab_sections=[], assessments=[], course_code="TEST 1000")
+    cm.store_extraction("a" * 64, data)
+    assert cm.lookup_extraction("a" * 64) is not None
+    monkeypatch.setattr(cache_mod, "PARSER_VERSION", "0000deadbeef")
+    assert cm.lookup_extraction("a" * 64) is None, "old parser's row served after a parser change"
+    cm.store_extraction("a" * 64, data)
+    assert cm.lookup_extraction("a" * 64) is not None
+    cm.delete_extraction("a" * 64)
+    assert cm.lookup_extraction("a" * 64) is None
+
+
+def test_parser_version_changes_with_the_parser_source(tmp_path):
+    from src.cache import parser_version
+    v1 = parser_version()
+    assert v1 == parser_version()  # stable within one process
+    assert v1 != parser_version(extra=b"pretend a parser file changed")

@@ -191,26 +191,28 @@ class RuleResolver:
         Returns:
             timedelta or None if cannot parse
         """
-        # Pattern for hours
-        hours_match = re.search(r'(\d+)\s+hours?', rule_text, re.IGNORECASE)
-        if hours_match:
-            hours = int(hours_match.group(1))
-            return timedelta(hours=hours)
-        
-        # Pattern for days
-        days_match = re.search(r'(\d+)\s+days?', rule_text, re.IGNORECASE)
-        if days_match:
-            days = int(days_match.group(1))
-            return timedelta(days=days)
-        
-        # Pattern for weeks
-        weeks_match = re.search(r'(\d+)\s+weeks?', rule_text, re.IGNORECASE)
-        if weeks_match:
-            weeks = int(weeks_match.group(1))
-            return timedelta(weeks=weeks)
-        
+        words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
+        low = rule_text.lower()
+
+        def num(m):
+            g = m.group(1)
+            return int(g) if g.isdigit() else words.get(g, 0)
+
+        m = re.search(r'(\d+|one|two|three)\s*(?:hours?|hrs?|h)\b', low)
+        if m:
+            return timedelta(hours=num(m))
+        m = re.search(r'(\d+|one|two|three|four|five|six|seven)\s*(?:days?|d)\b', low)
+        if m:
+            return timedelta(days=num(m))
+        m = re.search(r'(\d+|one|two|three)\s*(?:weeks?|wks?)\b', low)
+        if m:
+            return timedelta(weeks=num(m))
+        if re.search(r'\b(?:next|following)\s+(?:lab|tutorial|lecture|class|week)\b', low):
+            return timedelta(weeks=1)
+        if re.search(r'\b(?:day\s+of|end\s+of|during|in\s+(?:the\s+)?(?:lab|tutorial|class)|beginning\s+of|start\s+of)\b', low):
+            return timedelta(0)
         return None
-    
+
     def _generate_occurrences(self, section: SectionOption,
                              term: CourseTerm) -> List[datetime]:
         """Generate all occurrences of a section within term.
@@ -223,43 +225,39 @@ class RuleResolver:
             List of datetime occurrences
         """
         occurrences = []
-        
+
         # Determine date range
         if section.date_range:
             start_date, end_date = section.date_range
         else:
             start_date, end_date = term.start_date, term.end_date
-        
-        # Find first occurrence
-        current_date = start_date
-        first_occurrence = None
-        
-        # Find first day of week that matches
-        while current_date <= end_date:
-            if current_date.weekday() in section.days_of_week:
-                first_occurrence = current_date
-                break
-            current_date += timedelta(days=1)
-        
-        if not first_occurrence:
+        if not start_date or not end_date or not section.start_time:
             return []
-        
-        # Generate all occurrences
-        current_date = first_occurrence
+        days = _day_numbers(section.days_of_week)
+        if not days:
+            return []
+        reading = list(getattr(term, "reading_weeks", None) or [])
+
+        current_date = start_date
         while current_date <= end_date:
-            if current_date.weekday() in section.days_of_week:
-                # Combine date with section time
-                occurrence = datetime.combine(
-                    current_date,
-                    section.start_time
-                )
-                occurrences.append(occurrence)
-            
-            # Move to next week
-            if current_date.weekday() == max(section.days_of_week):
-                current_date += timedelta(days=7)
-            else:
-                current_date += timedelta(days=1)
-        
+            if current_date.weekday() in days and not any(a <= current_date <= b for a, b in reading):
+                occurrences.append(datetime.combine(current_date, section.start_time))
+            current_date += timedelta(days=1)
         return occurrences
+
+
+_DAY_NAMES = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
+
+
+def _day_numbers(days) -> List[int]:
+    """Section days come as 0-6 from the parser and the form, or as 'Mon'/'Monday' from older rows."""
+    out = []
+    for d in days or []:
+        if isinstance(d, int):
+            out.append(d)
+        else:
+            n = _DAY_NAMES.get(str(d)[:3].lower())
+            if n is not None:
+                out.append(n)
+    return sorted(set(out))
 

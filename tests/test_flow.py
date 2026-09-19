@@ -175,3 +175,72 @@ def test_edit_routes_store_extraction_once(monkeypatch, tmp_path):
     r = c.post("/api/remove-assessment", json={"assessment_index": 0})
     assert r.status_code == 200, r.data
     assert len(calls) == 1
+
+
+def _lab_rule_data():
+    term = CourseTerm(term_name="Fall 2026", start_date=date(2026, 9, 8), end_date=date(2026, 12, 8),
+                      reading_weeks=[(date(2026, 11, 2), date(2026, 11, 8))], timezone="America/Toronto")
+    lec = SectionOption(section_type="lecture", section_id="001", days_of_week=[4],
+                        start_time=time(13, 30), end_time=time(14, 30), location="HSB-236")
+    labs = AssessmentTask(title="Labs (Total = 8)", type="lab_report", weight_percent=50.0,
+                          due_rule="Lab Report due 24hrs after each Lab Session", rule_anchor="lab",
+                          date_status="rule", date_note="Relative rule: Lab Report due 24hrs after each Lab Session",
+                          confidence=0.9, needs_review=True)
+    proj = AssessmentTask(title="PCB Project", type="project", weight_percent=20.0,
+                          due_datetime=datetime(2026, 11, 29, 23, 59), confidence=0.9)
+    return ExtractedCourseData(term=term, lecture_sections=[lec], lab_sections=[], assessments=[labs, proj],
+                               course_code="ECE 2240A", course_name="Electronics Laboratory I")
+
+
+def test_lab_rule_without_a_lab_slot_tells_the_visitor_to_add_one(monkeypatch, tmp_path):
+    """D16: the review page must say the lab slot is needed, and the .ics must not silently drop the row."""
+    mod = _app(monkeypatch, tmp_path)
+    mod.get_cache().store_extraction(HASH, _lab_rule_data())
+    c = mod.app.test_client()
+    with c.session_transaction() as s:
+        s["pdf_hash"] = HASH; s["pdf_filename"] = "x.pdf"; s["session_id"] = "sid"; s["user_choices"] = {}
+    r = c.get("/review")
+    assert r.status_code == 200
+    assert b"Add Section" in r.data and b"one due event per lab" in r.data.lower().replace(b"\xe2\x80\x99", b"'") or b"per lab" in r.data.lower()
+
+
+def test_lab_rule_with_a_manual_lab_slot_gives_one_due_event_per_lab(monkeypatch, tmp_path):
+    """D16: Monday lab 14:30-17:30 -> lab report due Tuesdays 14:30, capped at the stated 8, none in reading week."""
+    mod = _app(monkeypatch, tmp_path)
+    mod.get_cache().store_extraction(HASH, _lab_rule_data())
+    c = mod.app.test_client()
+    with c.session_transaction() as s:
+        s["pdf_hash"] = HASH; s["pdf_filename"] = "x.pdf"; s["session_id"] = "sid"; s["user_choices"] = {}
+    r = c.post("/review", data={
+        "lecture_section": "0", "lab_section": "manual_0", "tutorial_section": "none",
+        "manual_lab_sections": '[{"days":[0],"start_time":"14:30","end_time":"17:30","location":"TEB-1"}]'})
+    assert r.status_code == 200 and r.mimetype == "text/calendar"
+    ics = r.data.decode()
+    import re
+    due = re.findall(r"SUMMARY:ECE 2240A: (Lab report \d+) due\r?\n", ics)
+    assert len(due) == 8, ics
+    starts = re.findall(r"SUMMARY:ECE 2240A: Lab report \d+ due\r?\n(?:.*\r?\n)*?DTSTART;TZID=America/Toronto:(\d{8}T\d{6})", ics)
+    assert len(starts) == 8
+    for s_ in starts:
+        d = datetime.strptime(s_, "%Y%m%dT%H%M%S")
+        assert d.weekday() == 1 and d.time() == time(14, 30), s_
+        assert not (date(2026, 11, 2) <= d.date() <= date(2026, 11, 9)), "lab report in reading week"
+    assert "Labs (Total = 8) due" not in ics
+
+
+def test_update_field_returns_completeness_and_row_state(monkeypatch, tmp_path):
+    """D19: the review page re-renders its tiles and badges from the update response."""
+    mod = _app(monkeypatch, tmp_path)
+    c = _client_with_pdf(mod)
+    r = c.post("/api/update-field", json={"field_type": "assessment_weight", "assessment_index": 0, "value": "35"})
+    body = r.get_json()
+    assert body["success"] and body["completeness"]["total_weight"] == 55 and body["completeness"]["assessments_undated"] == 0
+    assert body["row"]["weight"] == 35 and body["row"]["has_date"] is True
+    r = c.post("/api/update-field", json={"field_type": "assessment_due_date", "assessment_index": 1, "value": ""})
+    body = r.get_json()
+    assert body["completeness"]["assessments_undated"] == 1 and body["row"]["has_date"] is False
+    r = c.post("/api/update-field", json={"field_type": "assessment_due_date", "assessment_index": 1, "value": "2026-04-20T09:00"})
+    body = r.get_json()
+    assert body["completeness"]["assessments_undated"] == 0 and body["row"]["due_display"] == "Apr 20, 2026 9:00 AM"
+    html = c.get("/review").data.decode()
+    assert 'data-tile="undated"' in html and "badge-needs-date" not in html

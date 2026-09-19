@@ -499,9 +499,13 @@ def _dedupe(items: List[Assessment]) -> List[Assessment]:
     return out
 
 
+_ORDINALS = {"first": "1", "second": "2", "third": "3", "fourth": "4", "fifth": "5", "sixth": "6", "seventh": "7", "eighth": "8"}
+
+
 def _numbering(norm: str) -> List[str]:
-    """Digits, trailing roman numerals and single letters that distinguish 'Reflection I' from 'Reflection II'."""
-    toks = re.findall(r"\d+", norm)
+    """Digits, ordinal words, trailing roman numerals and single letters that distinguish
+    'Reflection I' from 'Reflection II' and 'First test' from 'Second test'."""
+    toks = re.findall(r"\d+", norm) + [_ORDINALS[w] for w in norm.split() if w in _ORDINALS]
     m = re.search(r"\b([ivx]{1,4}|[a-h])$", norm)
     if m:
         toks.append(m.group(1))
@@ -616,6 +620,302 @@ def _from_numeric_text_table(lines: List[str], resolver: DateResolver) -> List[A
     return out
 
 
+
+# ------------------------------------------------- dated bullet items (D14)
+_WORD_NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+                 "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15}
+_BULLET_LEAD = re.compile(r"^\s*(?:[•*\-–—▪●○]|o(?=\s)|\d{1,2}[.)]|[a-z][.)])\s*")
+# "- Assignment 1: From the content ...", "- Midterm exam: Weeks 1–6 (Oct 21, ...)", "- Project: Submission deadline: Dec 6"
+_ITEM_HEAD = re.compile(r"^([A-Z][A-Za-z#\-]*(?:\s+[A-Za-z#\-]*\d*[A-Za-z]?){0,3}?)\s*:\s*(.+)$")
+_DEADLINE_KEY = re.compile(r"\b(?:submission\s+deadline|deadline|due\s+date|due|submit(?:ted)?\s+by|hand(?:ed)?\s+in\s+by)\s*[:\-–]?\s*(?:on\s+|by\s+|at\s+)?", re.I)
+_SEGMENT_END = re.compile(r"[;)]|,?\s*\b(?:peer\s+review|optional|available|release[ds]?|posted|open(?:s|ed)?)\b", re.I)
+_PAREN = re.compile(r"\(([^()]*)\)")
+
+
+@dataclass
+class DatedItem:
+    title: str
+    date: DateResult
+    line: str
+
+
+def _join_wrapped(lines: List[str], i: int) -> str:
+    """A bullet whose parenthesis (or 'deadline:') runs onto the next line(s)."""
+    text = lines[i].rstrip()
+    for k in (1, 2):
+        if i + k >= len(lines):
+            break
+        unbalanced = text.count("(") > text.count(")")
+        dangling = bool(re.search(r"(?:deadline|due|at|on|by)\s*:?\s*$", text, re.I))
+        nxt = lines[i + k].strip()
+        if not (unbalanced or dangling) or not nxt or _BULLET_LEAD.match(lines[i + k]) and _ITEM_HEAD.match(_BULLET_LEAD.sub("", lines[i + k])):
+            break
+        text = text + " " + nxt
+    return text
+
+
+def _from_dated_bullets(lines: List[str], resolver: DateResolver) -> List[DatedItem]:
+    out: List[DatedItem] = []
+    for i, raw in enumerate(lines):
+        stripped = _BULLET_LEAD.sub("", raw)
+        m = _ITEM_HEAD.match(stripped)
+        if not m:
+            continue
+        title = clean_title(m.group(1))
+        if not title or len(title) > 30 or not _NOUN.search(title) or _PCT.search(title) or _POLICY.search(title):
+            continue
+        if re.match(r"^(?:week|lecture|class|chapter|unit|module|topic|reading)s?\b", title, re.I):
+            continue
+        body = _join_wrapped(lines, i)
+        body = _BULLET_LEAD.sub("", body)
+        body = body[len(m.group(1)):].lstrip(" :")
+        dr = _date_in_bullet(body, resolver)
+        if dr is None:
+            continue
+        out.append(DatedItem(title=title, date=dr, line=raw.strip()))
+    return out
+
+
+def _date_in_bullet(body: str, resolver: DateResolver) -> Optional[DateResult]:
+    flat = re.sub(r"\s+", " ", body)
+    km = _DEADLINE_KEY.search(flat)
+    if km:
+        seg = flat[km.end():]
+        end = _SEGMENT_END.search(seg)
+        seg = seg[:end.start()] if end else seg
+        dr = resolver.resolve(seg)
+        if dr.status == "recurring" and dr.dates:
+            dr = DateResult(status="exact", date=dr.dates[0], time=dr.time, raw=seg)
+        if dr.status in ("exact", "tba"):
+            return dr
+    for pm in _PAREN.finditer(flat):
+        inner = pm.group(1)
+        if re.search(rf"\b{MONTH_RE}\b", inner, re.I) or re.search(r"\btb[ad]\b", inner, re.I):
+            dr = resolver.resolve(inner)
+            if dr.status in ("exact", "tba", "registrar", "range"):
+                return dr
+    if re.search(r"\btb[ad]\b", flat, re.I) and not re.search(rf"\b{MONTH_RE}\b", flat, re.I):
+        return DateResult(status="tba", raw=flat, note="Outline says the date is TBA")
+    return None
+
+
+def _noun_stem(title: str) -> str:
+    m = _NOUN.search(title or "")
+    if not m:
+        return ""
+    w = m.group(0).lower()
+    w = re.sub(r"zzes$", "z", w)
+    w = re.sub(r"ies$", "y", w)
+    return w.rstrip("s")
+
+
+def _same_item(a: Assessment, d: DatedItem) -> bool:
+    if _numbering(a.norm()) != _numbering(norm_title(d.title)):
+        return False
+    ka, kd = a.kind, infer_kind(d.title)
+    if ka == kd and _noun_stem(a.title) == _noun_stem(d.title):
+        return True
+    if {ka, kd} <= {"midterm", "test"} and re.search(r"mid-?term", a.title + d.title, re.I):
+        return True
+    return difflib.SequenceMatcher(None, a.norm(), norm_title(d.title)).ratio() >= 0.75
+
+
+def _group_members(group: Assessment, dated: List[DatedItem]) -> List[DatedItem]:
+    stem = _noun_stem(group.title)
+    if not stem or not re.search(rf"\b{re.escape(stem)}(?:s|zes|es)?\b", norm_title(group.title)):
+        return []
+    if not re.search(r"s\b", norm_title(group.title).split()[-1] if norm_title(group.title) else "") and not re.search(r"\d", group.evidence):
+        return []
+    members = [d for d in dated if _noun_stem(d.title) == stem and re.search(r"\d", d.title) and d.date.status == "exact"]
+    seen, uniq = set(), []
+    for d in members:
+        key = norm_title(d.title)
+        if key not in seen:
+            seen.add(key); uniq.append(d)
+    return uniq
+
+
+def _stated_count(evidence: str, stem: str) -> Optional[int]:
+    m = re.search(rf"\b(\d{{1,2}}|{'|'.join(_WORD_NUMBERS)})\s+(?:[a-z\-]+\s+)?{re.escape(stem)}(?:s|zes|es)?\b", evidence, re.I)
+    if not m:
+        return None
+    w = m.group(1).lower()
+    return int(w) if w.isdigit() else _WORD_NUMBERS.get(w)
+
+
+def _split_weights(group: Assessment, n: int) -> Optional[List[float]]:
+    """'(three assignments: the first one 5%, and the remaining two, 6% each)' -> [5, 6, 6];
+    '(four quizzes, 2% each)' -> [2, 2, 2, 2]; otherwise an equal split of the group weight."""
+    ev = group.evidence.replace("\n", " ")
+    total = group.weight or 0
+    m = re.search(r"first\s+(?:one|\w+)\s+(\d{1,3}(?:\.\d+)?)\s*%.*?remaining\s+(?:\w+),?\s+(\d{1,3}(?:\.\d+)?)\s*%\s*each", ev, re.I)
+    if m:
+        ws = [float(m.group(1))] + [float(m.group(2))] * (n - 1)
+        if abs(sum(ws) - total) <= 0.5:
+            return ws
+    m = re.search(r"(\d{1,3}(?:\.\d+)?)\s*%\s*each", ev, re.I)
+    if m:
+        each = float(m.group(1))
+        if abs(each * n - total) <= 0.5:
+            return [each] * n
+    if total and n:
+        each = round(total / n, 2)
+        ws = [each] * n
+        ws[-1] = round(total - each * (n - 1), 2)
+        return ws
+    return None
+
+
+def _apply_dated_bullets(items: List[Assessment], dated: List[DatedItem]) -> List[Assessment]:
+    """Date existing rows from their bullet ('Project: Submission deadline: Dec 6'), and split a
+    group row ('Assignments 17% (three assignments ...)') into its dated members."""
+    if not dated:
+        return items
+    out: List[Assessment] = []
+    for a in items:
+        if a.date.status in ("exact", "recurring"):
+            out.append(a); continue
+        hit = next((d for d in dated if _same_item(a, d)), None) if a.date.status in ("missing", "tba") else None
+        if hit and (hit.date.status == "exact" or a.date.status == "missing"):
+            a.date = DateResult(status=hit.date.status, date=hit.date.date, time=hit.date.time,
+                                end_time=hit.date.end_time, window=hit.date.window, raw=hit.line,
+                                note="Date taken from the assessment list" if hit.date.status == "exact" else hit.date.note)
+            a.evidence = f"{a.evidence} | {hit.line}"
+            if hit.date.status == "exact":
+                a.confidence = max(a.confidence, 0.8)
+        out.append(a)
+    items = out
+    out = []
+    for a in items:
+        members = _group_members(a, dated) if a.date.status not in ("exact", "recurring") and a.weight else []
+        stated = _stated_count(a.evidence, _noun_stem(a.title)) if members else None
+        if len(members) >= 2 and (stated is None or stated == len(members)) \
+                and not any(_same_item(b, m) for b in items if b is not a for m in members):
+            ws = _split_weights(a, len(members))
+            if ws:
+                for d, w in zip(members, ws):
+                    out.append(Assessment(title=d.title, weight=w, kind=infer_kind(d.title), date=d.date, source="inline",
+                                          evidence=f"{a.evidence} | {d.line}", confidence=0.8))
+                continue
+        out.append(a)
+    return out
+
+
+# ------------------------------------------------ explicit date lists (D15)
+_DATE_LIST = re.compile(rf"\b({MONTH_RE})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?(?!\d)((?:\s*(?:,|&|and|,\s*and)\s*(?:and\s+)?\d{{1,2}}(?:st|nd|rd|th)?(?![\d:]))*)", re.I)
+
+
+def _date_list(segment: str, resolver: DateResolver) -> List[date]:
+    """'September 12, 19, 26; October 10, 17, 31; and November 14' -> seven dates."""
+    found: List[date] = []
+    for m in _DATE_LIST.finditer(segment):
+        month = m.group(1)
+        days = [int(m.group(2))] + [int(x) for x in re.findall(r"\d{1,2}", m.group(3))]
+        for d in days:
+            r = resolver.resolve(f"{month} {d}")
+            if r.status == "exact" and r.date:
+                found.append(r.date)
+    return sorted(set(found))
+
+
+def _explicit_dates_for(a: Assessment, text: str, resolver: DateResolver) -> Optional[Tuple[List[date], Optional[time]]]:
+    """A heading 'Quizzes:' followed (within a few lines) by a list of at least three dates."""
+    stem = _noun_stem(a.title)
+    if not stem:
+        return None
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if not re.match(rf"^\s*(?:weekly\s+|online\s+|in-class\s+)?{re.escape(stem)}(?:s|zes|es)?\s*(?:\(.*?\))?\s*:\s*$", line, re.I):
+            continue
+        block = " ".join(lines[i + 1:i + 5])
+        stop = re.search(r"\n\s*[A-Z][A-Za-z ]{2,30}:\s*$", "\n".join(lines[i + 1:i + 5]), re.M)
+        if stop:
+            block = "\n".join(lines[i + 1:i + 5])[:stop.start()].replace("\n", " ")
+        dates = _date_list(block, resolver)
+        if len(dates) >= 3:
+            t, _ = parse_time_span(block)
+            return dates, t
+    return None
+
+
+def _reconcile_recurring(items: List[Assessment], text: str, resolver: DateResolver) -> None:
+    """An 'every Friday' expansion yields to the outline's own date list; when the outline states a
+    count that the expansion does not match and lists no dates, no dates are invented."""
+    for a in items:
+        if a.date.status != "recurring" or not a.date.note.startswith("Every "):
+            continue
+        listed = _explicit_dates_for(a, text, resolver)
+        if listed:
+            dates, t = listed
+            a.date = DateResult(status="recurring", dates=dates, time=t or a.date.time, raw=a.date.raw,
+                                note=f"{len(dates)} dates listed in the outline ({dates[0]:%b %-d} – {dates[-1]:%b %-d, %Y})")
+            continue
+        stem = _noun_stem(a.title)
+        n = None
+        for m in re.finditer(rf"\b(?:total\s+of|there\s+will\s+be(?:\s+a\s+total\s+of)?)\s+(\d{{1,2}}|{'|'.join(_WORD_NUMBERS)})\s+{re.escape(stem)}(?:s|zes|es)?\b", text, re.I):
+            w = m.group(1).lower()
+            n = int(w) if w.isdigit() else _WORD_NUMBERS.get(w)
+            break
+        if n and a.date.dates and n != len(a.date.dates):
+            first, last = a.date.dates[0], a.date.dates[-1]
+            a.date = DateResult(status="range", window=(first, last), raw=a.date.raw,
+                                note=f"Outline says {n} {stem}s between {first:%b %-d} and {last:%b %-d, %Y} but the weekly rule "
+                                     f"gives {len(a.date.dates)} dates; it does not list them, so add the {n} dates yourself.")
+
+
+
+# ------------------------------------- section-dependent dates and chapter lists (D14, MOS)
+_SECTION_DATE_LINE = re.compile(r"^\s*section\s+(\d{3})\s*[:\-–]\s*(.+)$", re.I)
+_LIST_DUE_LINE = re.compile(rf"^\s*(?:[•*\-–—▪●○]\s*)?(.{{0,70}}?\b(?:{NOUNS})s?)\s*:\s*due\s+(.+)$", re.I)
+
+
+def _enrich_section_dependent(items: List[Assessment], lines: List[str], resolver: DateResolver) -> None:
+    """'Exam #1 (during class time) = 31%' followed by 'Section 001: Tues Oct 7, 2pm-4pm ...' lines:
+    the date depends on the section, so the row gets the window and a note, never one of the dates."""
+    for a in items:
+        if a.date.status != "missing":
+            continue
+        head = a.evidence.split(" | ")[0].strip()
+        for i, line in enumerate(lines):
+            if not head or head not in line:
+                continue
+            found = []
+            for nxt in lines[i + 1:i + 6]:
+                sm = _SECTION_DATE_LINE.match(nxt)
+                if not sm:
+                    break
+                dr = resolver.resolve(sm.group(2))
+                if dr.status == "exact" and dr.date:
+                    found.append((sm.group(1), dr))
+            if len(found) >= 2:
+                ds = sorted(d.date for _, d in found)
+                parts = ", ".join(f"section {sid} {d.date:%b %-d}" + (f" {d.time:%-I:%M %p}" if d.time else "") for sid, d in found)
+                a.date = DateResult(status="range", window=(ds[0], ds[-1]), raw=a.evidence,
+                                    note=f"Date depends on your section ({parts}); pick the date for your section with the calendar icon.")
+                break
+
+
+def _enrich_chapter_lists(items: List[Assessment], lines: List[str], resolver: DateResolver) -> None:
+    """'Chapter 1, Chapter 2, Chapter 3 assignments: due Sept 19 @ 11:59pm' x 8 lines -> the
+    'Chapter Assignments' row becomes recurring on those eight dates."""
+    per_stem: Dict[str, List[Tuple[date, Optional[time]]]] = {}
+    for line in lines:
+        m = _LIST_DUE_LINE.match(line)
+        if not m:
+            continue
+        dr = resolver.resolve(m.group(2))
+        if dr.status == "exact" and dr.date:
+            per_stem.setdefault(_noun_stem(m.group(1)), []).append((dr.date, dr.time))
+    for a in items:
+        if a.date.status != "missing":
+            continue
+        hits = per_stem.get(_noun_stem(a.title), [])
+        if len(hits) >= 3:
+            ds = sorted({d for d, _ in hits})
+            t = next((t for _, t in hits if t), None)
+            a.date = DateResult(status="recurring", dates=ds, time=t, raw=a.evidence,
+                                note=f"{len(ds)} due dates listed in the outline ({ds[0]:%b %-d} – {ds[-1]:%b %-d, %Y})")
+
 def extract_assessments(pages_text: Sequence[Tuple[int, str]],
                         tables: Sequence[Sequence[Sequence[Optional[str]]]],
                         term: TermInfo) -> Tuple[List[Assessment], List[str]]:
@@ -656,6 +956,7 @@ def extract_assessments(pages_text: Sequence[Tuple[int, str]],
             items = numeric + [a for a in items if a.is_bonus]
 
     items = _dedupe(items)
+    items = _apply_dated_bullets(items, _from_dated_bullets(lines, resolver))
     items = _drop_groups(items)
 
     # a weight far above 100 after grouping: the lowest-confidence duplicates go
@@ -665,6 +966,9 @@ def extract_assessments(pages_text: Sequence[Tuple[int, str]],
 
     _enrich_from_schedule(items, _schedule_rows(tables, lines, resolver))
     _enrich_from_prose(items, text, resolver)
+    _enrich_section_dependent(items, lines, resolver)
+    _enrich_chapter_lists(items, lines, resolver)
+    _reconcile_recurring(items, text, resolver)
 
     for a in items:
         if a.date.status == "exact" and a.date.time is None:
