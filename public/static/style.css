@@ -1070,6 +1070,11 @@ html.motion-ready [data-reveal] { opacity: 0; }
         scroll-behavior: auto !important;
     }
 
+    /* Specific enough to beat `html.motion-ready [data-reveal]`. The JS gate
+       already skips arming that class under reduce, but the stylesheet must
+       land on the final state on its own, without depending on a script. */
+    html.motion-ready [data-reveal],
+    html.motion-ready [data-reveal].is-in,
     [data-reveal],
     [data-reveal].is-in,
     .dropzone-body,
@@ -1080,7 +1085,7 @@ html.motion-ready [data-reveal] { opacity: 0; }
     .modal-content,
     .badge,
     .editable-field.editing {
-        opacity: 1;
+        opacity: 1 !important;
         transform: none;
         animation: none !important;
     }

@@ -130,6 +130,15 @@ def test_paper_tokens_are_the_spec_tokens():
         assert f"{token}: {value}" in CSS
 
 
+def test_reduced_motion_beats_the_reveal_gate_on_its_own():
+    # `html.motion-ready [data-reveal] { opacity: 0 }` is more specific than a
+    # bare `[data-reveal] { opacity: 1 }`, so the reduce block has to name the
+    # gated selector (and win) rather than leaning on the JS gate.
+    guard = CSS.split("@media (prefers-reduced-motion: reduce)", 1)[1]
+    assert "html.motion-ready [data-reveal]" in guard
+    assert "opacity: 1 !important" in guard
+
+
 def test_content_never_depends_on_the_reveal_script_succeeding():
     # [data-reveal] starts at opacity 0 only once initMotion has taken charge.
     assert "html.motion-ready [data-reveal] { opacity: 0; }" in CSS
