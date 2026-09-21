@@ -3,7 +3,7 @@
   "functions": {
     "src/app.py": {
       "maxDuration": 60,
-      "excludeFiles": "{tests/**,figma landingpage/**,legacy/**,course_outlines/**,test_*.py,*.md,.venv/**,setup.py,package.json,uploads/**,temp_calendars/**}"
+      "excludeFiles": "{tests/**,docs/**,figma landingpage/**,legacy/**,course_outlines/**,test_*.py,*.md,.venv/**,setup.py,package.json,uploads/**,temp_calendars/**}"
     }
   }
 }
