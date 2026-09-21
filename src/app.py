@@ -303,11 +303,93 @@ def build_calendar(extracted_data: ExtractedCourseData,
     return filename, calendar.to_ical(), extracted_data
 
 
+def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
+    """How many events the visitor's calendar will actually hold, and the range.
+
+    Counting BEGIN:VEVENT is wrong: a weekly lecture, lab or tutorial is ONE
+    VEVENT carrying RRULE ... UNTIL (icalendar_gen.py), so a whole term of
+    Monday lectures counts as 1. A four-series term reported 22 events for a
+    calendar that imports about 74 — and this number is the last thing the
+    download screen says before the visitor leaves, so it has to be true.
+    Recurring events are expanded; the range runs to the last occurrence, not
+    to the series' first DTSTART.
+    """
+    count = 0
+    days: List[date] = []
+    in_event = False
+    start_day: Optional[date] = None
+    rrule_line = b''
+
+    def flush():
+        nonlocal count, start_day, rrule_line
+        if start_day is None:
+            return
+        occurrences = [start_day]
+        m = re.search(rb'UNTIL=(\d{8})', rrule_line)
+        if b'FREQ=WEEKLY' in rrule_line and m:
+            try:
+                until = datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date()
+            except ValueError:
+                until = None
+            if until and until >= start_day:
+                # Every series this app writes is one weekday, interval 1.
+                d = start_day
+                occurrences = []
+                while d <= until:
+                    occurrences.append(d)
+                    d += timedelta(days=7)
+        count += len(occurrences)
+        days.extend(occurrences)
+        start_day = None
+        rrule_line = b''
+
+    for raw_line in ics_bytes.splitlines():
+        line = raw_line.strip()
+        if line == b'BEGIN:VEVENT':
+            in_event = True
+            start_day = None
+            rrule_line = b''
+            continue
+        if line == b'END:VEVENT':
+            flush()
+            in_event = False
+            continue
+        if not in_event:
+            continue
+        if line.startswith(b'RRULE'):
+            rrule_line = line
+            continue
+        m = re.match(rb'DTSTART[^:]*:(\d{8})', line)
+        if m and start_day is None:
+            try:
+                start_day = datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date()
+            except ValueError:
+                start_day = None
+
+    if not days:
+        return count, ''
+    first, last = min(days), max(days)
+    if first == last:
+        return count, first.strftime('%b %d, %Y')
+    # ASCII only: this value becomes an HTTP header, and headers are latin-1.
+    # An en dash here raised UnicodeEncodeError inside werkzeug and killed the
+    # whole download response; the page swaps in the en dash for display.
+    return count, f"{first.strftime('%b %d')} - {last.strftime('%b %d, %Y')}"
+
+
 def ics_response(filename: str, ics_bytes: bytes):
     """Stream an .ics back as a download in this same request."""
     resp = Response(ics_bytes, mimetype='text/calendar')
-    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    safe_name = filename.encode('ascii', 'replace').decode('ascii').replace('"', '')
+    resp.headers['Content-Disposition'] = f'attachment; filename="{safe_name}"'
     resp.headers['Cache-Control'] = 'no-store'
+    # Additive only: the review page reads these to name the file, the event count
+    # and the range in its confirmation block. Nothing else depends on them, and the
+    # body and mimetype are exactly what they were before.
+    count, span = ics_event_span(ics_bytes)
+    resp.headers['X-Plato-Events'] = str(count)
+    resp.headers['X-Plato-Range'] = span.encode('ascii', 'replace').decode('ascii')
+    resp.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Plato-Events, X-Plato-Range'
     return resp
 
 
@@ -446,8 +528,69 @@ def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
     metrics['total_class'] = 'over' if t > 102 else 'high' if t >= 95 else 'medium' if t >= 70 else 'low'
     metrics['assessments_undated'] = sum(1 for a in data.assessments
                                          if not a.due_datetime and not getattr(a, 'dates', None) and not getattr(a, 'is_bonus', False))
-    
+    metrics.update(summary_sentences(metrics))
+
     return metrics
+
+
+def _num(value: float) -> str:
+    """101.0 -> "101", 12.5 -> "12.5". Weights are read, not computed with."""
+    return f"{round(value, 2):g}"
+
+
+def summary_sentences(m: Dict[str, Any]) -> Dict[str, str]:
+    """The three reassurance lines at the top of /review, as sentences.
+
+    Replaces the unparseable "100% / OF 100% FOUND (+1.0 BONUS)" and
+    "1 / 0 / 0 / LECTURE / LAB / TUTORIAL SLOTS" the audit flagged. The strings
+    are built here rather than in Jinja so that the page and the inline-edit
+    endpoint (which returns this same dict) always say exactly the same thing.
+    """
+    n = m['num_assessments']
+    total = m['total_weight']
+    bonus = m.get('bonus_weight') or 0.0
+
+    if n == 0:
+        assessments = "No assessments were found in the outline."
+    else:
+        noun = "assessment" if n == 1 else "assessments"
+        head = f"All {n} {noun} found." if total >= 99.5 else f"{n} {noun} found."
+        if total >= 99.5:
+            head += f" Weights total {_num(total)} %."
+        else:
+            head += f" Weights total {_num(total)} % — {_num(100.0 - total)} % is unaccounted for."
+        if bonus:
+            head += f" Plus {_num(bonus)} % bonus, not counted."
+        assessments = head
+
+    found, absent = [], []
+    for count, label in ((m['num_lecture_sections'], 'lecture'),
+                         (m['num_lab_sections'], 'lab'),
+                         (m['num_tutorial_sections'], 'tutorial')):
+        if count:
+            found.append(f"{count} {label} slot{'s' if count != 1 else ''}.")
+        else:
+            absent.append(label)
+    if not found:
+        slots = "No lecture, lab or tutorial slot was found."
+    else:
+        slots = " ".join(found)
+        if absent:
+            slots += " No " + ", no ".join(absent) + "."
+
+    undated = m['assessments_undated']
+    if undated == 0:
+        undated_line = "Every assessment has a date."
+    elif undated == 1:
+        undated_line = "1 assessment still needs a date."
+    else:
+        undated_line = f"{undated} assessments still need a date."
+
+    return {
+        'summary_assessments': assessments,
+        'summary_slots': slots,
+        'summary_undated': undated_line,
+    }
 
 
 def deserialize_extracted_data(data: Dict[str, Any]) -> ExtractedCourseData:
@@ -510,7 +653,9 @@ def ingest_proxy(subpath: str):
 
 @app.context_processor
 def _inject_limits():
-    return {'max_mb': MAX_FILE_SIZE_MB}
+    # `step` drives the header's "01 Upload - 02 Review - 03 Download" rail; a
+    # template that does not say otherwise is on step 1.
+    return {'max_mb': MAX_FILE_SIZE_MB, 'step': 1}
 
 
 @app.route('/')
@@ -966,7 +1111,7 @@ def review():
         'is_manual': str(pdf_hash).startswith('manual-'),
     }
     
-    return render_template('review.html', **context)
+    return render_template('review.html', step=2, **context)
 
 
 @app.route('/manual', methods=['GET', 'POST'])
@@ -987,7 +1132,7 @@ def manual():
             end = deserialize_date(form['term_end']) if form.get('term_end') else None
         except ValueError:
             flash('Term dates must be real dates (YYYY-MM-DD).', 'error')
-            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB), 400
+            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB, step=1), 400
         term = CourseTerm(term_name=term_name, start_date=start, end_date=end, source='manual')
         assessments = []
         titles = form.getlist('assessment_title[]')
@@ -1048,7 +1193,7 @@ def manual():
         flash('Course entered. Review it below, then download the calendar.', 'success')
         return redirect(url_for('review'))
     
-    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB)
+    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB, step=1)
 
 
 @app.route('/api/update-field', methods=['POST'])
@@ -1328,11 +1473,14 @@ def update_field():
                 }
             except (ValueError, IndexError):
                 row = None
-        return jsonify({'success': True, 'message': 'Field updated successfully', 'row': row, 'completeness': {
-            'num_assessments': c['num_assessments'], 'total_weight': round(c['total_weight']), 'total_class': c['total_class'],
-            'bonus_weight': round(c.get('bonus_weight', 0.0), 1), 'num_lecture_sections': c['num_lecture_sections'],
-            'num_lab_sections': c['num_lab_sections'], 'num_tutorial_sections': c['num_tutorial_sections'],
-            'assessments_undated': c['assessments_undated']}})
+        # Send the completeness dict whole. Hand-picking keys here is what let
+        # the three summary sentences go stale after an edit: the page kept
+        # saying "2 assessments still need a date" with none left undated.
+        # `round()` on the total also turned 101.5 % into 102 % after an edit
+        # while the template rendered it with %g.
+        return jsonify({'success': True, 'message': 'Field updated successfully', 'row': row,
+                        'completeness': dict(c, total_weight=round(c['total_weight'], 1),
+                                             bonus_weight=round(c.get('bonus_weight', 0.0), 1))})
         
     except Exception as e:
         import traceback

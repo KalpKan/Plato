@@ -240,10 +240,42 @@ The codebase is organized into focused modules:
 See "How to deploy this" above. The old Railway/Docker files are kept for
 reference in `legacy/railway/` and are not used.
 
+## Design
+
+Plato's interface is a **registrar's ledger**: warm paper, ruled rows, a serif term header, and one
+amber accent whose only meaning is *"Plato could not read this — you must check it."* There is no
+card anywhere in the product; grouping is rules and spacing. The three screens are the drop zone, the
+ledger you proof-read, and the confirmation that names the file you just took.
+
+- `docs/design/DESIGN.md` — the shipped system: tokens with measured contrast, the type scale, the
+  table rules, the motion table, the reduced-motion policy, and the do-not list.
+- `docs/design/spec.md` — the locked spec the redesign was built against (MengTo's
+  `design-first-ui-prompting` skeleton), plus every amendment made during the build and why.
+- `docs/design/plan.md` — the task-by-task implementation plan.
+- `docs/images/redesign/` — every screen at 1440 and 390.
+
+Three rules worth knowing before you touch the front end:
+
+1. **One accent.** `--flag` marks only what Plato could not read. If something new needs colour to
+   look important, it needs better hierarchy instead.
+2. **One easing family**, `cubic-bezier(.22, 1, .36, 1)` in and `cubic-bezier(.4, 0, 1, 1)` out, and
+   every animation lands on a complete static final state under `prefers-reduced-motion: reduce`.
+   `transition: all` is banned.
+3. **Content never depends on the script.** Entrance animations only arm themselves once
+   `initMotion()` has set `html.motion-ready`, and the first uncaught JS error takes it back off.
+
+`tests/test_design.py` enforces all of this — it fails if the old glow token, the dark SaaS palette,
+a third easing curve, a `transition: all`, the fabricated calendar chips, the workflow diagram or the
+unparseable "of 100% found" fraction come back.
+
+Type is self-hosted from `public/static/fonts/` (Newsreader, Inter, JetBrains Mono — SIL OFL latin
+subsets, 138 KB, no font CDN; see `public/static/fonts/OFL.txt`).
+
 ## Documentation
 
 - `PROJECT_OVERVIEW.md` - Comprehensive project documentation
 - `EXTRACTION_PLAN.md` - Detailed extraction algorithm documentation
+- `docs/design/DESIGN.md` - The interface design system (see **Design** above)
 
 ## License
 

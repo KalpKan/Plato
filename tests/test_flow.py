@@ -243,4 +243,7 @@ def test_update_field_returns_completeness_and_row_state(monkeypatch, tmp_path):
     body = r.get_json()
     assert body["completeness"]["assessments_undated"] == 0 and body["row"]["due_display"] == "Apr 20, 2026 9:00 AM"
     html = c.get("/review").data.decode()
-    assert 'data-tile="undated"' in html and "badge-needs-date" not in html
+    # The four stat tiles became three sentences in the "Registrar's ledger"
+    # redesign (docs/design/spec.md, audit item P2 "confusing summary copy").
+    assert 'data-summary="undated"' in html and "badge-needs-date" not in html
+    assert "Every assessment has a date." in html
