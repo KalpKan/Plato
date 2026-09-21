@@ -303,11 +303,39 @@ def build_calendar(extracted_data: ExtractedCourseData,
     return filename, calendar.to_ical(), extracted_data
 
 
+def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
+    """How many events the calendar holds and the range they cover.
+
+    Used only to describe the download to the person who just took it
+    ("41 events, Sep 09 - Dec 08, 2026"); the bytes themselves are untouched.
+    """
+    count = ics_bytes.count(b'BEGIN:VEVENT')
+    days = []
+    for raw in re.findall(rb'^DTSTART[^:\r\n]*:(\d{8})', ics_bytes, re.MULTILINE):
+        try:
+            days.append(datetime.strptime(raw.decode('ascii'), '%Y%m%d').date())
+        except ValueError:
+            continue
+    if not days:
+        return count, ''
+    first, last = min(days), max(days)
+    if first == last:
+        return count, first.strftime('%b %d, %Y')
+    return count, f"{first.strftime('%b %d')} – {last.strftime('%b %d, %Y')}"
+
+
 def ics_response(filename: str, ics_bytes: bytes):
     """Stream an .ics back as a download in this same request."""
     resp = Response(ics_bytes, mimetype='text/calendar')
     resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     resp.headers['Cache-Control'] = 'no-store'
+    # Additive only: the review page reads these to name the file, the event count
+    # and the range in its confirmation block. Nothing else depends on them, and the
+    # body and mimetype are exactly what they were before.
+    count, span = ics_event_span(ics_bytes)
+    resp.headers['X-Plato-Events'] = str(count)
+    resp.headers['X-Plato-Range'] = span
+    resp.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Plato-Events, X-Plato-Range'
     return resp
 
 
@@ -446,8 +474,69 @@ def calculate_completeness(data: ExtractedCourseData) -> Dict[str, Any]:
     metrics['total_class'] = 'over' if t > 102 else 'high' if t >= 95 else 'medium' if t >= 70 else 'low'
     metrics['assessments_undated'] = sum(1 for a in data.assessments
                                          if not a.due_datetime and not getattr(a, 'dates', None) and not getattr(a, 'is_bonus', False))
-    
+    metrics.update(summary_sentences(metrics))
+
     return metrics
+
+
+def _num(value: float) -> str:
+    """101.0 -> "101", 12.5 -> "12.5". Weights are read, not computed with."""
+    return f"{round(value, 2):g}"
+
+
+def summary_sentences(m: Dict[str, Any]) -> Dict[str, str]:
+    """The three reassurance lines at the top of /review, as sentences.
+
+    Replaces the unparseable "100% / OF 100% FOUND (+1.0 BONUS)" and
+    "1 / 0 / 0 / LECTURE / LAB / TUTORIAL SLOTS" the audit flagged. The strings
+    are built here rather than in Jinja so that the page and the inline-edit
+    endpoint (which returns this same dict) always say exactly the same thing.
+    """
+    n = m['num_assessments']
+    total = m['total_weight']
+    bonus = m.get('bonus_weight') or 0.0
+
+    if n == 0:
+        assessments = "No assessments were found in the outline."
+    else:
+        noun = "assessment" if n == 1 else "assessments"
+        head = f"All {n} {noun} found." if total >= 99.5 else f"{n} {noun} found."
+        if total >= 99.5:
+            head += f" Weights total {_num(total)} %."
+        else:
+            head += f" Weights total {_num(total)} % — {_num(100.0 - total)} % is unaccounted for."
+        if bonus:
+            head += f" Plus {_num(bonus)} % bonus, not counted."
+        assessments = head
+
+    found, absent = [], []
+    for count, label in ((m['num_lecture_sections'], 'lecture'),
+                         (m['num_lab_sections'], 'lab'),
+                         (m['num_tutorial_sections'], 'tutorial')):
+        if count:
+            found.append(f"{count} {label} slot{'s' if count != 1 else ''}.")
+        else:
+            absent.append(label)
+    if not found:
+        slots = "No lecture, lab or tutorial slot was found."
+    else:
+        slots = " ".join(found)
+        if absent:
+            slots += " No " + ", no ".join(absent) + "."
+
+    undated = m['assessments_undated']
+    if undated == 0:
+        undated_line = "Every assessment has a date."
+    elif undated == 1:
+        undated_line = "1 assessment still needs a date."
+    else:
+        undated_line = f"{undated} assessments still need a date."
+
+    return {
+        'summary_assessments': assessments,
+        'summary_slots': slots,
+        'summary_undated': undated_line,
+    }
 
 
 def deserialize_extracted_data(data: Dict[str, Any]) -> ExtractedCourseData:
@@ -510,7 +599,9 @@ def ingest_proxy(subpath: str):
 
 @app.context_processor
 def _inject_limits():
-    return {'max_mb': MAX_FILE_SIZE_MB}
+    # `step` drives the header's "01 Upload - 02 Review - 03 Download" rail; a
+    # template that does not say otherwise is on step 1.
+    return {'max_mb': MAX_FILE_SIZE_MB, 'step': 1}
 
 
 @app.route('/')
@@ -966,7 +1057,7 @@ def review():
         'is_manual': str(pdf_hash).startswith('manual-'),
     }
     
-    return render_template('review.html', **context)
+    return render_template('review.html', step=2, **context)
 
 
 @app.route('/manual', methods=['GET', 'POST'])
@@ -987,7 +1078,7 @@ def manual():
             end = deserialize_date(form['term_end']) if form.get('term_end') else None
         except ValueError:
             flash('Term dates must be real dates (YYYY-MM-DD).', 'error')
-            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB), 400
+            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB, step=2), 400
         term = CourseTerm(term_name=term_name, start_date=start, end_date=end, source='manual')
         assessments = []
         titles = form.getlist('assessment_title[]')
@@ -1048,7 +1139,7 @@ def manual():
         flash('Course entered. Review it below, then download the calendar.', 'success')
         return redirect(url_for('review'))
     
-    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB)
+    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB, step=2)
 
 
 @app.route('/api/update-field', methods=['POST'])

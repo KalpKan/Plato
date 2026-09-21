@@ -1,0 +1,199 @@
+"""Design-system guarantees for the "Registrar's ledger" redesign.
+
+These tests hold the spec (docs/design/spec.md) in place: the slop the audit
+found must stay deleted, the rewritten copy must stay rewritten, every keyframe
+must stay guarded by prefers-reduced-motion, and /review must stay one ruled
+table rather than nine cards.
+"""
+from datetime import date, datetime, time
+from pathlib import Path
+
+import pytest
+
+from src.app import app, calculate_completeness, ics_response
+from src.models import AssessmentTask, CourseTerm, ExtractedCourseData, SectionOption
+
+ROOT = Path(__file__).resolve().parent.parent
+CSS = (ROOT / "public/static/style.css").read_text()
+JS = (ROOT / "public/static/app.js").read_text()
+INDEX_HTML = (ROOT / "templates/index.html").read_text()
+REVIEW_HTML = (ROOT / "templates/review.html").read_text()
+
+
+def _data(assessments=None, lecture=None, lab=None, tutorial=None):
+    return ExtractedCourseData(
+        term=CourseTerm(term_name="Fall 2026", start_date=date(2026, 9, 9), end_date=date(2026, 12, 8)),
+        lecture_sections=list(lecture or []),
+        lab_sections=list(lab or []),
+        assessments=list(assessments or []),
+        course_code="BIOL 1001A",
+        course_name="Test Course",
+        tutorial_sections=list(tutorial or []),
+    )
+
+
+def _section(kind="Lecture"):
+    return SectionOption(section_type=kind, section_id="001", days_of_week=[0],
+                         start_time=time(9, 30), end_time=time(10, 20))
+
+
+# --------------------------------------------------------------------------
+# Task 1 — the rewritten summary copy and the .ics headers
+# --------------------------------------------------------------------------
+
+def test_summary_sentences_replace_the_unparseable_fraction():
+    a = [AssessmentTask(title=f"A{i}", type="assignment", weight_percent=10.0,
+                        due_datetime=datetime(2026, 10, i + 1, 23, 59)) for i in range(9)]
+    a[0].weight_percent = 21.0  # 21 + eight tens = 101
+    c = calculate_completeness(_data(assessments=a, lecture=[_section()]))
+    assert c["summary_assessments"] == "All 9 assessments found. Weights total 101 %."
+    assert c["summary_slots"] == "1 lecture slot. No lab, no tutorial."
+    assert c["summary_undated"] == "Every assessment has a date."
+
+
+def test_summary_says_what_is_missing_when_weights_fall_short():
+    a = [AssessmentTask(title="Midterm", type="midterm", weight_percent=40.0,
+                        due_datetime=datetime(2026, 10, 20, 23, 59)),
+         AssessmentTask(title="Final", type="final", weight_percent=53.0)]
+    c = calculate_completeness(_data(assessments=a))
+    assert c["summary_assessments"] == "2 assessments found. Weights total 93 % — 7 % is unaccounted for."
+    assert c["summary_slots"] == "No lecture, lab or tutorial slot was found."
+    assert c["summary_undated"] == "1 assessment still needs a date."
+
+
+def test_summary_names_bonus_weight_without_counting_it():
+    bonus = AssessmentTask(title="Bonus quiz", type="quiz", weight_percent=1.0,
+                           due_datetime=datetime(2026, 11, 3, 23, 59))
+    bonus.is_bonus = True
+    a = [AssessmentTask(title="Exam", type="final", weight_percent=100.0,
+                        due_datetime=datetime(2026, 12, 10, 9, 0)), bonus]
+    c = calculate_completeness(_data(assessments=a, lecture=[_section()], lab=[_section("Lab")]))
+    assert c["summary_assessments"] == "All 2 assessments found. Weights total 100 %. Plus 1 % bonus, not counted."
+    assert c["summary_slots"] == "1 lecture slot. 1 lab slot. No tutorial."
+
+
+def test_ics_response_carries_the_event_count_and_range():
+    ics = (b"BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20260909\r\nEND:VEVENT\r\n"
+           b"BEGIN:VEVENT\r\nDTSTART:20261208T235900\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+    with app.test_request_context():
+        r = ics_response("x.ics", ics)
+    assert r.headers["X-Plato-Events"] == "2"
+    assert r.headers["X-Plato-Range"] == "Sep 09 – Dec 08, 2026"
+    assert "X-Plato-Events" in r.headers["Access-Control-Expose-Headers"]
+    assert r.mimetype == "text/calendar"
+
+
+# --------------------------------------------------------------------------
+# Task 3 — the stylesheet
+# --------------------------------------------------------------------------
+
+def test_the_glow_and_the_dark_saas_palette_are_gone():
+    for dead in ("--shadow-glow", "#09090b", "#2563eb", "calendarPulse", "workflowStep1",
+                 "arrowParticle1", "rotateProcessing", "processingPulse"):
+        assert dead not in CSS, f"{dead} survived the redesign"
+
+
+def test_every_animation_is_guarded_by_reduced_motion():
+    assert "@media (prefers-reduced-motion: reduce)" in CSS
+    guard = CSS.split("@media (prefers-reduced-motion: reduce)", 1)[1]
+    assert "animation-duration: 0.01ms" in guard
+    assert "transform: none" in guard
+    assert "transition: all" not in CSS, "every transition must name its properties"
+
+
+def test_one_easing_family():
+    import re
+    curves = set(re.findall(r"cubic-bezier\([^)]*\)", CSS))
+    assert curves <= {"cubic-bezier(.22, 1, .36, 1)", "cubic-bezier(.4, 0, 1, 1)"}, curves
+
+
+def test_paper_tokens_are_the_spec_tokens():
+    for token, value in (("--paper", "#faf8f4"), ("--sheet", "#ffffff"), ("--ink", "#1c1a17"),
+                         ("--rule", "#e0dad0"), ("--flag", "#9a6a00"), ("--flag-bg", "#fff6e0"),
+                         ("--link", "#1f5fbf")):
+        assert f"{token}: {value}" in CSS
+
+
+def test_the_type_is_self_hosted_and_three_families():
+    for family in ("Newsreader", "Inter", "JetBrains Mono"):
+        assert f"font-family: '{family}'" in CSS
+    assert "fonts/newsreader-latin.woff2" in CSS
+    assert "fonts.googleapis.com" not in CSS and "fonts.gstatic.com" not in CSS
+
+
+# --------------------------------------------------------------------------
+# Task 4/5 — the shell and the drop screen
+# --------------------------------------------------------------------------
+
+@pytest.fixture()
+def client():
+    app.config["TESTING"] = True
+    with app.test_client() as c:
+        yield c
+
+
+def test_every_route_shares_one_shell_with_a_skip_link_and_the_step_rail(client):
+    for path in ("/", "/manual"):
+        html = client.get(path).get_data(as_text=True)
+        assert 'class="skip-link"' in html and 'href="#content"' in html
+        assert 'id="content"' in html
+        assert "Course outline to calendar" in html
+        assert 'class="step-rail"' in html and ">01<" in html and ">03<" in html
+        assert 'aria-current="step"' in html
+
+
+def test_the_landing_page_has_no_marketing_layer_and_no_fabricated_calendar(client):
+    html = client.get("/").get_data(as_text=True)
+    for dead in ("Automatic Course Calendar Generation", "From Course Outline to Calendar in Seconds",
+                 "Get Started", "How It Works", "calendar-background", "workflow-visualization",
+                 "arrow-particle", "Lecture 1", "Assignment 1", "feature-icon", "hero-badge",
+                 "hero-glow", "btn-hero"):
+        assert dead not in html, f"{dead} survived on /"
+    assert "Check your outline, then take the calendar." in html
+    assert "Drag and drop your course outline here" in html
+    assert "Not a PDF, or a scan?" in html
+    assert "Enter the course by hand" in html
+    assert 'aria-live="polite"' in html
+    assert 'role="alert"' in html
+
+
+def test_the_fake_calendar_chips_are_gone_from_the_source():
+    for dead in ("calendar-event", "calendar-day-number", "Lecture 1", "Assignment 1", "Lab 1",
+                 "workflow-arrow", "arrow-line", "arrow-particle", "calendarPulse"):
+        assert dead not in INDEX_HTML, f"{dead} survived in templates/index.html"
+
+
+# --------------------------------------------------------------------------
+# Task 6/7 — the ledger and the download confirmation
+# --------------------------------------------------------------------------
+
+def test_the_review_screen_is_one_ruled_table_not_nine_cards():
+    assert 'class="ledger assessments"' in REVIEW_HTML
+    assert "<tbody" in REVIEW_HTML and "<tfoot" in REVIEW_HTML
+    assert 'data-summary="assessments"' in REVIEW_HTML
+    assert 'data-summary="slots"' in REVIEW_HTML
+    assert 'data-slot="lecture"' in REVIEW_HTML and 'data-slot="tutorial"' in REVIEW_HTML
+    # the audit's "card apocalypse" and its unparseable fraction
+    for dead in ("summary-stats", "stat-item", "stat-value", "of 100% found",
+                 "Lecture / lab / tutorial slots"):
+        assert dead not in REVIEW_HTML, f"{dead} survived on /review"
+    # the copy that must stay verbatim
+    assert "Check every date against your outline" in REVIEW_HTML
+    assert "What could not be read from the PDF" in REVIEW_HTML
+    assert "labs are usually only on draftmyschedule.uwo.ca" in REVIEW_HTML
+    assert "Add Section" in REVIEW_HTML  # kept, restyled
+
+
+def test_the_download_confirmation_block_exists_and_starts_hidden():
+    assert 'id="download-done"' in REVIEW_HTML
+    assert "X-Plato-Events" in JS and "X-Plato-Range" in JS
+
+
+# --------------------------------------------------------------------------
+# Task 9 — motion in JS
+# --------------------------------------------------------------------------
+
+def test_motion_is_gated_on_reduced_motion_in_js_too():
+    assert "prefers-reduced-motion: reduce" in JS
+    assert "IntersectionObserver" in JS
+    assert "calendarPulse" not in JS and "animateWorkflow" not in JS
