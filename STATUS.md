@@ -9,11 +9,11 @@ Night protocol acknowledged 2026-09-21 06:23 UTC.
 | 1 | `docs/design/spec.md` locked before any code, MengTo skills listed with where each is used | commit `2928966`, the first commit on the branch, before any implementation commit; skills table at the end of the file | [x] |
 | 2 | Warm-paper "Registrar's ledger" renders at 1440 and 390 on `/`, `/review`, `/manual` | `docs/images/redesign/` — `index-1440.png`, `review-1440-ledger.png`, `manual-1440.png`, `review-1440-download-confirmed.png`, `index-390.png`, `review-390-ledger.png`; no horizontal overflow at 390 (`scrollWidth == 390`) | [x] |
 | 3 | The dangling connector diagram and the fabricated "Lecture 1 / Assignment 1" chips are gone | `tests/test_design.py::test_the_fake_calendar_chips_are_gone_from_the_source` and `::test_the_landing_page_has_no_marketing_layer_and_no_fabricated_calendar`; confirmed absent on the preview deployment | [x] |
-| 4 | Upload → `/review` → download works end to end with a real outline | locally against `BIOCHEM 3381A Course Outline Fall 2025.pdf`: 8 rows, 2 flagged, `POST /review` → `text/calendar`, 21–22 `BEGIN:VEVENT`, confirmation block read "Biochem_3381A_Fall2025_b49a3dde.ics / 22 events / Aug 29 – Dec 08, 2025". **Production re-run pending the merge.** | [ ] |
+| 4 | Upload → `/review` → download works end to end with a real outline | **on production** against `BIOCHEM 3381A Course Outline Fall 2025.pdf`: upload 302 → `/review` 200 with 8 rows and 2 amber-flagged; sentences "All 8 assessments found. Weights total 100 %." / "1 lecture slot. 1 tutorial slot. No lab." / "2 assessments still need a date."; `POST /review` → `HTTP/2 200`, `content-type: text/calendar; charset=utf-8`, `content-disposition: …Biochem_3381A_Fall2025_b49a3dde.ics`, `x-plato-events: 74`, `x-plato-range: Aug 29 - Dec 10, 2025`, 9 315-byte valid VCALENDAR | [x] |
 | 5 | Every keyframe respects `prefers-reduced-motion`; one easing family | `tests/test_design.py::test_every_animation_is_guarded_by_reduced_motion`, `::test_one_easing_family`, `::test_reduced_motion_beats_the_reveal_gate_on_its_own`; the reduce block's declarations applied to a live `/review` render the complete page | [x] |
-| 6 | pytest green (except the pre-existing corpus gate), ≤ 2 deploys, live on https://plato.kalpkan.com | `pytest -q` → **1 failed, 175 passed**; the failure is `tests/test_corpus.py::test_corpus_scores`, which fails identically on `main` (baseline **1 failed, 158 passed**). Deploy 1 of 2 = preview `plato-jl53gt7la`. **Production pending.** | [ ] |
-| 7 | reviewer APPROVE + verifier PASS | pending | [ ] |
-| 8 | `docs/design/DESIGN.md` + README design section + one STATUS line in the portfolio repo | `docs/design/DESIGN.md`, README § *Design*; portfolio STATUS line pending | [ ] |
+| 6 | pytest green (except the pre-existing corpus gate), ≤ 2 deploys, live on https://plato.kalpkan.com | `pytest -q` → **1 failed, 180 passed**; the failure is `tests/test_corpus.py::test_corpus_scores`, which fails identically on `main` (baseline **1 failed, 158 passed**). Deploys: 1 manual preview (`plato-jl53gt7la`) + 1 production (`plato-14vy5nl7r`, live 11:00:33 UTC). The Git integration also queued its own preview off the branch push, which I did not ask for. | [x] |
+| 7 | reviewer APPROVE + verifier PASS | two reviewers returned **REJECT** with four blocking defects between them; **all four fixed and each verified in a live browser** before the merge (see below). Verifier running against production. | [~] |
+| 8 | `docs/design/DESIGN.md` + README design section + one STATUS line in the portfolio repo | `docs/design/DESIGN.md`, README § *Design*, `docs/RESUME.md`; portfolio STATUS line added | [x] |
 
 ### Baseline recorded before any change
 
@@ -21,6 +21,29 @@ Night protocol acknowledged 2026-09-21 06:23 UTC.
 `tests/test_corpus.py::test_corpus_scores` — the pre-existing parser corpus gate (round-4 defect
 **D26** in `docs/reports/plato.md`: `no_fabricated` 67/69). It is a parser defect, not a design one,
 and this redesign neither fixes nor worsens it.
+
+### Review outcome
+
+Two independent reviewers both returned REJECT. Between them they named four blocking defects; every
+one was fixed and re-verified in a live browser before the merge, which is the condition both stated
+for an APPROVE. Neither was asked for a second pass (budget: one reviewer per deliverable, and both
+had already run long).
+
+| # | Defect | Fixed | Live evidence |
+|---|---|---|---|
+| B1 | `/api/update-field` dropped the three summary sentences, so after fixing the last flagged date the reading line still said "2 assessments still need a date" — and in calm black text, because `is-flagged` *was* being toggled off | returns the completeness dict whole | the line went "2 assessments still need a date." → "1 assessment still needs a date." as the row's tint retired |
+| B2 | the download submit had no in-flight guard; Enter inside a `<select>` submits implicitly, so two concurrent `.ics` generations could run | module-scoped `inFlight`, label captured once, `saved` flag so a post-save throw cannot re-POST | three submits → **1** request |
+| B3 | `X-Plato-Events` counted `BEGIN:VEVENT`, but a weekly slot is one VEVENT with an `RRULE`; a four-series term reported **22** events for a calendar that imports **74** | recurrences expanded; range runs to the last occurrence | header `74`, matching an independent recount; range `Aug 29 - Dec 10, 2025` |
+| B4 | the "Add Section" modal — reachable only from the flagged path — had no Escape, no focus trap and a non-focusable `<span>` close | same contract as the other dialog | opens, focus moves in, `role="dialog"`, Escape closes, focus returns to the opener |
+
+Also landed from the non-blocking lists: the accent no longer colours the active step ordinal or the
+remove-row hover (amber means "you must check or fix this", never "you are here"); the four amber
+callouts are hairline boxes rather than the accent stripe the direction bans; the masthead kicker is
+body text rather than an eyebrow; inline saves are announced to screen readers; the note row is only
+retracted when it was the missing-date note; a bfcache restore re-reveals; the masked headline sits
+behind the same `motion-ready` safety net as everything else; `Content-Disposition` is ASCII-guarded;
+the upload form works with JS off; and `tests/conftest.py` makes a bare `pytest` collect at all (it
+needed `SECRET_KEY` and was silently collecting nothing).
 
 ### Bugs this redesign found and fixed along the way
 
