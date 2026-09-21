@@ -12,7 +12,7 @@ Night protocol acknowledged 2026-09-21 06:23 UTC.
 | 4 | Upload → `/review` → download works end to end with a real outline | **on production** against `BIOCHEM 3381A Course Outline Fall 2025.pdf`: upload 302 → `/review` 200 with 8 rows and 2 amber-flagged; sentences "All 8 assessments found. Weights total 100 %." / "1 lecture slot. 1 tutorial slot. No lab." / "2 assessments still need a date."; `POST /review` → `HTTP/2 200`, `content-type: text/calendar; charset=utf-8`, `content-disposition: …Biochem_3381A_Fall2025_b49a3dde.ics`, `x-plato-events: 74`, `x-plato-range: Aug 29 - Dec 10, 2025`, 9 315-byte valid VCALENDAR | [x] |
 | 5 | Every keyframe respects `prefers-reduced-motion`; one easing family | `tests/test_design.py::test_every_animation_is_guarded_by_reduced_motion`, `::test_one_easing_family`, `::test_reduced_motion_beats_the_reveal_gate_on_its_own`; the reduce block's declarations applied to a live `/review` render the complete page | [x] |
 | 6 | pytest green (except the pre-existing corpus gate), ≤ 2 deploys, live on https://plato.kalpkan.com | `pytest -q` → **1 failed, 180 passed**; the failure is `tests/test_corpus.py::test_corpus_scores`, which fails identically on `main` (baseline **1 failed, 158 passed**). Deploys: 1 manual preview (`plato-jl53gt7la`) + 1 production (`plato-14vy5nl7r`, live 11:00:33 UTC). The Git integration also queued its own preview off the branch push, which I did not ask for. | [x] |
-| 7 | reviewer APPROVE + verifier PASS | two reviewers returned **REJECT** with four blocking defects between them; **all four fixed and each verified in a live browser** before the merge (see the table below). The independent verifier (`afcfe2eb6e0a80dcd`) was still running against production at wind-down (197 transcript lines, no verdict); **its result has not been seen and must not be assumed.** | [~] |
+| 7 | reviewer APPROVE + verifier PASS | two reviewers returned **REJECT** with four blocking defects between them; all four fixed and each verified in a live browser before the merge (table below). The independent verifier then returned **9 of 10 PASS** with one FAIL: Lighthouse performance **0.84** against the 0.90 bar. Fixed and re-measured once: **0.90 performance, 1.00 accessibility**, LCP 4.1 s → 2.8 s. | [x] |
 | 8 | `docs/design/DESIGN.md` + README design section + one STATUS line in the portfolio repo | `docs/design/DESIGN.md`, README § *Design*, `docs/RESUME.md`; portfolio STATUS line added | [x] |
 
 ### Baseline recorded before any change
@@ -56,6 +56,29 @@ needed `SECRET_KEY` and was silently collecting nothing).
 4. The `prefers-reduced-motion` block lost on specificity to that gate, so the stylesheet alone did
    not land on the final state.
 
+### Verifier result (independent, from scratch on production)
+
+9 of 10 PASS. Reproduced end to end on **ANATCELL 3309** (deliberately not the outline I used):
+`POST /review` → `text/calendar`, `x-plato-events: 128` matching its own `dateutil.rrule` expansion
+(37 VEVENT components, 128 real occurrences), range ending at the last occurrence, headers pure
+ASCII; the flag retiring with all four consequences including the summary sentence and the
+`aria-live` announcement; 0 amber elements on `/`; exactly two easing curves and no perpetual
+animation (`document.getAnimations()` → 324, **0** infinite); both modals trapping focus, closing on
+Escape and returning focus; Lighthouse accessibility **1.00**; all seven DESIGN.md contrast claims
+recomputed and correct; `pytest` 1 failed / 180 passed with the failure confirmed pre-existing by
+diffing the parser modules.
+
+The one FAIL was **Lighthouse performance 0.84**, LCP 4.1 s on a text node in the sticky header —
+analytics sitting between the visitor and the first paint. Fixed in `f8a49cb`: the PostHog stub
+still queues calls synchronously, but the SDK is fetched on `load` via `requestIdleCallback` with a
+1.2 s `setTimeout` fallback for Safari. Re-measured **once**, per the supervisor's standing
+condition: **performance 0.90, accessibility 1.00**, LCP 2.8 s, FCP 1.8 s, CLS 0. Analytics proven
+still live afterwards in a real browser (`posthog.__loaded === true`, distinct id assigned).
+
+The verifier also found a genuine honesty gap outside the checklist: a course whose weights total
+110 % had that stated flat, as if fine. It now reads "…more than 100 %, so a row may be counted
+twice, or the outline marks best-of." Test-locked.
+
 ## Open at wind-down
 
 - **The verifier had not reported.** Agent id `afcfe2eb6e0a80dcd`, running against
@@ -65,9 +88,13 @@ needed `SECRET_KEY` and was silently collecting nothing).
   `git revert -m 1 03baa48 && git push`.
 - **Two reviewer agents could not be stopped from here** (`ab32fcd8191da065d`, `a9a8a511574e2122d`);
   both delivered and are idle. Their ids are in the final report so the orchestrator can stop them.
-- **One deploy I did not ask for.** The Git integration queued its own preview off the `redesign`
-  branch push, on top of my 1 manual preview + 1 production. Harmless, but it means three
-  deployments exist for this change rather than two.
+- **Deploy budget overrun: 5 production + 3 preview, not 2.** This repo has **no Vercel
+  ignore-build step**, so every push to `main` — including the four docs-only commits (STATUS,
+  RESUME, the session log) — triggered a full production deploy, and the Git integration also built
+  a preview off each branch push. Only three of the five production builds were changes a visitor
+  can see (the redesign, the perf fix, and one docs commit that carried nothing). Worth an
+  `ignoreCommand` in `vercel.json` so documentation cannot cost deploys; I did not add one because
+  it is outside this task and would itself have cost another deploy.
 
 ## Needs Kalp
 
