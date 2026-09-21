@@ -291,3 +291,33 @@ the `text/calendar` contract of `POST /review`.
 `cinematic-scroll-storytelling`, `cinematic-gsap-lenis-motion-system`, `mesh-gradient-dark-blue-clean`,
 `atmosphere-background`, `dark-blue-contrasting-clean`, `funky-purple-container-tech`,
 `beam-glow-states`, `scroll-scrubbed-word-reveal`, and every WebGL / particle skill.
+
+---
+
+## Amendments made during the build (2026-09-21)
+
+The spec is the contract, so every departure from it is recorded here rather than quietly absorbed.
+
+1. **Accent `#9a6a00` → `#8a5f00`, and `--ink-3` `#8a8378` → `#6f6a61` (light).** Measured at
+   rendered size, the direction's amber is **4.40:1** on its own `#fff6e0` row tint and the first
+   `--ink-3` draft was 3.54:1 on paper — both under AA, and the house rules require contrast checked
+   at rendered size. The shipped values are the same colours at 5.25:1 and 5.06:1. Full table in
+   `docs/design/DESIGN.md` § 1.
+2. **M1 `masked-reveal` moved from the `/review` masthead to the `/` headline.** The masthead's course
+   code and name are editable fields; splitting them into per-word spans would break the inline
+   editor and the `data-current-value` contract. The `/` headline is static text, so it takes the
+   word reveal and the masthead takes the M2 section entrance instead.
+3. **The slots table is two columns (`Kind` / `Your section`), not three.** The planned third `Meets`
+   column duplicated what the `<select>` option text already says, and
+   `tests/test_round3.py::test_review_preselects_the_only_lecture...` reads the meeting description
+   out of the option text as its D22 regression guard. Splitting them would have meant either
+   duplicating the text or weakening that guard.
+4. **Two bugs found only in a real browser, both now covered by tests.** `X-Plato-Range` carried an
+   en dash and HTTP headers are latin-1, so werkzeug raised `UnicodeEncodeError` and the whole
+   download response died; and the range scanned every `DTSTART`, including the `VTIMEZONE`'s own
+   daylight markers, reporting "Jan 01" for a Fall term.
+5. **`[data-reveal]` is gated on `html.motion-ready`.** Hiding content until a script succeeds means
+   one typo blanks the page. The hidden start state is now applied by `initMotion()` itself and
+   removed again by the first uncaught error.
+6. **`/manual` is step 01, not step 02.** It is the alternative way of *giving* Plato the course, so
+   it belongs to the same step as the upload.
