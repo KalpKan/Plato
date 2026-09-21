@@ -3,6 +3,10 @@
 Written 2026-09-21 at the end of the "Registrar's ledger" redesign. If you are picking Plato up cold,
 read `STATUS.md` first for the done-criteria and their evidence, then this file for what to do next.
 
+**Status: shipped.** `redesign` was merged `--no-ff` into `main` (`03baa48`) and is live on
+https://plato.kalpkan.com since 11:00:33 UTC on 2026-09-21. Reversal, if ever needed, is
+`git revert -m 1 03baa48 && git push`.
+
 ## What was done
 
 The three screens were rebuilt to the PRIMARY direction in the portfolio repo's
@@ -25,6 +29,21 @@ Nothing in the extraction or flagging model was touched. `POST /review` still st
    Baseline for comparison: `main` = 1 failed / 158 passed; `redesign` = 1 failed / 175 passed.
 2. **Round-4 defects D27 (prose tutorial slots) and D28 (titles)** from the same report.
 3. **Google / Apple import screenshots** — still owed from round 3, still not captured.
+
+## The reviews
+
+Two independent reviewers both returned REJECT. Four blocking defects between them, all fixed and
+each re-verified in a live browser before the merge; `STATUS.md` has the table with the evidence.
+Three are worth remembering because the test suite could not see any of them:
+
+- **Numbers on a reassurance surface must be true.** `X-Plato-Events` counted `BEGIN:VEVENT`, but a
+  weekly lecture is ONE VEVENT with an `RRULE`, so the download screen said 22 for a calendar that
+  imports 74. If you touch `ics_event_span`, keep expanding recurrences.
+- **A partial payload is a lying page.** `/api/update-field` hand-picked keys out of
+  `calculate_completeness` and dropped the summary sentences, so the top of `/review` kept asserting
+  a stale count after the very interaction the product exists for. Return the dict whole.
+- **HTTP headers are latin-1.** Both `X-Plato-Range` and the `Content-Disposition` filename are
+  ASCII-guarded. An en dash in the first one crashed the entire download inside werkzeug.
 
 ## Things to know before touching the front end
 
