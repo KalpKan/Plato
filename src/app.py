@@ -304,35 +304,68 @@ def build_calendar(extracted_data: ExtractedCourseData,
 
 
 def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
-    """How many events the calendar holds and the range they cover.
+    """How many events the visitor's calendar will actually hold, and the range.
 
-    Used only to describe the download to the person who just took it
-    ("21 events, Aug 29 - Dec 08, 2025"); the bytes themselves are untouched.
-    Only DTSTARTs inside a VEVENT count - a VTIMEZONE carries its own
-    DTSTART:20240101T000000 daylight-saving markers, which would otherwise
-    drag the range back to January of the wrong year.
+    Counting BEGIN:VEVENT is wrong: a weekly lecture, lab or tutorial is ONE
+    VEVENT carrying RRULE ... UNTIL (icalendar_gen.py), so a whole term of
+    Monday lectures counts as 1. A four-series term reported 22 events for a
+    calendar that imports about 74 — and this number is the last thing the
+    download screen says before the visitor leaves, so it has to be true.
+    Recurring events are expanded; the range runs to the last occurrence, not
+    to the series' first DTSTART.
     """
     count = 0
-    days = []
+    days: List[date] = []
     in_event = False
+    start_day: Optional[date] = None
+    rrule_line = b''
+
+    def flush():
+        nonlocal count, start_day, rrule_line
+        if start_day is None:
+            return
+        occurrences = [start_day]
+        m = re.search(rb'UNTIL=(\d{8})', rrule_line)
+        if b'FREQ=WEEKLY' in rrule_line and m:
+            try:
+                until = datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date()
+            except ValueError:
+                until = None
+            if until and until >= start_day:
+                # Every series this app writes is one weekday, interval 1.
+                d = start_day
+                occurrences = []
+                while d <= until:
+                    occurrences.append(d)
+                    d += timedelta(days=7)
+        count += len(occurrences)
+        days.extend(occurrences)
+        start_day = None
+        rrule_line = b''
+
     for raw_line in ics_bytes.splitlines():
         line = raw_line.strip()
         if line == b'BEGIN:VEVENT':
             in_event = True
-            count += 1
+            start_day = None
+            rrule_line = b''
             continue
         if line == b'END:VEVENT':
+            flush()
             in_event = False
             continue
         if not in_event:
             continue
+        if line.startswith(b'RRULE'):
+            rrule_line = line
+            continue
         m = re.match(rb'DTSTART[^:]*:(\d{8})', line)
-        if not m:
-            continue
-        try:
-            days.append(datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date())
-        except ValueError:
-            continue
+        if m and start_day is None:
+            try:
+                start_day = datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date()
+            except ValueError:
+                start_day = None
+
     if not days:
         return count, ''
     first, last = min(days), max(days)
@@ -347,7 +380,8 @@ def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
 def ics_response(filename: str, ics_bytes: bytes):
     """Stream an .ics back as a download in this same request."""
     resp = Response(ics_bytes, mimetype='text/calendar')
-    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    safe_name = filename.encode('ascii', 'replace').decode('ascii').replace('"', '')
+    resp.headers['Content-Disposition'] = f'attachment; filename="{safe_name}"'
     resp.headers['Cache-Control'] = 'no-store'
     # Additive only: the review page reads these to name the file, the event count
     # and the range in its confirmation block. Nothing else depends on them, and the
@@ -1439,11 +1473,14 @@ def update_field():
                 }
             except (ValueError, IndexError):
                 row = None
-        return jsonify({'success': True, 'message': 'Field updated successfully', 'row': row, 'completeness': {
-            'num_assessments': c['num_assessments'], 'total_weight': round(c['total_weight']), 'total_class': c['total_class'],
-            'bonus_weight': round(c.get('bonus_weight', 0.0), 1), 'num_lecture_sections': c['num_lecture_sections'],
-            'num_lab_sections': c['num_lab_sections'], 'num_tutorial_sections': c['num_tutorial_sections'],
-            'assessments_undated': c['assessments_undated']}})
+        # Send the completeness dict whole. Hand-picking keys here is what let
+        # the three summary sentences go stale after an edit: the page kept
+        # saying "2 assessments still need a date" with none left undated.
+        # `round()` on the total also turned 101.5 % into 102 % after an edit
+        # while the template rendered it with %g.
+        return jsonify({'success': True, 'message': 'Field updated successfully', 'row': row,
+                        'completeness': dict(c, total_weight=round(c['total_weight'], 1),
+                                             bonus_weight=round(c.get('bonus_weight', 0.0), 1))})
         
     except Exception as e:
         import traceback

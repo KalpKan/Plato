@@ -321,3 +321,16 @@ The spec is the contract, so every departure from it is recorded here rather tha
    removed again by the first uncaught error.
 6. **`/manual` is step 01, not step 02.** It is the alternative way of *giving* Plato the course, so
    it belongs to the same step as the upload.
+7. **M7 and M11 ship without their exit beats.** The motion table gives both a 200 ms `--ease-exit`
+   close. In the build the inline editor and the modals close as instant state swaps: closing is a
+   reversal the reader already asked for, and an exit animation sits between them and the next
+   action. `--ease-exit` stays declared because the easing family is defined in pairs. Recorded here
+   rather than left as a doc that describes motion the product does not have.
+8. **Four defects the review found, all fixed before merge.** `/api/update-field` hand-picked keys
+   out of `calculate_completeness` and dropped the three summary sentences, so the reading line went
+   stale and asserted a false count after the very interaction the product exists for (now returns
+   the dict whole, with a regression test); the download submit had no in-flight guard, so Enter
+   inside a `<select>` could fire two concurrent `.ics` generations; the accent was colouring the
+   active step ordinal on every page, which is navigation decoration and breaks the one-accent rule;
+   and the "Add Section" modal — reached only from the flagged path — had no Escape, no focus trap
+   and a non-focusable close control.

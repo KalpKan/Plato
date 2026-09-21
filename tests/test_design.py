@@ -5,6 +5,7 @@ found must stay deleted, the rewritten copy must stay rewritten, every keyframe
 must stay guarded by prefers-reduced-motion, and /review must stay one ruled
 table rather than nine cards.
 """
+import uuid
 from datetime import date, datetime, time
 from pathlib import Path
 
@@ -85,6 +86,31 @@ def test_ics_range_ignores_the_timezone_blocks_own_dtstart():
         r = ics_response("x.ics", ics)
     assert r.headers["X-Plato-Events"] == "2"
     assert r.headers["X-Plato-Range"] == "Aug 29 - Dec 08, 2025"
+
+
+def test_ics_event_count_expands_weekly_series():
+    """A term of Monday lectures is ONE VEVENT with an RRULE, not one event.
+
+    Counting BEGIN:VEVENT told the visitor "22 events" for a calendar that
+    imports about 74, on the screen whose whole job is to be trusted.
+    """
+    ics = (b"BEGIN:VCALENDAR\r\n"
+           b"BEGIN:VEVENT\r\nDTSTART;TZID=America/Toronto:20250908T123000\r\n"
+           b"RRULE:FREQ=WEEKLY;UNTIL=20250929T035959Z;BYDAY=MO\r\nEND:VEVENT\r\n"
+           b"BEGIN:VEVENT\r\nDTSTART;TZID=America/Toronto:20251020T235900\r\nEND:VEVENT\r\n"
+           b"END:VCALENDAR\r\n")
+    with app.test_request_context():
+        r = ics_response("x.ics", ics)
+    # Sep 8, 15, 22, 29 (four Mondays) + the single dated assessment
+    assert r.headers["X-Plato-Events"] == "5"
+    # and the range runs to the last OCCURRENCE, not the series' first DTSTART
+    assert r.headers["X-Plato-Range"] == "Sep 08 - Oct 20, 2025"
+
+
+def test_the_download_filename_header_is_ascii():
+    with app.test_request_context():
+        r = ics_response("Économie_1021A.ics", b"BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
+    assert r.headers["Content-Disposition"].isascii()
 
 
 def test_ics_response_carries_the_event_count_and_range():
@@ -229,3 +255,50 @@ def test_motion_is_gated_on_reduced_motion_in_js_too():
     assert "prefers-reduced-motion: reduce" in JS
     assert "IntersectionObserver" in JS
     assert "calendarPulse" not in JS and "animateWorkflow" not in JS
+
+
+def test_update_field_returns_the_summary_sentences(monkeypatch, tmp_path):
+    """The inline-edit endpoint must say exactly what a reloaded page says.
+
+    It used to hand-pick keys out of calculate_completeness() and drop the three
+    summary_* sentences, so after fixing the last undated assessment the reading
+    line still asserted "2 assessments still need a date" — in calm black text,
+    because the is-flagged class DID get toggled off.
+    """
+    from src.app import app as flask_app, get_cache
+    import src.app as mod
+
+    monkeypatch.setattr(mod, "upload_dir", lambda: tmp_path)
+    data = _data(assessments=[
+        AssessmentTask(title="Midterm", type="midterm", weight_percent=50.0,
+                       due_datetime=datetime(2026, 10, 20, 23, 59)),
+        AssessmentTask(title="Final", type="final", weight_percent=50.0),
+    ], lecture=[_section()])
+    h = "designhash-" + uuid.uuid4().hex  # the edit below mutates the cached entry
+    get_cache().store_extraction(h, data)
+    c = flask_app.test_client()
+    with c.session_transaction() as sess:
+        sess["pdf_hash"] = h
+        sess["session_id"] = "sid"
+        sess["user_choices"] = {}
+
+    before = c.get("/review").get_data(as_text=True)
+    assert "1 assessment still needs a date." in before
+
+    r = c.post("/api/update-field", json={"field_type": "assessment_due_date",
+                                          "assessment_index": 1,
+                                          "value": "2026-12-10T09:00"})
+    body = r.get_json()
+    assert body["success"] is True
+    comp = body["completeness"]
+    for key in ("summary_assessments", "summary_slots", "summary_undated"):
+        assert key in comp, f"{key} missing from /api/update-field — the reading line goes stale"
+    assert comp["summary_undated"] == "Every assessment has a date."
+    assert comp["assessments_undated"] == 0
+
+
+def test_the_accent_is_never_navigation_decoration():
+    # The active step ordinal was painted in the flag accent on every page, so
+    # the first amber a visitor met on / meant "you are here", not "check this".
+    assert ".step.is-active .step-n { color: var(--ink); }" in CSS
+    assert "var(--flag)" not in CSS.split(".step.is-active .step-n", 1)[1].split("}", 1)[0]

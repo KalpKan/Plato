@@ -31,7 +31,7 @@
 
         <label class="force-refresh"><input type="checkbox" name="force_refresh" value="on"> Re-read the PDF even if it was parsed before</label>
 
-        <div class="upload-actions" id="upload-actions" hidden>
+        <div class="upload-actions" id="upload-actions">
             <button type="submit" class="btn btn-primary" id="btn-generate">Read the outline</button>
             <button type="button" class="btn btn-quiet" id="btn-remove-file">Remove file</button>
         </div>
@@ -43,7 +43,7 @@
         <img src="{{ url_for('static', filename='img/review-ledger.webp') }}"
              alt="Plato's review ledger: a ruled table of assessments with their weights and dates, one row tinted amber because its date could not be read."
              width="940" height="602" loading="lazy" decoding="async">
-        <figcaption>Step 02, the ledger you proof-read. A real screenshot of this build reading Biochemistry 3381A's outline: eight rows, weights totalling 100 %, and the two the outline never dated tinted amber.</figcaption>
+        <figcaption>Step 02, the ledger you proof-read. A real screenshot of this build reading Biochem 3381A's outline: eight rows, weights totalling 100 %, and the two the outline never dated tinted amber.</figcaption>
     </figure>
 </div>
 
@@ -76,6 +76,10 @@
         var btnRemoveFile = document.getElementById('btn-remove-file');
         var errorEl = document.getElementById('upload-error');
         var MAX_MB = {{ max_mb }};
+
+        // The actions ship visible so the form still works with JS off; with
+        // JS they only appear once a file has been chosen.
+        uploadActions.hidden = true;
 
         dropzone.addEventListener('dragover', function (e) {
             e.preventDefault();

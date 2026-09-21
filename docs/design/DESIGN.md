@@ -29,9 +29,11 @@ Light. Warm paper, never white-on-grey, never a dark dashboard. A dark variant e
 | `--flag-bg` | `#fff6e0` | `#2a2415` | the flagged row's tint |
 | `--link` | `#1f5fbf` | `#8fb4f0` | links and the focus ring, nothing else |
 
-**The accent has exactly one meaning: "Plato could not read this — you must check it."** It marks a
-flagged row's tint, its pill, the parser-notes block, the `Needs a date` badge and the upload error.
-It is never decorative, never a gradient, and never used to make something look important.
+**The accent has exactly one meaning: "you must check or fix this."** It marks a flagged row's tint,
+its pill, the parser-notes block, the `Needs a date` badge, the missing-term warning, the upload
+error and a required field left empty. It appears nowhere else — in particular **not** on the active
+step ordinal, which is `--ink` (the hairline underline already says which step you are on). It is
+never decorative, never a gradient, and never used to make something look important.
 
 **Contrast, measured at rendered size** (WCAG 2.1 AA, ≥ 4.5:1 for body text):
 
@@ -39,7 +41,7 @@ It is never decorative, never a gradient, and never used to make something look 
 |---|---|---|
 | `--ink` on `--paper` | 16.4 | 15.8 |
 | `--ink-2` on `--paper` | 6.8 | 8.6 |
-| `--ink-3` on `--paper` | 5.1 | 4.9 |
+| `--ink-3` on `--paper` | 5.1 | 5.7 |
 | `--ink-3` on `--paper-2` | 4.8 | 5.1 |
 | `--flag` on `--flag-bg` | 5.3 | 7.7 |
 | `--flag` on `--paper` | 5.3 | 9.1 |
@@ -54,6 +56,11 @@ AA — the shipped value is the same amber at 5.25:1), and `--ink-3` is `#6f6a61
 
 Paper. Flat surfaces, hairline rules, 2 px radius on inputs and pills, **0 radius on tables and
 rules**. There is no card in the product.
+
+Callouts — the parser-notes block, the missing-term warning, the upload error and flash messages —
+are a tint plus a full 1 px hairline box, never a coloured stripe welded to one side (the direction's
+negative prompt bans that shape, and the spec asks for the notes block specifically to be "a ruled
+margin-note block").
 
 Exactly two shadows exist:
 
@@ -119,7 +126,7 @@ One easing family. Every beat has a reason and a reduced-motion final state. The
 
 ```
 --ease       cubic-bezier(.22, 1, .36, 1)   entering / emphasis
---ease-exit  cubic-bezier(.4, 0, 1, 1)      leaving, faster
+--ease-exit  cubic-bezier(.4, 0, 1, 1)      leaving, faster (declared; see note)
 --d-micro    140ms   hover, press, row tint
 --d-state    200ms   toggle, flag appear
 --d-small    260ms   inline editor, modal, file accepted

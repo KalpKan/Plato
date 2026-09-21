@@ -297,7 +297,7 @@ a:hover { color: var(--ink); }
     font-weight: 500;
     color: var(--ink-3);
 }
-.step.is-active .step-n { color: var(--flag); }
+.step.is-active .step-n { color: var(--ink); }
 .step-name { letter-spacing: 0.01em; }
 .step.is-active::after {
     content: "";
@@ -357,8 +357,8 @@ a:hover { color: var(--ink); }
 }
 .field-warning {
     margin-top: var(--s4);
-    padding: var(--s3) 0 var(--s3) var(--s4);
-    border-left: 2px solid var(--flag);
+    padding: var(--s3) var(--s4);
+    border: 1px solid var(--flag-rule);
     font-size: 13px;
     color: var(--flag);
     background: var(--flag-bg);
@@ -450,7 +450,7 @@ a:hover { color: var(--ink); }
     margin-bottom: var(--s3);
     padding: var(--s3) var(--s4);
     background: var(--flag-bg);
-    border-left: 2px solid var(--flag);
+    border: 1px solid var(--flag-rule);
     color: var(--flag);
     font-size: 13px;
 }
@@ -523,12 +523,12 @@ a:hover { color: var(--ink); }
 
 .masthead { padding-bottom: var(--s6); border-bottom: 1px solid var(--rule-2); }
 
+/* Kept copy, but not as an eyebrow: the spec reserves the 11px uppercase
+   label for column headers and form labels only. */
 .masthead-kicker {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink-2);
 }
 
 .masthead-title {
@@ -607,7 +607,7 @@ a:hover { color: var(--ink); }
     margin-top: var(--s6);
     padding: var(--s4) var(--s5);
     background: var(--flag-bg);
-    border-left: 2px solid var(--flag);
+    border: 1px solid var(--flag-rule);
 }
 .margin-note .section-head { font-size: 15px; color: var(--flag); }
 .notes-list { margin-top: var(--s3); display: grid; gap: var(--s2); }
@@ -743,7 +743,7 @@ a:hover { color: var(--ink); }
 .assessment-item:hover .btn-remove-assessment,
 .assessment-item:focus-within .btn-remove-assessment,
 .btn-remove-assessment:focus-visible { opacity: 1; }
-.btn-remove-assessment:hover { color: var(--flag); }
+.btn-remove-assessment:hover { color: var(--ink); }
 
 .foot-note { font-size: 12px; color: var(--ink-3); }
 .completeness-over, .completeness-low, .completeness-medium { color: var(--flag); }
@@ -917,14 +917,14 @@ select.control { padding-right: var(--s5); }
 .messages { width: min(100%, var(--container-max)); margin: var(--s4) auto 0; }
 .alert {
     padding: var(--s3) var(--s4);
-    border-left: 2px solid var(--rule-2);
+    border: 1px solid var(--rule-2);
     background: var(--paper-2);
     font-size: 13px;
     color: var(--ink-2);
 }
 .alert + .alert { margin-top: var(--s2); }
 .alert-error, .alert-warning {
-    border-left-color: var(--flag);
+    border-color: var(--flag-rule);
     background: var(--flag-bg);
     color: var(--flag);
 }
@@ -1044,11 +1044,13 @@ html.motion-ready [data-reveal] { opacity: 0; }
     padding: 0.06em 0 0.20em;
     margin: -0.06em 0 -0.20em;
 }
-.word {
-    display: inline-block;
+/* Gated like [data-reveal]: if the script throws after splitting, the
+   motion-ready retraction must un-hide the headline too. */
+html.motion-ready .word {
     transform: translateY(135%);
     will-change: transform;
 }
+.word { display: inline-block; }
 .is-split.is-in .word {
     animation: word-rise var(--d-hero) var(--ease) both;
     animation-delay: calc(var(--i, 0) * 35ms);

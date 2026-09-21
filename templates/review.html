@@ -62,6 +62,8 @@
 </section>
 
 {% if completeness %}
+<p id="save-status" class="sr-only" aria-live="polite"></p>
+
 <section class="summary" data-reveal aria-label="What Plato found">
     <p class="summary-line" data-summary="assessments">{{ completeness.summary_assessments }}</p>
     <p class="summary-line" data-summary="slots">{{ completeness.summary_slots }}</p>

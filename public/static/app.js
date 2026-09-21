@@ -96,6 +96,7 @@ function initFormValidation() {
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
+            if (e.defaultPrevented) return;   // an earlier handler already stopped this submit
             // Basic validation - browser will handle required fields
             // Add custom validation here if needed
             const requiredFields = form.querySelectorAll('[required]');
@@ -443,7 +444,7 @@ function startEditing(fieldElement) {
         <div class="inline-edit-container">
             <input type="${inputType}" 
                    class="inline-edit-input" 
-                   value="${inputValue}" 
+                   value="${escapeHtml(inputValue)}" 
                    placeholder="${placeholder}"
                    ${numberAttrs}
                    autofocus>
@@ -639,6 +640,7 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
             fieldElement.classList.remove('editing');
             applyCompleteness(data.completeness);
             applyRowState(fieldElement, data.row);
+            announceSave(data.completeness);
             // Show success message briefly
             fieldElement.classList.add('saved');
             setTimeout(() => {
@@ -657,6 +659,18 @@ function saveField(fieldElement, fieldType, newValue, assessmentIndex, originalC
         fieldElement.innerHTML = originalContent;
         fieldElement.classList.remove('editing');
     });
+}
+
+/**
+ * Say "saved" out loud. The failure path has role="status" on the notice box,
+ * but a success was silent — and the whole task is fixing flagged fields, so a
+ * screen-reader user got no confirmation and no updated count.
+ */
+function announceSave(completeness) {
+    const el = document.getElementById('save-status');
+    if (!el) return;
+    const tail = completeness && completeness.summary_undated ? ' ' + completeness.summary_undated : '';
+    el.textContent = 'Saved.' + tail;
 }
 
 /**
@@ -786,7 +800,7 @@ function applyCompleteness(c) {
     if (undated) undated.classList.toggle('is-flagged', c.assessments_undated > 0);
     const total = document.querySelector('[data-tile="total"]');
     if (total) {
-        total.textContent = `${c.total_weight}%`;
+        total.textContent = `${String(c.total_weight).replace(/\.0$/, '')}%`;
         total.className = `c-weight mono completeness-${c.total_class}`;
     }
 }
@@ -828,7 +842,9 @@ function applyRowState(fieldElement, row) {
         noteRow.classList.toggle('needs-review', flagged);
         noteRow.querySelector('.date-reason').textContent =
             (row.date_note || 'No due date') + ' — no calendar event until you add a date.';
-    } else if (noteRow) {
+    } else if (noteRow && /no calendar event until you add a date\.$/.test(noteRow.textContent.trim())) {
+        // Only retract the missing-date note. The same row also carries the
+        // "recurring" and "rule" explanations, which survive an edit.
         noteRow.remove();
     }
 }
@@ -872,9 +888,8 @@ function showManualSectionForm(sectionType) {
     const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
     
     modalContent.innerHTML = `
-        <span class="close-modal">&times;</span>
-        <h3>
-            <i data-lucide="plus-circle"></i>
+        <button type="button" class="close-modal" aria-label="Close">&times;</button>
+        <h3 id="manual-section-title">
             Add ${sectionName} Section Manually
         </h3>
         <form id="manual-section-form">
@@ -961,16 +976,16 @@ function showManualSectionForm(sectionType) {
         
         // Add the section to the page
         addManualSection(sectionType, days, startTime, endTime, location);
-        
+
         // Close modal
-        document.body.removeChild(modal);
+        closeManualSectionModal();
     });
     
     // Handle close button
     const closeBtn = modalContent.querySelector('.close-modal');
     if (closeBtn) {
         closeBtn.addEventListener('click', function() {
-            document.body.removeChild(modal);
+            closeManualSectionModal();
         });
     }
     
@@ -978,16 +993,50 @@ function showManualSectionForm(sectionType) {
     const cancelBtn = modalContent.querySelector('.btn-cancel-modal');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function() {
-            document.body.removeChild(modal);
+            closeManualSectionModal();
         });
     }
-    
+
     // Close on overlay click
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
-            document.body.removeChild(modal);
+            closeManualSectionModal();
         }
     });
+
+    // Escape closes, Tab stays inside, focus returns to the opener — the same
+    // contract the Add-assessment dialog already honours.
+    modalContent.setAttribute('role', 'dialog');
+    modalContent.setAttribute('aria-modal', 'true');
+    modalContent.setAttribute('aria-labelledby', 'manual-section-title');
+    const opener = document.activeElement;
+    const focusables = modalContent.querySelectorAll('input, select, textarea, button, [href]');
+    if (focusables.length) focusables[0].focus();
+
+    function onKeydown(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeManualSectionModal();
+            return;
+        }
+        if (e.key !== 'Tab' || focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+    document.addEventListener('keydown', onKeydown);
+
+    function closeManualSectionModal() {
+        document.removeEventListener('keydown', onKeydown);
+        if (modal.parentNode) document.body.removeChild(modal);
+        if (opener && typeof opener.focus === 'function') opener.focus();
+    }
 }
 
 /**
@@ -1386,6 +1435,20 @@ function initMotion() {
     headlines.forEach(function (el) { observer.observe(el); });
 
     window.addEventListener('pagehide', function () { observer.disconnect(); }, { once: true });
+    window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) return;   // bfcache restore: DOMContentLoaded will not fire again
+        revealTargets.concat(headlines).forEach(function (el) { el.classList.add('is-in'); });
+    });
+
+    // Turning reduce on mid-session must land on the finished state too.
+    if (typeof REDUCED_MOTION.addEventListener === 'function') {
+        REDUCED_MOTION.addEventListener('change', function (e) {
+            if (!e.matches) return;
+            observer.disconnect();
+            document.documentElement.classList.remove('motion-ready');
+            revealTargets.concat(headlines).forEach(function (el) { el.classList.add('is-in'); });
+        });
+    }
 }
 
 /**
@@ -1433,20 +1496,33 @@ function initDownloadConfirm() {
     const done = document.getElementById('download-done');
     if (!form || !done || typeof window.fetch !== 'function' || typeof window.FormData !== 'function') return;
 
+    const button = document.getElementById('generate-calendar-btn');
+    const label = button ? button.textContent : '';   // captured once, before anything rewrites it
     let passthrough = false;
+    let inFlight = false;
+
+    const reset = function () {
+        inFlight = false;
+        if (button) { button.disabled = false; button.textContent = label; }
+    };
 
     form.addEventListener('submit', function (e) {
         if (passthrough) return;
         if (document.querySelector('.editable-field.editing')) return;  // the save handler owns this click
         e.preventDefault();
 
-        const button = document.getElementById('generate-calendar-btn');
-        const label = button ? button.textContent : '';
+        // A disabled button is not a guard: Enter inside a <select> submits the
+        // form implicitly, and submitReview() can race a click. Two concurrent
+        // POST /review means two 60 s function invocations and two saved files.
+        if (inFlight) return;
+        inFlight = true;
         if (button) { button.disabled = true; button.textContent = 'Generating…'; }
 
+        let saved = false;
         const fallback = function () {
+            if (saved) { reset(); return; }   // the file already landed; never re-POST
             passthrough = true;
-            if (button) { button.disabled = false; button.textContent = label; }
+            reset();
             form.submit();
         };
 
@@ -1460,8 +1536,9 @@ function initDownloadConfirm() {
                 const range = response.headers.get('X-Plato-Range') || '';
                 return response.blob().then(function (blob) {
                     saveBlob(blob, filename);
+                    saved = true;
                     showDownloadConfirm(done, filename, events, range);
-                    if (button) { button.disabled = false; button.textContent = label; }
+                    reset();
                 });
             })
             .catch(fallback);
@@ -1489,9 +1566,13 @@ function showDownloadConfirm(done, filename, events, range) {
         const el = done.querySelector('[data-confirm="' + key + '"]');
         if (el) el.textContent = text;
     };
-    set('file', filename);
-    set('events', events ? (events + (events === '1' ? ' event' : ' events')) : 'unknown');
-    set('range', range ? range.replace(' - ', ' \u2013 ') : 'no dated events');
+    // Unhide BEFORE filling: a change inside a still-hidden aria-live region is
+    // generally not announced, so the confirmation was silent to a screen reader.
     done.hidden = false;
-    done.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'nearest' });
+    requestAnimationFrame(function () {
+        set('file', filename);
+        set('events', events ? (events + (events === '1' ? ' event' : ' events')) : 'unknown');
+        set('range', range ? range.replace(' - ', ' \u2013 ') : 'no dated events');
+        done.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'nearest' });
+    });
 }
