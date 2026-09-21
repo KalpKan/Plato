@@ -62,6 +62,17 @@ def test_summary_says_what_is_missing_when_weights_fall_short():
     assert c["summary_undated"] == "1 assessment still needs a date."
 
 
+def test_summary_warns_when_the_weights_exceed_100():
+    """110 % is a finding, not a reassurance \u2014 a row is probably double-counted."""
+    a = [AssessmentTask(title="A", type="midterm", weight_percent=60.0,
+                        due_datetime=datetime(2026, 10, 20, 23, 59)),
+         AssessmentTask(title="B", type="final", weight_percent=50.0,
+                        due_datetime=datetime(2026, 12, 10, 9, 0))]
+    c = calculate_completeness(_data(assessments=a))
+    assert "more than 100 %" in c["summary_assessments"]
+    assert c["summary_assessments"].startswith("All 2 assessments found. Weights total 110 %")
+
+
 def test_summary_names_bonus_weight_without_counting_it():
     bonus = AssessmentTask(title="Bonus quiz", type="quiz", weight_percent=1.0,
                            due_datetime=datetime(2026, 11, 3, 23, 59))

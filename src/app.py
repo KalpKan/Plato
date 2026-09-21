@@ -555,7 +555,12 @@ def summary_sentences(m: Dict[str, Any]) -> Dict[str, str]:
     else:
         noun = "assessment" if n == 1 else "assessments"
         head = f"All {n} {noun} found." if total >= 99.5 else f"{n} {noun} found."
-        if total >= 99.5:
+        if total > 102.0:
+            # Over 100 % is not a reassurance: a row is probably counted twice,
+            # or the outline uses best-N-of-M. Say so rather than stating it flat.
+            head += (f" Weights total {_num(total)} % \u2014 more than 100 %, so a row may be"
+                     " counted twice, or the outline marks best-of.")
+        elif total >= 99.5:
             head += f" Weights total {_num(total)} %."
         else:
             head += f" Weights total {_num(total)} % — {_num(100.0 - total)} % is unaccounted for."
