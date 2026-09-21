@@ -72,13 +72,29 @@ def test_summary_names_bonus_weight_without_counting_it():
     assert c["summary_slots"] == "1 lecture slot. 1 lab slot. No tutorial."
 
 
+def test_ics_range_ignores_the_timezone_blocks_own_dtstart():
+    # A VTIMEZONE carries DTSTART:20240101T000000 daylight markers; counting
+    # them dragged the range back to "Jan 01" of the wrong year on the live app.
+    ics = (b"BEGIN:VCALENDAR\r\nBEGIN:VTIMEZONE\r\nBEGIN:DAYLIGHT\r\n"
+           b"DTSTART:20240310T030000\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\n"
+           b"DTSTART:20240101T000000\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n"
+           b"BEGIN:VEVENT\r\nDTSTART;TZID=America/Toronto:20250829T130000\r\nEND:VEVENT\r\n"
+           b"BEGIN:VEVENT\r\nDTSTART;TZID=America/Toronto:20251208T235500\r\nEND:VEVENT\r\n"
+           b"END:VCALENDAR\r\n")
+    with app.test_request_context():
+        r = ics_response("x.ics", ics)
+    assert r.headers["X-Plato-Events"] == "2"
+    assert r.headers["X-Plato-Range"] == "Aug 29 - Dec 08, 2025"
+
+
 def test_ics_response_carries_the_event_count_and_range():
     ics = (b"BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20260909\r\nEND:VEVENT\r\n"
            b"BEGIN:VEVENT\r\nDTSTART:20261208T235900\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
     with app.test_request_context():
         r = ics_response("x.ics", ics)
     assert r.headers["X-Plato-Events"] == "2"
-    assert r.headers["X-Plato-Range"] == "Sep 09 – Dec 08, 2026"
+    assert r.headers["X-Plato-Range"] == "Sep 09 - Dec 08, 2026"  # ASCII: headers are latin-1
+    assert r.headers["X-Plato-Range"].isascii()
     assert "X-Plato-Events" in r.headers["Access-Control-Expose-Headers"]
     assert r.mimetype == "text/calendar"
 
@@ -109,9 +125,16 @@ def test_one_easing_family():
 
 def test_paper_tokens_are_the_spec_tokens():
     for token, value in (("--paper", "#faf8f4"), ("--sheet", "#ffffff"), ("--ink", "#1c1a17"),
-                         ("--rule", "#e0dad0"), ("--flag", "#9a6a00"), ("--flag-bg", "#fff6e0"),
+                         ("--rule", "#e0dad0"), ("--flag", "#8a5f00"), ("--flag-bg", "#fff6e0"),
                          ("--link", "#1f5fbf")):
         assert f"{token}: {value}" in CSS
+
+
+def test_content_never_depends_on_the_reveal_script_succeeding():
+    # [data-reveal] starts at opacity 0 only once initMotion has taken charge.
+    assert "html.motion-ready [data-reveal] { opacity: 0; }" in CSS
+    assert "\n[data-reveal] { opacity: 0; }" not in CSS  # never ungated
+    assert "motion-ready" in JS
 
 
 def test_the_type_is_self_hosted_and_three_families():

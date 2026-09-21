@@ -51,12 +51,12 @@
     --paper-2: #f4f1ea;
     --ink: #1c1a17;
     --ink-2: #5c574f;
-    --ink-3: #8a8378;
+    --ink-3: #6f6a61;
     --rule: #e0dad0;
     --rule-2: #cdc4b6;
 
     /* The only accent: "Plato could not read this — you must check it" */
-    --flag: #9a6a00;
+    --flag: #8a5f00;
     --flag-bg: #fff6e0;
     --flag-rule: #e6d3a3;
 
@@ -112,7 +112,7 @@ body.route-upload {
         --paper-2: #232019;
         --ink: #f2ede3;
         --ink-2: #b8b0a2;
-        --ink-3: #8a8378;
+        --ink-3: #968f83;
         --rule: #332f27;
         --rule-2: #46413a;
         --flag: #e6ad45;
@@ -501,7 +501,7 @@ a:hover { color: var(--ink); }
     max-width: 48ch;
 }
 
-.constraints { padding: var(--s7) 0 var(--s8); display: grid; gap: 0; }
+.constraints { padding: var(--s7) 0 0; display: grid; gap: 0; }
 .constraint {
     display: grid;
     grid-template-columns: 200px minmax(0, 1fr);
@@ -685,9 +685,9 @@ a:hover { color: var(--ink); }
     color: var(--ink-3);
     font-size: 12px;
 }
-.ledger .c-weight { width: 92px; text-align: right; }
-.ledger .c-date { width: 220px; }
-.ledger .c-flag { width: 160px; white-space: nowrap; }
+.ledger .c-weight { width: 88px; text-align: right; }
+.ledger .c-date { width: 300px; }
+.ledger .c-flag { width: 140px; white-space: nowrap; }
 .ledger thead .c-weight { text-align: right; }
 .ledger .c-kind { width: 120px; font-weight: 500; }
 .slots .c-section select { max-width: 520px; }
@@ -974,7 +974,7 @@ select.control { padding-right: var(--s5); }
 
 .sheet-foot {
     width: min(100%, var(--container-max));
-    margin: var(--s9) auto 0;
+    margin: var(--s7) auto 0;
     padding-top: var(--s5);
     border-top: 1px solid var(--rule);
 }
@@ -1021,22 +1021,32 @@ select.control { padding-right: var(--s5); }
 }
 
 @keyframes word-rise {
-    from { transform: translateY(110%); }
+    from { transform: translateY(135%); }
     to { transform: translateY(0); }
 }
 
-/* Section entrance — MengTo `animation-on-scroll`, once, never replayed. */
-[data-reveal] { opacity: 0; }
+/* Section entrance — MengTo `animation-on-scroll`, once, never replayed.
+   `motion-ready` is set by initMotion() and removed again by the first
+   uncaught error, so a broken script can never leave the page blank. */
+html.motion-ready [data-reveal] { opacity: 0; }
 [data-reveal].is-in {
     animation: reveal-rise var(--d-section) var(--ease) both;
     animation-delay: calc(var(--reveal-i, 0) * var(--stagger));
 }
 
-/* Masthead word reveal — MengTo `masked-reveal`, CSS implementation. */
-.word-mask { display: inline-block; overflow: hidden; vertical-align: top; }
+/* Masthead word reveal — MengTo `masked-reveal`, CSS implementation.
+   The mask reaches past the baseline so descenders are not clipped, and the
+   word starts further out so it is still fully hidden behind it. */
+.word-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: top;
+    padding: 0.06em 0 0.20em;
+    margin: -0.06em 0 -0.20em;
+}
 .word {
     display: inline-block;
-    transform: translateY(110%);
+    transform: translateY(135%);
     will-change: transform;
 }
 .is-split.is-in .word {
@@ -1131,7 +1141,7 @@ select.control { padding-right: var(--s5); }
     .ledger thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .ledger tbody tr {
         position: relative;
-        padding: var(--s4) var(--s3) var(--s4) 44px;
+        padding: var(--s3) var(--s3) var(--s4) 44px;
         border-bottom: 1px solid var(--rule);
     }
     .ledger tbody td,
@@ -1139,7 +1149,7 @@ select.control { padding-right: var(--s5); }
     .assessments .c-ordinal {
         position: absolute;
         left: var(--s3);
-        top: var(--s4);
+        top: var(--s3);
         width: auto;
     }
     .assessments .c-name { font-size: 15px; }
@@ -1151,11 +1161,9 @@ select.control { padding-right: var(--s5); }
         text-align: left;
         color: var(--ink-2);
     }
-    .assessments .c-weight::after {
-        content: "·";
-        padding: 0 var(--s2);
-        color: var(--ink-3);
-    }
+    /* Spacing, not a glyph: a separator character strands itself at the end of
+       the line whenever the date wraps onto its own. */
+    .assessments .c-weight { margin-right: var(--s4); }
     .assessments .c-flag { margin-top: var(--s2); }
     .assessment-note { padding-top: 0 !important; padding-bottom: var(--s4) !important; }
     .assessment-note .c-ordinal { display: none; }

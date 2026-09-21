@@ -6,18 +6,35 @@
  * dynamic content updates.
  */
 
+// A page whose content is hidden until a script succeeds is a page one typo
+// can blank. The reveal animation only arms itself once initMotion() adds
+// `motion-ready`, and the first uncaught error takes it straight back off.
+window.addEventListener('error', function () {
+    document.documentElement.classList.remove('motion-ready');
+});
+
+/** Run one initialiser; a failure in it must not take the others with it. */
+function boot(name, fn) {
+    try {
+        fn();
+    } catch (err) {
+        console.error('Plato: ' + name + ' failed', err);
+        document.documentElement.classList.remove('motion-ready');
+    }
+}
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize form enhancements
-    initFormValidation();
-    initDynamicForms();
-    initEditableFields();
-    initManualSectionAdders();
-    initAssessmentAddRemove();
-    initMotion();
-    initHeaderShadow();
-    initDownloadConfirm();
-    drawIcons();
+    boot('initMotion', initMotion);
+    boot('initFormValidation', initFormValidation);
+    boot('initDynamicForms', initDynamicForms);
+    boot('initEditableFields', initEditableFields);
+    boot('initManualSectionAdders', initManualSectionAdders);
+    boot('initAssessmentAddRemove', initAssessmentAddRemove);
+    boot('initHeaderShadow', initHeaderShadow);
+    boot('initDownloadConfirm', initDownloadConfirm);
+    boot('drawIcons', drawIcons);
     
     // The Generate button only has work to do when a field is still open in
     // its inline editor: save that edit first, then submit. Otherwise the
@@ -1340,18 +1357,15 @@ function initMotion() {
     const revealTargets = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     const headlines = Array.prototype.slice.call(document.querySelectorAll('[data-masked-reveal]'));
 
-    if (REDUCED_MOTION.matches) {
+    // Reduced motion lands on the complete final state, never a faster one.
+    if (REDUCED_MOTION.matches || !('IntersectionObserver' in window)) {
         revealTargets.forEach(function (el) { el.classList.add('is-in'); });
         headlines.forEach(function (el) { el.classList.add('is-in'); });
         return;
     }
 
+    document.documentElement.classList.add('motion-ready');
     headlines.forEach(splitMaskedReveal);
-
-    if (!('IntersectionObserver' in window)) {
-        revealTargets.concat(headlines).forEach(function (el) { el.classList.add('is-in'); });
-        return;
-    }
 
     let index = 0;
     const observer = new IntersectionObserver(function (entries) {
@@ -1477,7 +1491,7 @@ function showDownloadConfirm(done, filename, events, range) {
     };
     set('file', filename);
     set('events', events ? (events + (events === '1' ? ' event' : ' events')) : 'unknown');
-    set('range', range || 'no dated events');
+    set('range', range ? range.replace(' - ', ' \u2013 ') : 'no dated events');
     done.hidden = false;
     done.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'nearest' });
 }

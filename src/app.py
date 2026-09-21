@@ -307,13 +307,30 @@ def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
     """How many events the calendar holds and the range they cover.
 
     Used only to describe the download to the person who just took it
-    ("41 events, Sep 09 - Dec 08, 2026"); the bytes themselves are untouched.
+    ("21 events, Aug 29 - Dec 08, 2025"); the bytes themselves are untouched.
+    Only DTSTARTs inside a VEVENT count - a VTIMEZONE carries its own
+    DTSTART:20240101T000000 daylight-saving markers, which would otherwise
+    drag the range back to January of the wrong year.
     """
-    count = ics_bytes.count(b'BEGIN:VEVENT')
+    count = 0
     days = []
-    for raw in re.findall(rb'^DTSTART[^:\r\n]*:(\d{8})', ics_bytes, re.MULTILINE):
+    in_event = False
+    for raw_line in ics_bytes.splitlines():
+        line = raw_line.strip()
+        if line == b'BEGIN:VEVENT':
+            in_event = True
+            count += 1
+            continue
+        if line == b'END:VEVENT':
+            in_event = False
+            continue
+        if not in_event:
+            continue
+        m = re.match(rb'DTSTART[^:]*:(\d{8})', line)
+        if not m:
+            continue
         try:
-            days.append(datetime.strptime(raw.decode('ascii'), '%Y%m%d').date())
+            days.append(datetime.strptime(m.group(1).decode('ascii'), '%Y%m%d').date())
         except ValueError:
             continue
     if not days:
@@ -321,7 +338,10 @@ def ics_event_span(ics_bytes: bytes) -> Tuple[int, str]:
     first, last = min(days), max(days)
     if first == last:
         return count, first.strftime('%b %d, %Y')
-    return count, f"{first.strftime('%b %d')} – {last.strftime('%b %d, %Y')}"
+    # ASCII only: this value becomes an HTTP header, and headers are latin-1.
+    # An en dash here raised UnicodeEncodeError inside werkzeug and killed the
+    # whole download response; the page swaps in the en dash for display.
+    return count, f"{first.strftime('%b %d')} - {last.strftime('%b %d, %Y')}"
 
 
 def ics_response(filename: str, ics_bytes: bytes):
@@ -334,7 +354,7 @@ def ics_response(filename: str, ics_bytes: bytes):
     # body and mimetype are exactly what they were before.
     count, span = ics_event_span(ics_bytes)
     resp.headers['X-Plato-Events'] = str(count)
-    resp.headers['X-Plato-Range'] = span
+    resp.headers['X-Plato-Range'] = span.encode('ascii', 'replace').decode('ascii')
     resp.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Plato-Events, X-Plato-Range'
     return resp
 
@@ -1078,7 +1098,7 @@ def manual():
             end = deserialize_date(form['term_end']) if form.get('term_end') else None
         except ValueError:
             flash('Term dates must be real dates (YYYY-MM-DD).', 'error')
-            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB, step=2), 400
+            return render_template('manual.html', form=form, max_mb=MAX_FILE_SIZE_MB, step=1), 400
         term = CourseTerm(term_name=term_name, start_date=start, end_date=end, source='manual')
         assessments = []
         titles = form.getlist('assessment_title[]')
@@ -1139,7 +1159,7 @@ def manual():
         flash('Course entered. Review it below, then download the calendar.', 'success')
         return redirect(url_for('review'))
     
-    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB, step=2)
+    return render_template('manual.html', form=None, max_mb=MAX_FILE_SIZE_MB, step=1)
 
 
 @app.route('/api/update-field', methods=['POST'])
