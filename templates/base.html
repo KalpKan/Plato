@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}Plato{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/inter-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/newsreader-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5">
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     {% if config.POSTHOG_API_KEY %}
     <!-- PostHog analytics: cookieless, proxied through /ingest (see README "Where the settings live") -->
     <script>
@@ -22,50 +25,59 @@
     </script>
     {% endif %}
 </head>
+{% set step_names = {1: 'Upload', 2: 'Review', 3: 'Download'} %}
 <body class="{% block body_class %}{% endblock %}">
-    <div class="container {% block container_class %}{% endblock %}">
-        <header>
-            <a href="{{ url_for('index') }}" class="header-link">
-                <div class="header-content">
-                    <i data-lucide="calendar-check" class="header-icon"></i>
-                    <div class="header-text">
-                        <h1>Plato</h1>
-                        <p class="subtitle">Course outline to calendar</p>
-                    </div>
-                </div>
+    <a class="skip-link" href="#content">Skip to content</a>
+
+    <div class="page container-lines">
+        <span class="corner corner-tl" aria-hidden="true"></span>
+        <span class="corner corner-tr" aria-hidden="true"></span>
+
+        <header class="sheet-head">
+            <a href="{{ url_for('index') }}" class="lockup">
+                <i data-lucide="calendar-check" class="lockup-mark" aria-hidden="true"></i>
+                <span class="lockup-text">
+                    <span class="lockup-name">Plato</span>
+                    <span class="lockup-sub">Course outline to calendar</span>
+                </span>
             </a>
+
+            <nav class="step-nav" aria-label="Progress">
+                <ol class="step-rail">
+                    {% for n in [1, 2, 3] %}
+                    <li class="step{% if step == n %} is-active{% endif %}"{% if step == n %} aria-current="step"{% endif %}>
+                        <span class="step-n">{{ '%02d'|format(n) }}</span><span class="step-name">{{ step_names[n] }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                <p class="step-compact">Step {{ '%02d'|format(step) }} of 03 &middot; {{ step_names[step] }}</p>
+            </nav>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="messages">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            {{ message }}
-                        </div>
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
-        <main class="{% block main_class %}{% endblock %}">
+        <main id="content" class="sheet {% block main_class %}{% endblock %}" tabindex="-1">
             {% block content %}{% endblock %}
         </main>
 
-        <footer>
-            <div class="footer-content">
-                <p class="footer-disclaimer">This tool is not affiliated with Western University. It is an independent project designed to work with Western University course outlines.</p>
-                <p class="footer-credit">Developed by Kalp Kansara</p>
-            </div>
+        <footer class="sheet-foot">
+            <p class="footer-disclaimer">This tool is not affiliated with Western University. It is an independent project designed to work with Western University course outlines.</p>
+            <p class="footer-credit">Developed by Kalp Kansara</p>
         </footer>
+
+        <span class="corner corner-bl" aria-hidden="true"></span>
+        <span class="corner corner-br" aria-hidden="true"></span>
     </div>
 
-    <script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-    </script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=5"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
-

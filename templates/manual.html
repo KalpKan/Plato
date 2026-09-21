@@ -1,120 +1,124 @@
 {% extends "base.html" %}
 
-{% block title %}Plato - Enter a course by hand{% endblock %}
+{% block title %}Plato — Enter a course by hand{% endblock %}
+
+{% block body_class %}route-manual{% endblock %}
+{% block main_class %}manual-sheet{% endblock %}
 
 {% block content %}
-<div class="manual-section">
-    <h2>Enter a course by hand</h2>
-    <p>Use this when the PDF could not be read (a scan, a locked file, an outline without a table). Only the term dates and one assessment are required; you can add slots and more assessments on the review page too.</p>
+<section class="masthead" data-reveal>
+    <p class="masthead-kicker">By hand</p>
+    <h1 class="masthead-title"><span class="course-name">Enter a course by hand</span></h1>
+    <p class="sheet-note">Use this when the PDF could not be read (a scan, a locked file, an outline without a table). Only the term dates and one assessment are required; you can add slots and more assessments on the review page too.</p>
+</section>
 
-    <form action="{{ url_for('manual') }}" method="POST" class="manual-form" id="manual-form">
-        <section class="form-section">
-            <h3>Course</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="course_code">Course code</label>
-                    <input type="text" id="course_code" name="course_code" placeholder="e.g. KIN 2000" value="{{ form.course_code if form else '' }}">
-                </div>
-                <div class="form-group">
-                    <label for="course_name">Course name (optional)</label>
-                    <input type="text" id="course_name" name="course_name" placeholder="e.g. Physical Activity and Health" value="{{ form.course_name if form else '' }}">
-                </div>
+<form action="{{ url_for('manual') }}" method="POST" class="manual-form" id="manual-form">
+    <fieldset class="block" data-reveal>
+        <legend class="section-head">Course</legend>
+        <div class="field-row">
+            <div class="field">
+                <label for="course_code">Course code</label>
+                <input type="text" id="course_code" name="course_code" class="control" placeholder="e.g. KIN 2000" value="{{ form.course_code if form else '' }}">
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="term_name">Term</label>
-                    <input type="text" id="term_name" name="term_name" placeholder="e.g. Winter 2026" value="{{ form.term_name if form else '' }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="term_start">First day of classes</label>
-                    <input type="date" id="term_start" name="term_start" value="{{ form.term_start if form else '' }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="term_end">Last day of classes</label>
-                    <input type="date" id="term_end" name="term_end" value="{{ form.term_end if form else '' }}" required>
-                </div>
+            <div class="field">
+                <label for="course_name">Course name (optional)</label>
+                <input type="text" id="course_name" name="course_name" class="control" placeholder="e.g. Physical Activity and Health" value="{{ form.course_name if form else '' }}">
             </div>
-            <small>Western's sessional dates: Fall 2025 Sep 4 – Dec 9; Winter 2026 Jan 5 – Apr 9; Fall 2026 Sep 9 – Dec 8; Winter 2027 Jan 4 – Apr 9.</small>
-        </section>
-
-        <section class="form-section">
-            <h3>Weekly slots (optional)</h3>
-            <p>Days as letters (MWF, TTh, Mon/Wed) or names; times in 24-hour form.</p>
-            {% for kind in ['lecture', 'lab', 'tutorial'] %}
-            <div class="form-row slot-row">
-                <div class="form-group">
-                    <label for="{{ kind }}_days">{{ kind|capitalize }} days</label>
-                    <input type="text" id="{{ kind }}_days" name="{{ kind }}_days" placeholder="e.g. TTh">
-                </div>
-                <div class="form-group">
-                    <label for="{{ kind }}_start">Start</label>
-                    <input type="time" id="{{ kind }}_start" name="{{ kind }}_start">
-                </div>
-                <div class="form-group">
-                    <label for="{{ kind }}_end">End</label>
-                    <input type="time" id="{{ kind }}_end" name="{{ kind }}_end">
-                </div>
-                <div class="form-group">
-                    <label for="{{ kind }}_location">Room</label>
-                    <input type="text" id="{{ kind }}_location" name="{{ kind }}_location" placeholder="e.g. SSC-2050">
-                </div>
-            </div>
-            {% endfor %}
-        </section>
-
-        <section class="form-section">
-            <h3>Assessments</h3>
-            <div id="assessments-container">
-                <div class="assessment-entry">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Title</label>
-                            <input type="text" name="assessment_title[]" placeholder="e.g. Assignment 1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select name="assessment_type[]">
-                                <option value="assignment">Assignment</option>
-                                <option value="lab_report">Lab report</option>
-                                <option value="quiz">Quiz</option>
-                                <option value="midterm">Midterm</option>
-                                <option value="test">Test</option>
-                                <option value="final">Final exam</option>
-                                <option value="project">Project</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Due date and time (leave empty if the outline says TBA)</label>
-                            <input type="datetime-local" name="assessment_due[]">
-                        </div>
-                        <div class="form-group">
-                            <label>Weight %</label>
-                            <input type="number" name="assessment_weight[]" min="0" max="100" step="0.5" placeholder="e.g. 15">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button type="button" id="add-assessment" class="btn btn-secondary btn-sm">Add another assessment</button>
-        </section>
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Continue to review</button>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to upload</a>
         </div>
-    </form>
-</div>
+        <div class="field-row">
+            <div class="field">
+                <label for="term_name">Term</label>
+                <input type="text" id="term_name" name="term_name" class="control" placeholder="e.g. Winter 2026" value="{{ form.term_name if form else '' }}" required>
+            </div>
+            <div class="field">
+                <label for="term_start">First day of classes</label>
+                <input type="date" id="term_start" name="term_start" class="control" value="{{ form.term_start if form else '' }}" required>
+            </div>
+            <div class="field">
+                <label for="term_end">Last day of classes</label>
+                <input type="date" id="term_end" name="term_end" class="control" value="{{ form.term_end if form else '' }}" required>
+            </div>
+        </div>
+        <p class="helper">Western's sessional dates: Fall 2025 Sep 4 – Dec 9; Winter 2026 Jan 5 – Apr 9; Fall 2026 Sep 9 – Dec 8; Winter 2027 Jan 4 – Apr 9.</p>
+    </fieldset>
+
+    <fieldset class="block" data-reveal>
+        <legend class="section-head">Weekly slots (optional)</legend>
+        <p class="helper">Days as letters (MWF, TTh, Mon/Wed) or names; times in 24-hour form.</p>
+        {% for kind in ['lecture', 'lab', 'tutorial'] %}
+        <div class="field-row slot-row">
+            <div class="field">
+                <label for="{{ kind }}_days">{{ kind|capitalize }} days</label>
+                <input type="text" id="{{ kind }}_days" name="{{ kind }}_days" class="control" placeholder="e.g. TTh">
+            </div>
+            <div class="field">
+                <label for="{{ kind }}_start">Start</label>
+                <input type="time" id="{{ kind }}_start" name="{{ kind }}_start" class="control">
+            </div>
+            <div class="field">
+                <label for="{{ kind }}_end">End</label>
+                <input type="time" id="{{ kind }}_end" name="{{ kind }}_end" class="control">
+            </div>
+            <div class="field">
+                <label for="{{ kind }}_location">Room</label>
+                <input type="text" id="{{ kind }}_location" name="{{ kind }}_location" class="control" placeholder="e.g. SSC-2050">
+            </div>
+        </div>
+        {% endfor %}
+    </fieldset>
+
+    <fieldset class="block" data-reveal>
+        <legend class="section-head">Assessments</legend>
+        <div id="assessments-container">
+            <div class="assessment-entry">
+                <div class="field-row">
+                    <div class="field">
+                        <label>Title</label>
+                        <input type="text" name="assessment_title[]" class="control" placeholder="e.g. Assignment 1" required>
+                    </div>
+                    <div class="field">
+                        <label>Type</label>
+                        <select name="assessment_type[]" class="control">
+                            <option value="assignment">Assignment</option>
+                            <option value="lab_report">Lab report</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="midterm">Midterm</option>
+                            <option value="test">Test</option>
+                            <option value="final">Final exam</option>
+                            <option value="project">Project</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label>Due date and time (leave empty if the outline says TBA)</label>
+                        <input type="datetime-local" name="assessment_due[]" class="control">
+                    </div>
+                    <div class="field">
+                        <label>Weight %</label>
+                        <input type="number" name="assessment_weight[]" class="control" min="0" max="100" step="0.5" placeholder="e.g. 15">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="button" id="add-assessment" class="btn btn-quiet btn-sm">Add another assessment</button>
+    </fieldset>
+
+    <div class="actions" data-reveal>
+        <button type="submit" class="btn btn-primary">Continue to review</button>
+        <a href="{{ url_for('index') }}" class="btn btn-quiet">Back to upload</a>
+    </div>
+</form>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('add-assessment').addEventListener('click', function() {
-        const container = document.getElementById('assessments-container');
-        const newEntry = container.firstElementChild.cloneNode(true);
-        newEntry.querySelectorAll('input').forEach(input => input.value = '');
-        newEntry.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    document.getElementById('add-assessment').addEventListener('click', function () {
+        var container = document.getElementById('assessments-container');
+        var newEntry = container.firstElementChild.cloneNode(true);
+        newEntry.querySelectorAll('input').forEach(function (input) { input.value = ''; });
+        newEntry.querySelectorAll('select').forEach(function (select) { select.selectedIndex = 0; });
         container.appendChild(newEntry);
     });
 </script>

@@ -1,364 +1,327 @@
 {% extends "base.html" %}
 
-{% block title %}Plato - Review{% endblock %}
+{% block title %}Plato — Review &amp; Confirm{% endblock %}
+
+{% block body_class %}route-review{% endblock %}
+{% block main_class %}review-sheet{% endblock %}
 
 {% block content %}
-<div class="review-section">
-    <h2>Review & Confirm</h2>
-    <p>Check every date against your outline; click any highlighted field to correct it. Your edits are saved for you only.
-    {% if not is_manual %}Wrong from the start? <a href="{{ url_for('index') }}#upload-section">Re-upload the PDF</a> with "re-read the PDF" ticked.{% endif %}</p>
+<section class="masthead" data-reveal>
+    <p class="masthead-kicker">Review &amp; Confirm</p>
+    <h1 class="masthead-title">
+        <span class="course-code editable-field mono {% if course_code == 'Not found' %}missing-field{% endif %}"
+              data-field-type="course_code"
+              data-current-value="{{ '' if course_code == 'Not found' else course_code }}"
+              role="button" tabindex="0" title="Click to edit">{{ course_code }}</span>
+        <span class="course-name editable-field {% if course_name == 'Not found' %}missing-field{% endif %}"
+              data-field-type="course_name"
+              data-current-value="{{ '' if course_name == 'Not found' else course_name }}"
+              role="button" tabindex="0" title="Click to edit">{{ course_name }}</span>
+    </h1>
 
-    <!-- Summary Section -->
-    {% if completeness %}
-    <section class="review-section-item summary-section">
-        <div class="summary-stats">
-            <div class="stat-item">
-                <span class="stat-value" data-tile="assessments">{{ completeness.num_assessments }}</span>
-                <span class="stat-label">Assessments</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-value completeness-{{ completeness.total_class }}" data-tile="total" title="{% if completeness.total_class == 'over' %}More than 100 %: a row is probably counted twice, or the outline uses best-N-of-M{% elif completeness.bonus_weight %}Bonus rows ({{ completeness.bonus_weight|round|int }} %) are not counted{% else %}Sum of the weights below{% endif %}">{{ "%.0f"|format(completeness.total_weight) }}%</span>
-                <span class="stat-label" data-tile="total-label">of 100% found{% if completeness.bonus_weight %} (+{{ completeness.bonus_weight|round(1) }} bonus){% endif %}</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-value" data-tile="slots">{{ completeness.num_lecture_sections }} / {{ completeness.num_lab_sections }} / {{ completeness.num_tutorial_sections }}</span>
-                <span class="stat-label">Lecture / lab / tutorial slots</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-value {% if completeness.assessments_undated %}completeness-medium{% endif %}" data-tile="undated">{{ completeness.assessments_undated }}</span>
-                <span class="stat-label">Need a date</span>
-            </div>
+    <dl class="masthead-grid">
+        <div class="entry">
+            <dt>Term</dt>
+            <dd>
+                <span class="editable-field {% if term.term_name == 'Unknown' %}missing-field{% endif %}"
+                      data-field-type="term_name"
+                      data-current-value="{{ '' if term.term_name == 'Unknown' else term.term_name }}"
+                      role="button" tabindex="0" title="Click to edit">{{ term.term_name }}</span>
+                {% if term_source == 'sessional' %}<small class="field-note">Western sessional dates (outline gives none)</small>
+                {% elif term_source == 'estimated' %}<small class="field-note">Estimated: confirm the dates</small>{% endif %}
+            </dd>
         </div>
-    </section>
+        <div class="entry">
+            <dt>First day of classes</dt>
+            <dd><span class="editable-field mono {% if not term.start_date %}missing-field{% endif %}"
+                      data-field-type="term_start"
+                      data-current-value="{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else '' }}"
+                      role="button" tabindex="0" title="Click to edit">{{ term.start_date.strftime('%b %d, %Y') if term.start_date else 'Not found' }}</span></dd>
+        </div>
+        <div class="entry">
+            <dt>Last day of classes</dt>
+            <dd><span class="editable-field mono {% if not term.end_date %}missing-field{% endif %}"
+                      data-field-type="term_end"
+                      data-current-value="{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else '' }}"
+                      role="button" tabindex="0" title="Click to edit">{{ term.end_date.strftime('%b %d, %Y') if term.end_date else 'Not found' }}</span></dd>
+        </div>
+        {% if term.exam_periods %}
+        <div class="entry">
+            <dt>Exam period</dt>
+            <dd class="mono">{% for a, b in term.exam_periods %}{{ a.strftime('%b %d') }} – {{ b.strftime('%b %d, %Y') }}{% if not loop.last %}; {% endif %}{% endfor %}</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    {% if not term.start_date or not term.end_date %}
+    <p class="field-warning">Weekly lecture, lab and tutorial events need the first and last day of classes. Click the dates above to enter them.</p>
     {% endif %}
 
-    {% if notes %}
-    <section class="review-section-item parser-notes">
-        <h3><i data-lucide="info"></i> What could not be read from the PDF</h3>
-        <ul class="notes-list">
-            {% for note in notes %}<li>{{ note }}</li>{% endfor %}
-        </ul>
-    </section>
-    {% endif %}
+    <p class="sheet-note">Check every date against your outline; click any highlighted field to correct it. Your edits are saved for you only.
+    {% if not is_manual %}Wrong from the start? <a href="{{ url_for('index') }}">Re-upload the PDF</a> with "re-read the PDF" ticked.{% endif %}</p>
+</section>
 
-    <form action="{{ url_for('review') }}" method="POST" class="review-form" id="review-form">
-        <!-- Course Information -->
-        <section class="review-section-item">
-            <h3>
-                <i data-lucide="book-open"></i>
-                Course Information
-            </h3>
-            <div class="info-grid">
-                <div>
-                    <label>Course Code</label>
-                    <span class="value editable-field {% if course_code == 'Not found' %}missing-field{% endif %}"
-                          data-field-type="course_code"
-                          data-current-value="{{ '' if course_code == 'Not found' else course_code }}"
-                          title="Click to edit">
-                        {{ course_code }}
-                    </span>
-                </div>
-                <div>
-                    <label>Course Name</label>
-                    <span class="value editable-field {% if course_name == 'Not found' %}missing-field{% endif %}" 
-                          data-field-type="course_name" 
-                          data-current-value="{{ course_name }}"
-                          title="Click to edit">
-                        {{ course_name }}
-                    </span>
-                </div>
-                <div>
-                    <label>Term</label>
-                    <span class="value editable-field {% if term.term_name == 'Unknown' %}missing-field{% endif %}"
-                          data-field-type="term_name"
-                          data-current-value="{{ '' if term.term_name == 'Unknown' else term.term_name }}"
-                          title="Click to edit">
-                        {{ term.term_name }}
-                    </span>
-                    {% if term_source == 'sessional' %}<small class="field-note">Western sessional dates (outline gives none)</small>
-                    {% elif term_source == 'estimated' %}<small class="field-note">Estimated: confirm the dates</small>{% endif %}
-                </div>
-                <div>
-                    <label>Start Date</label>
-                    <span class="value editable-field {% if not term.start_date %}missing-field{% endif %}" 
-                          data-field-type="term_start" 
-                          data-current-value="{{ term.start_date.strftime('%Y-%m-%d') if term.start_date else '' }}"
-                          title="Click to edit">
-                        {{ term.start_date.strftime('%b %d, %Y') if term.start_date else 'Not found' }}
-                    </span>
-                </div>
-                <div>
-                    <label>End Date</label>
-                    <span class="value editable-field {% if not term.end_date %}missing-field{% endif %}" 
-                          data-field-type="term_end" 
-                          data-current-value="{{ term.end_date.strftime('%Y-%m-%d') if term.end_date else '' }}"
-                          title="Click to edit">
-                        {{ term.end_date.strftime('%b %d, %Y') if term.end_date else 'Not found' }}
-                    </span>
-                </div>
-                {% if term.exam_periods %}
-                <div>
-                    <label>Exam period</label>
-                    <span class="value">{% for a, b in term.exam_periods %}{{ a.strftime('%b %d') }} – {{ b.strftime('%b %d, %Y') }}{% if not loop.last %}; {% endif %}{% endfor %}</span>
-                </div>
-                {% endif %}
-            </div>
-            {% if not term.start_date or not term.end_date %}
-            <p class="field-warning">Weekly lecture, lab and tutorial events need the first and last day of classes. Click the dates above to enter them.</p>
-            {% endif %}
-        </section>
+{% if completeness %}
+<section class="summary" data-reveal aria-label="What Plato found">
+    <p class="summary-line" data-summary="assessments">{{ completeness.summary_assessments }}</p>
+    <p class="summary-line" data-summary="slots">{{ completeness.summary_slots }}</p>
+    <p class="summary-line{% if completeness.assessments_undated %} is-flagged{% endif %}" data-summary="undated">{{ completeness.summary_undated }}</p>
+</section>
+{% endif %}
 
-        <!-- Lecture Section Selection -->
-        <section class="review-section-item">
-            <h3>
-                <i data-lucide="users"></i>
-                Lecture Section
-            </h3>
-            {% if lecture_sections %}
-                <div class="form-group">
-                    <label for="lecture_section">Select your section</label>
-                    <select name="lecture_section" id="lecture_section" class="form-control" required>
-                        <option value="">Select a section</option>
-                        {% for section in lecture_sections %}
+{% if notes %}
+<section class="margin-note" data-reveal>
+    <h2 class="section-head">What could not be read from the PDF</h2>
+    <ul class="notes-list">
+        {% for note in notes %}<li>{{ note }}</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<form action="{{ url_for('review') }}" method="POST" class="review-form" id="review-form">
+
+    <section class="block" data-reveal>
+        <h2 class="section-head">Weekly slots</h2>
+        <table class="ledger slots">
+            <caption class="sr-only">The weekly lecture, lab and tutorial times Plato found in the outline</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="c-kind">Kind</th>
+                    <th scope="col" class="c-section">Your section</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-slot="lecture">
+                    <th scope="row" class="c-kind">Lecture</th>
+                    <td class="c-section">
+                    {% if lecture_sections %}
+                        <label class="sr-only" for="lecture_section">Select your lecture section</label>
+                        <select name="lecture_section" id="lecture_section" class="control" required>
+                            <option value="">Select a section</option>
+                            {% for section in lecture_sections %}
                             <option value="{{ loop.index0 }}"
                                 {% if (user_choices.selected_lecture_section and user_choices.selected_lecture_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lecture_section) %}selected{% endif %}>
                                 {% if section.section_id %}Section {{ section.section_id }}: {% endif %}{{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
-                        {% endfor %}
-                    </select>
-                    {% if lecture_sections|length == 1 and lecture_sections[0].meetings %}<small class="field-note">This course meets {{ lecture_sections[0].meetings|length + 1 }} times a week; one weekly event per meeting is added.</small>{% endif %}
-                    {% for section in lecture_sections if section.note %}<small class="field-note">{{ section.note }}</small>{% endfor %}
-                </div>
-            {% else %}
-                <p class="no-data">No lecture time was found in the outline. Add one if you want weekly events.</p>
-                <button type="button" class="btn btn-tertiary btn-sm" id="add-lecture-section">
-                    <i data-lucide="plus"></i>
-                    Add Section
-                </button>
-                <input type="hidden" name="lecture_section" value="none">
-            {% endif %}
-        </section>
+                            {% endfor %}
+                        </select>
+                        {% if lecture_sections|length == 1 and lecture_sections[0].meetings %}<small class="field-note">This course meets {{ lecture_sections[0].meetings|length + 1 }} times a week; one weekly event per meeting is added.</small>{% endif %}
+                        {% for section in lecture_sections if section.note %}<small class="field-note">{{ section.note }}</small>{% endfor %}
+                    {% else %}
+                        <p class="no-data">No lecture time was found in the outline. Add one if you want weekly events.</p>
+                        <button type="button" class="btn btn-quiet btn-sm" id="add-lecture-section">Add Section</button>
+                        <input type="hidden" name="lecture_section" value="none">
+                    {% endif %}
+                    </td>
+                </tr>
 
-        <!-- Lab Section Selection -->
-        <section class="review-section-item">
-            <h3>
-                <i data-lucide="flask-conical"></i>
-                Lab Section
-            </h3>
-            {% if lab_sections %}
-                <div class="form-group">
-                    <label for="lab_section">Select your section</label>
-                    <select name="lab_section" id="lab_section" class="form-control">
-                        <option value="none">No lab section</option>
-                        {% for section in lab_sections %}
+                <tr data-slot="lab">
+                    <th scope="row" class="c-kind">Lab</th>
+                    <td class="c-section">
+                    {% if lab_sections %}
+                        <label class="sr-only" for="lab_section">Select your lab section</label>
+                        <select name="lab_section" id="lab_section" class="control">
+                            <option value="none">No lab section</option>
+                            {% for section in lab_sections %}
                             <option value="{{ loop.index0 }}"
                                 {% if (user_choices.selected_lab_section and user_choices.selected_lab_section.section_id == section.section_id) or (loop.length == 1 and not user_choices.selected_lab_section) %}selected{% endif %}>
                                 Section {{ section.section_id or 'N/A' }}: {{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% else %}
-                <p class="no-data">No lab time was found in the outline (labs are usually only on draftmyschedule.uwo.ca). Add one if you have a lab.</p>
-                <button type="button" class="btn btn-tertiary btn-sm" id="add-lab-section">
-                    <i data-lucide="plus"></i>
-                    Add Section
-                </button>
-                <input type="hidden" name="lab_section" value="none">
-            {% endif %}
-        </section>
+                            {% endfor %}
+                        </select>
+                        {% for section in lab_sections if section.note %}<small class="field-note">{{ section.note }}</small>{% endfor %}
+                    {% else %}
+                        <p class="no-data">No lab time was found in the outline (labs are usually only on draftmyschedule.uwo.ca). Add one if you have a lab.</p>
+                        <button type="button" class="btn btn-quiet btn-sm" id="add-lab-section">Add Section</button>
+                        <input type="hidden" name="lab_section" value="none">
+                    {% endif %}
+                    </td>
+                </tr>
 
-        <!-- Tutorial Section Selection -->
-        <section class="review-section-item">
-            <h3>
-                <i data-lucide="message-circle"></i>
-                Tutorial Section
-            </h3>
-            {% if tutorial_sections %}
-                <div class="form-group">
-                    <label for="tutorial_section">Select your section</label>
-                    <select name="tutorial_section" id="tutorial_section" class="form-control">
-                        <option value="none">No tutorial section</option>
-                        {% for section in tutorial_sections %}
+                <tr data-slot="tutorial">
+                    <th scope="row" class="c-kind">Tutorial</th>
+                    <td class="c-section">
+                    {% if tutorial_sections %}
+                        <label class="sr-only" for="tutorial_section">Select your tutorial section</label>
+                        <select name="tutorial_section" id="tutorial_section" class="control">
+                            <option value="none">No tutorial section</option>
+                            {% for section in tutorial_sections %}
                             <option value="{{ loop.index0 }}" {% if loop.length == 1 %}selected{% endif %}>
                                 {% if section.section_id %}Section {{ section.section_id }}: {% endif %}{{ section.label }}
                                 {% if section.location %}({{ section.location }}){% endif %}
                             </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% else %}
-                <p class="no-data">No tutorial time was found in the outline.</p>
-                <input type="hidden" name="tutorial_section" value="none">
-            {% endif %}
-        </section>
-
-        <!-- Assessments -->
-        <section class="review-section-item">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-                <h3 style="margin: 0;">
-                    <i data-lucide="clipboard-list"></i>
-                    Assessments
-                </h3>
-                <button type="button" class="btn btn-tertiary btn-sm" id="add-assessment-btn">
-                    <i data-lucide="plus"></i>
-                    Add
-                </button>
-            </div>
-            {% if assessments %}
-                <div class="assessments-list">
-                    {% for assessment in assessments %}
-                        {% set missing_date = not assessment.due_datetime and not assessment.due_rule and not assessment.dates %}
-                        {% set should_flag = (assessment.needs_review or missing_date or not assessment.weight_percent) and not assessment.is_bonus %}
-                        <div class="assessment-item {% if should_flag %}needs-review{% endif %}{% if assessment.is_bonus %} is-bonus{% endif %}" data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
-                            <div class="assessment-header">
-                                <span class="editable-field assessment-title" 
-                                      data-field-type="assessment_title" 
-                                      data-assessment-index="{{ loop.index0 }}"
-                                      data-current-value="{{ assessment.title }}"
-                                      title="Click to edit">
-                                    <strong>{{ assessment.title }}</strong>
-                                </span>
-                                {% if assessment.is_bonus %}
-                                    <span class="badge badge-info" title="Shown but not counted in the total">Bonus / optional</span>
-                                {% elif missing_date %}
-                                    <span class="badge badge-warning badge-needs-date">Needs a date</span>
-                                {% elif should_flag %}
-                                    <span class="badge badge-warning badge-review">Review</span>
-                                {% endif %}
-                                <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove">
-                                    <i data-lucide="trash-2"></i>
-                                </button>
-                            </div>
-                            <div class="assessment-details">
-                                <span class="editable-field {% if not assessment.weight_percent %}missing-field{% endif %}" 
-                                      data-field-type="assessment_weight" 
-                                      data-assessment-index="{{ loop.index0 }}"
-                                      data-current-value="{{ assessment.weight_percent or '' }}"
-                                      title="Click to edit weight">
-                                    <i data-lucide="percent"></i>
-                                    {% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Add weight{% endif %}
-                                </span>
-                                {% if assessment.dates and assessment.dates|length > 1 %}
-                                    <span class="editable-field"
-                                          data-field-type="assessment_due_date"
-                                          data-assessment-index="{{ loop.index0 }}"
-                                          data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
-                                          title="{{ assessment.dates|length }} dates: {% for d in assessment.dates %}{{ d.strftime('%b %d') }}{% if not loop.last %}, {% endif %}{% endfor %}. Click to replace them with one date">
-                                        <i data-lucide="calendar"></i>
-                                        {{ assessment.dates|length }} dates, {{ assessment.dates[0].strftime('%b %d') }} – {{ assessment.dates[-1].strftime('%b %d, %Y') }}
-                                    </span>
-                                {% elif assessment.due_datetime %}
-                                    <span class="editable-field" 
-                                          data-field-type="assessment_due_date" 
-                                          data-assessment-index="{{ loop.index0 }}"
-                                          data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
-                                          title="Click to edit date">
-                                        <i data-lucide="calendar"></i>
-                                        {{ assessment.due_datetime.strftime('%b %d, %Y') }}{% if assessment.due_datetime.hour != 23 or assessment.due_datetime.minute != 59 %} {{ assessment.due_datetime|time_12h }}{% endif %}
-                                    </span>
-                                {% elif assessment.due_rule %}
-                                    <span class="editable-field" 
-                                          data-field-type="assessment_due_date" 
-                                          data-assessment-index="{{ loop.index0 }}"
-                                          data-current-value=""
-                                          title="Click to set exact date">
-                                        <i data-lucide="calendar"></i>
-                                        {{ assessment.due_rule[:25] }}{% if assessment.due_rule|length > 25 %}...{% endif %}
-                                    </span>
-                                {% else %}
-                                    <span class="editable-field missing-field" 
-                                          data-field-type="assessment_due_date" 
-                                          data-assessment-index="{{ loop.index0 }}"
-                                          data-current-value=""
-                                          title="Click to add date">
-                                        <i data-lucide="calendar"></i>
-                                        Add date
-                                    </span>
-                                {% endif %}
-                            </div>
-                            {% if assessment.date_note and (missing_date or assessment.date_status in ['recurring', 'rule'] or 'you' in assessment.date_note) %}
-                                <p class="date-reason">{{ assessment.date_note }}{% if missing_date and not assessment.is_bonus %} — no calendar event until you add a date.{% endif %}</p>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="no-data">No assessments found. Add them manually using the button above.</p>
-            {% endif %}
-        </section>
-
-        <!-- Lead Time Mapping - Collapsible -->
-        <details class="review-section-item">
-            <summary class="lead-time-summary">
-                <i data-lucide="bell"></i>
-                <span>Study Reminders</span>
-                <i data-lucide="chevron-down" class="chevron"></i>
-            </summary>
-            <div class="lead-time-content">
-                <p>Reminders will be created based on assessment weight. Click to customize.</p>
-                <div class="lead-time-mapping">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Weight Range</th>
-                                <th>Reminder</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for range, days in lead_time_mapping.items() %}
-                                <tr>
-                                    <td>{{ range }}</td>
-                                    <td>
-                                        <span class="editable-field lead-time-value" 
-                                              data-field-type="lead_time_mapping" 
-                                              data-weight-range="{{ range }}"
-                                              data-current-value="{{ days }}"
-                                              title="Click to edit">
-                                            {{ days }} days before
-                                        </span>
-                                    </td>
-                                </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </details>
+                        </select>
+                    {% else %}
+                        <p class="no-data">No tutorial time was found in the outline.</p>
+                        <input type="hidden" name="tutorial_section" value="none">
+                    {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
-        <!-- Form Actions -->
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="generate-calendar-btn">
-                <i data-lucide="download"></i>
-                Download Calendar
-            </button>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">
-                <i data-lucide="arrow-left"></i>
-                Back
-            </a>
+    <section class="block" data-reveal>
+        <div class="block-head">
+            <h2 class="section-head">Assessments</h2>
+            <button type="button" class="btn btn-quiet btn-sm" id="add-assessment-btn">Add another assessment</button>
         </div>
-    </form>
-</div>
 
-<!-- Modal for Adding Assessment -->
-<div id="add-assessment-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h3>
-            <i data-lucide="plus-circle"></i>
-            Add Assessment
-        </h3>
+        {% if assessments %}
+        <table class="ledger assessments">
+            <caption class="sr-only">Every assessment Plato found, with its weight and date. A tinted row is one Plato could not read and you must check.</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="c-ordinal"><span class="sr-only">Number</span><span aria-hidden="true">#</span></th>
+                    <th scope="col" class="c-name">Assessment</th>
+                    <th scope="col" class="c-weight">Weight</th>
+                    <th scope="col" class="c-date">Date</th>
+                    <th scope="col" class="c-flag">Flag</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in assessments %}
+                {% set missing_date = not assessment.due_datetime and not assessment.due_rule and not assessment.dates %}
+                {% set should_flag = (assessment.needs_review or missing_date or not assessment.weight_percent) and not assessment.is_bonus %}
+                <tr class="assessment-item {% if should_flag %}needs-review{% endif %}{% if assessment.is_bonus %} is-bonus{% endif %}"
+                    data-assessment-index="{{ loop.index0 }}" data-assessment-id="{{ loop.index0 }}">
+                    <td class="c-ordinal mono">{{ '%02d'|format(loop.index) }}</td>
+                    <td class="c-name" data-label="Assessment">
+                        <span class="editable-field assessment-title"
+                              data-field-type="assessment_title"
+                              data-assessment-index="{{ loop.index0 }}"
+                              data-current-value="{{ assessment.title }}"
+                              role="button" tabindex="0" title="Click to edit"><strong>{{ assessment.title }}</strong></span>
+                    </td>
+                    <td class="c-weight mono" data-label="Weight">
+                        <span class="editable-field {% if not assessment.weight_percent %}missing-field{% endif %}"
+                              data-field-type="assessment_weight"
+                              data-assessment-index="{{ loop.index0 }}"
+                              data-current-value="{{ assessment.weight_percent or '' }}"
+                              role="button" tabindex="0" title="Click to edit weight">{% if assessment.weight_percent %}{{ assessment.weight_percent }}%{% else %}Add weight{% endif %}</span>
+                    </td>
+                    <td class="c-date mono" data-label="Date">
+                        {% if assessment.dates and assessment.dates|length > 1 %}
+                            <span class="editable-field"
+                                  data-field-type="assessment_due_date"
+                                  data-assessment-index="{{ loop.index0 }}"
+                                  data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') if assessment.due_datetime else '' }}"
+                                  role="button" tabindex="0"
+                                  title="{{ assessment.dates|length }} dates: {% for d in assessment.dates %}{{ d.strftime('%b %d') }}{% if not loop.last %}, {% endif %}{% endfor %}. Click to replace them with one date">{{ assessment.dates|length }} dates, {{ assessment.dates[0].strftime('%b %d') }} – {{ assessment.dates[-1].strftime('%b %d, %Y') }}</span>
+                        {% elif assessment.due_datetime %}
+                            <span class="editable-field"
+                                  data-field-type="assessment_due_date"
+                                  data-assessment-index="{{ loop.index0 }}"
+                                  data-current-value="{{ assessment.due_datetime.strftime('%Y-%m-%d %H:%M') }}"
+                                  role="button" tabindex="0" title="Click to edit date">{{ assessment.due_datetime.strftime('%b %d, %Y') }}{% if assessment.due_datetime.hour != 23 or assessment.due_datetime.minute != 59 %} {{ assessment.due_datetime|time_12h }}{% endif %}</span>
+                        {% elif assessment.due_rule %}
+                            <span class="editable-field"
+                                  data-field-type="assessment_due_date"
+                                  data-assessment-index="{{ loop.index0 }}"
+                                  data-current-value=""
+                                  role="button" tabindex="0" title="Click to set exact date">{{ assessment.due_rule[:25] }}{% if assessment.due_rule|length > 25 %}...{% endif %}</span>
+                        {% else %}
+                            <span class="editable-field missing-field"
+                                  data-field-type="assessment_due_date"
+                                  data-assessment-index="{{ loop.index0 }}"
+                                  data-current-value=""
+                                  role="button" tabindex="0" title="Click to add date">Add date</span>
+                        {% endif %}
+                    </td>
+                    <td class="c-flag">
+                        {% if assessment.is_bonus %}
+                            <span class="badge badge-info" title="Shown but not counted in the total">Bonus / optional</span>
+                        {% elif missing_date %}
+                            <span class="badge badge-warning badge-needs-date">Needs a date</span>
+                        {% elif should_flag %}
+                            <span class="badge badge-warning badge-review">Review</span>
+                        {% endif %}
+                        <button type="button" class="btn-remove-assessment" data-assessment-index="{{ loop.index0 }}" title="Remove {{ assessment.title }}" aria-label="Remove {{ assessment.title }}">
+                            <i data-lucide="trash-2" aria-hidden="true"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% if assessment.date_note and (missing_date or assessment.date_status in ['recurring', 'rule'] or 'you' in assessment.date_note) %}
+                <tr class="assessment-note {% if should_flag %}needs-review{% endif %}" data-note-for="{{ loop.index0 }}">
+                    <td class="c-ordinal" aria-hidden="true"></td>
+                    <td colspan="4"><p class="date-reason">{{ assessment.date_note }}{% if missing_date and not assessment.is_bonus %} — no calendar event until you add a date.{% endif %}</p></td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="c-ordinal" aria-hidden="true"></td>
+                    <th scope="row" class="c-name">Total weight</th>
+                    <td class="c-weight mono completeness-{{ completeness.total_class }}" data-tile="total">{{ '%g'|format(completeness.total_weight) }}%</td>
+                    <td class="c-date" colspan="2">{% if completeness.bonus_weight %}<span class="foot-note">plus {{ '%g'|format(completeness.bonus_weight) }}% bonus, not counted</span>{% endif %}</td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <p class="no-data">No assessments found. Add them with the button above.</p>
+        {% endif %}
+    </section>
+
+    <details class="block reminders" data-reveal>
+        <summary class="section-head">Study reminders</summary>
+        <div class="reminders-body">
+            <p class="helper">A reminder is added before each assessment, sized by its weight. Click a value to change it.</p>
+            <table class="ledger lead-times">
+                <caption class="sr-only">How many days before an assessment its reminder is set</caption>
+                <thead>
+                    <tr><th scope="col">Weight range</th><th scope="col">Reminder</th></tr>
+                </thead>
+                <tbody>
+                    {% for range, days in lead_time_mapping.items() %}
+                    <tr>
+                        <th scope="row" class="mono">{{ range }}</th>
+                        <td class="mono">
+                            <span class="editable-field lead-time-value"
+                                  data-field-type="lead_time_mapping"
+                                  data-weight-range="{{ range }}"
+                                  data-current-value="{{ days }}"
+                                  role="button" tabindex="0" title="Click to edit">{{ days }} days before</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+
+    <div class="actions" data-reveal>
+        <button type="submit" class="btn btn-primary" id="generate-calendar-btn">Generate calendar</button>
+        <a href="{{ url_for('index') }}" class="btn btn-quiet">Back to upload</a>
+    </div>
+</form>
+
+<section id="download-done" class="confirm" hidden aria-live="polite">
+    <h2 class="section-head">Saved to your downloads</h2>
+    <dl class="confirm-grid">
+        <div class="entry"><dt>File</dt><dd class="mono" data-confirm="file"></dd></div>
+        <div class="entry"><dt>Events</dt><dd class="mono" data-confirm="events"></dd></div>
+        <div class="entry"><dt>Covering</dt><dd class="mono" data-confirm="range"></dd></div>
+    </dl>
+    <p class="helper">Import it into Google, Apple or Outlook. Nothing is kept on the server — change anything above and generate it again.</p>
+</section>
+
+<div id="add-assessment-modal" class="modal" hidden>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="add-assessment-title">
+        <button type="button" class="close-modal" aria-label="Close">&times;</button>
+        <h2 class="section-head" id="add-assessment-title">Add assessment</h2>
         <form id="add-assessment-form" onsubmit="return false;">
-            <div class="form-group">
+            <div class="field">
                 <label for="assessment-title">Title</label>
-                <input type="text" id="assessment-title" name="title" required placeholder="e.g., Midterm Exam, Assignment 1">
+                <input type="text" id="assessment-title" name="title" required placeholder="e.g. Midterm Exam, Assignment 1" class="control">
             </div>
-            <div class="form-row">
-                <div class="form-group">
+            <div class="field-row">
+                <div class="field">
                     <label for="assessment-type">Type</label>
-                    <select id="assessment-type" name="type" required>
+                    <select id="assessment-type" name="type" required class="control">
                         <option value="assignment">Assignment</option>
                         <option value="lab_report">Lab Report</option>
                         <option value="quiz">Quiz</option>
@@ -368,28 +331,23 @@
                         <option value="other">Other</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="field">
                     <label for="assessment-weight">Weight (%)</label>
-                    <input type="number" id="assessment-weight" name="weight_percent" step="0.1" min="0" max="100" placeholder="15">
+                    <input type="number" id="assessment-weight" name="weight_percent" step="0.1" min="0" max="100" placeholder="15" class="control">
                 </div>
             </div>
-            <div class="form-group">
-                <label for="assessment-due-date">Due Date & Time</label>
-                <input type="datetime-local" id="assessment-due-date" name="due_datetime">
+            <div class="field">
+                <label for="assessment-due-date">Due date &amp; time</label>
+                <input type="datetime-local" id="assessment-due-date" name="due_datetime" class="control">
             </div>
-            <div class="form-group">
-                <label for="assessment-due-rule">Relative Date (optional)</label>
-                <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g., During final exam period">
-                <small>Use this if you don't know the exact date yet</small>
+            <div class="field">
+                <label for="assessment-due-rule">Relative date (optional)</label>
+                <input type="text" id="assessment-due-rule" name="due_rule" placeholder="e.g. During final exam period" class="control">
+                <small class="field-note">Use this if you do not know the exact date yet.</small>
             </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i data-lucide="check"></i>
-                    Add
-                </button>
-                <button type="button" class="btn btn-secondary cancel-add-assessment">
-                    Cancel
-                </button>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="button" class="btn btn-quiet cancel-add-assessment">Cancel</button>
             </div>
         </form>
     </div>

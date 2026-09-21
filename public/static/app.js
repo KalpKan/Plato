@@ -9,95 +9,66 @@
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize form enhancements
-    initFileUpload();
     initFormValidation();
     initDynamicForms();
     initEditableFields();
     initManualSectionAdders();
     initAssessmentAddRemove();
+    initMotion();
+    initHeaderShadow();
+    initDownloadConfirm();
+    drawIcons();
     
-    // Re-enable form submission for the generate calendar button
+    // The Generate button only has work to do when a field is still open in
+    // its inline editor: save that edit first, then submit. Otherwise the
+    // native submit runs and the confirmation handler picks it up.
     const generateBtn = document.getElementById('generate-calendar-btn');
     const reviewForm = document.getElementById('review-form');
     if (generateBtn && reviewForm) {
-        generateBtn.addEventListener('click', function(e) {
-            // Check if any field is currently being edited
+        generateBtn.addEventListener('click', function (e) {
             const editingField = document.querySelector('.editable-field.editing');
-            if (editingField) {
-                // Try to auto-save the field if it has a value
-                const input = editingField.querySelector('.inline-edit-input');
-                if (input) {
-                    const fieldType = editingField.getAttribute('data-field-type');
-                    const assessmentIndex = editingField.getAttribute('data-assessment-index');
-                    const newValue = input.value.trim();
-                    
-                    // For date fields, allow saving even if empty (to clear the date)
-                    if (newValue || fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end') {
-                        // Get original content from a stored attribute or reconstruct
-                        const originalContent = editingField.getAttribute('data-original-content') || editingField.textContent;
-                        
-                        // Save the field synchronously (we'll wait for it)
-                        saveField(editingField, fieldType, newValue, assessmentIndex, originalContent);
-                        
-                        // Wait a moment for the save to complete, then submit
-                        setTimeout(() => {
-                            if (!document.querySelector('.editable-field.editing')) {
-                                // Field is no longer in editing mode, safe to submit
-                                reviewForm.onsubmit = function(e) {
-                                    return true;
-                                };
-                                reviewForm.submit();
-                            } else {
-                                showReviewNotice('Still saving your edit; click Download Calendar again in a moment.');
-                            }
-                        }, 500);
-                        e.preventDefault();
-                        return false;
-                    } else {
-                        // No value entered, just cancel the edit
-                        const originalContent = editingField.getAttribute('data-original-content') || '';
-                        editingField.innerHTML = originalContent;
-                        editingField.classList.remove('editing');
-                        // Continue with form submission
-                    }
-                } else {
-                    // A field is mid-save (no input yet): leave editing mode and go on
-                    editingField.classList.remove('editing');
-                }
+            if (!editingField) return;
+
+            const input = editingField.querySelector('.inline-edit-input');
+            if (!input) {
+                // Mid-save, with no input to read: leave editing mode and go on.
+                editingField.classList.remove('editing');
+                return;
             }
-            
-            // No fields being edited, proceed with submission
-            reviewForm.onsubmit = function(e) {
-                return true;
-            };
-            reviewForm.submit();
+
+            const fieldType = editingField.getAttribute('data-field-type');
+            const assessmentIndex = editingField.getAttribute('data-assessment-index');
+            const newValue = input.value.trim();
+            const clearable = fieldType === 'assessment_due_date' || fieldType === 'term_start' || fieldType === 'term_end';
+
+            if (!newValue && !clearable) {
+                // Nothing typed: drop the edit and let the submit through.
+                editingField.innerHTML = editingField.getAttribute('data-original-content') || '';
+                editingField.classList.remove('editing');
+                return;
+            }
+
+            e.preventDefault();
+            const originalContent = editingField.getAttribute('data-original-content') || editingField.textContent;
+            saveField(editingField, fieldType, newValue, assessmentIndex, originalContent);
+            setTimeout(function () {
+                if (document.querySelector('.editable-field.editing')) {
+                    showReviewNotice('Still saving your edit; click Generate calendar again in a moment.');
+                    return;
+                }
+                submitReview(reviewForm);
+            }, 500);
         });
     }
 });
 
 /**
- * Initialize file upload enhancements
- * Shows file name when file is selected
+ * Submit the review form in a way that still fires the submit event, so the
+ * download confirmation can read the response. form.submit() would skip it.
  */
-function initFileUpload() {
-    const fileInput = document.getElementById('pdf_file');
-    const fileNameDisplay = document.getElementById('file-name');
-    
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            // Update file name display
-            if (fileNameDisplay && this.files && this.files.length > 0) {
-                const fileName = this.files[0].name;
-                fileNameDisplay.textContent = fileName.length > 40 ? fileName.substring(0, 40) + '...' : fileName;
-                fileNameDisplay.style.color = 'var(--color-success)';
-                fileNameDisplay.style.fontStyle = 'normal';
-            } else if (fileNameDisplay) {
-                fileNameDisplay.textContent = 'No file selected';
-                fileNameDisplay.style.color = 'var(--color-text-secondary)';
-                fileNameDisplay.style.fontStyle = 'italic';
-            }
-        });
-    }
+function submitReview(form) {
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.submit();
 }
 
 /**
@@ -293,14 +264,16 @@ function initEditableFields() {
     }
     
     editableFields.forEach((field, index) => {
-        // Make sure cursor shows it's clickable
-        field.style.cursor = 'pointer';
-        field.style.userSelect = 'none';
-        field.style.position = 'relative'; // Ensure it can receive clicks
-        field.style.zIndex = '10'; // Make sure it's above other elements
-        
-        // Store reference for debugging
         field._isEditable = true;
+
+        // Enter or Space opens the editor, so a keyboard visitor can proof
+        // every field without a pointer (the spans carry role="button").
+        field.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+            if (e.target.closest('.inline-edit-form')) return;
+            e.preventDefault();
+            if (!this.classList.contains('editing')) startEditing(this);
+        });
         
         // Use onclick as primary handler (most reliable)
         field.onclick = function(e) {
@@ -744,15 +717,8 @@ function updateFieldDisplay(fieldElement, fieldType, newValue) {
     // For assessment_title, preserve the <strong> tag structure; date and weight keep their icon
     if (fieldType === 'assessment_title') {
         fieldElement.innerHTML = `<strong>${escapeHtml(displayValue)}</strong>`;
-    } else if (fieldType === 'assessment_due_date') {
-        fieldElement.innerHTML = '<i data-lucide="calendar"></i> ' + escapeHtml(displayValue);
-    } else if (fieldType === 'assessment_weight') {
-        fieldElement.innerHTML = '<i data-lucide="percent"></i> ' + escapeHtml(displayValue);
     } else {
-        fieldElement.innerHTML = escapeHtml(displayValue);
-    }
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        try { window.lucide.createIcons(); } catch (e) { /* icons are decoration */ }
+        fieldElement.textContent = displayValue;
     }
     
     fieldElement.setAttribute('data-current-value', newValue || '');
@@ -792,19 +758,19 @@ function formatDueDate(value) {
  */
 function applyCompleteness(c) {
     if (!c) return;
-    const set = (name, text) => { const el = document.querySelector(`[data-tile="${name}"]`); if (el) el.textContent = text; };
-    set('assessments', c.num_assessments);
+    const say = (name, text) => {
+        const el = document.querySelector(`[data-summary="${name}"]`);
+        if (el && typeof text === 'string') el.textContent = text;
+    };
+    say('assessments', c.summary_assessments);
+    say('slots', c.summary_slots);
+    say('undated', c.summary_undated);
+    const undated = document.querySelector('[data-summary="undated"]');
+    if (undated) undated.classList.toggle('is-flagged', c.assessments_undated > 0);
     const total = document.querySelector('[data-tile="total"]');
     if (total) {
         total.textContent = `${c.total_weight}%`;
-        total.className = `stat-value completeness-${c.total_class}`;
-    }
-    set('total-label', 'of 100% found' + (c.bonus_weight ? ` (+${c.bonus_weight} bonus)` : ''));
-    set('slots', `${c.num_lecture_sections} / ${c.num_lab_sections} / ${c.num_tutorial_sections}`);
-    const undated = document.querySelector('[data-tile="undated"]');
-    if (undated) {
-        undated.textContent = c.assessments_undated;
-        undated.classList.toggle('completeness-medium', c.assessments_undated > 0);
+        total.className = `c-weight mono completeness-${c.total_class}`;
     }
 }
 
@@ -816,26 +782,37 @@ function applyRowState(fieldElement, row) {
     if (!row) return;
     const item = fieldElement.closest('.assessment-item');
     if (!item) return;
-    const header = item.querySelector('.assessment-header');
+    const flagCell = item.querySelector('.c-flag');
     let badge = item.querySelector('.badge-needs-date');
     const missing = !row.has_date && !row.is_bonus;
-    if (missing && !badge && header) {
+    if (missing && !badge && flagCell) {
         badge = document.createElement('span');
         badge.className = 'badge badge-warning badge-needs-date';
         badge.textContent = 'Needs a date';
-        const title = header.querySelector('.assessment-title');
-        if (title && title.nextSibling) header.insertBefore(badge, title.nextSibling); else header.appendChild(badge);
+        flagCell.insertBefore(badge, flagCell.firstChild);
     } else if (!missing && badge) {
         badge.remove();
     }
     const flagged = (row.needs_review || missing || !row.weight) && !row.is_bonus;
     item.classList.toggle('needs-review', flagged);
-    let note = item.querySelector('.date-reason');
+
+    const index = item.getAttribute('data-assessment-index');
+    let noteRow = item.nextElementSibling;
+    if (!noteRow || !noteRow.classList.contains('assessment-note')) noteRow = null;
     if (missing) {
-        if (!note) { note = document.createElement('p'); note.className = 'date-reason'; item.appendChild(note); }
-        note.textContent = (row.date_note || 'No due date') + ' — no calendar event until you add a date.';
-    } else if (note) {
-        note.remove();
+        if (!noteRow) {
+            noteRow = document.createElement('tr');
+            noteRow.className = 'assessment-note';
+            noteRow.setAttribute('data-note-for', index);
+            noteRow.innerHTML = '<td class="c-ordinal" aria-hidden="true"></td>' +
+                                '<td colspan="4"><p class="date-reason"></p></td>';
+            item.parentNode.insertBefore(noteRow, item.nextSibling);
+        }
+        noteRow.classList.toggle('needs-review', flagged);
+        noteRow.querySelector('.date-reason').textContent =
+            (row.date_note || 'No due date') + ' — no calendar event until you add a date.';
+    } else if (noteRow) {
+        noteRow.remove();
     }
 }
 
@@ -870,7 +847,6 @@ function showManualSectionForm(sectionType) {
     // Create modal overlay using existing modal class
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.style.display = 'block';
     
     // Create modal content using existing modal-content class
     const modalContent = document.createElement('div');
@@ -970,7 +946,6 @@ function showManualSectionForm(sectionType) {
         addManualSection(sectionType, days, startTime, endTime, location);
         
         // Close modal
-        modal.style.display = 'none';
         document.body.removeChild(modal);
     });
     
@@ -978,7 +953,6 @@ function showManualSectionForm(sectionType) {
     const closeBtn = modalContent.querySelector('.close-modal');
     if (closeBtn) {
         closeBtn.addEventListener('click', function() {
-            modal.style.display = 'none';
             document.body.removeChild(modal);
         });
     }
@@ -987,7 +961,6 @@ function showManualSectionForm(sectionType) {
     const cancelBtn = modalContent.querySelector('.btn-cancel-modal');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function() {
-            modal.style.display = 'none';
             document.body.removeChild(modal);
         });
     }
@@ -995,7 +968,6 @@ function showManualSectionForm(sectionType) {
     // Close on overlay click
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
-            modal.style.display = 'none';
             document.body.removeChild(modal);
         }
     });
@@ -1014,22 +986,11 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
     const sectionName = sectionType === 'lab' ? 'Lab' : 'Lecture';
     const sectionId = sectionType === 'lab' ? 'lab_section' : 'lecture_section';
     
-    // Find the section container - look for the h3 with the section name
-    const sectionHeaders = document.querySelectorAll('.review-section-item h3');
-    let sectionContainer = null;
-    for (const header of sectionHeaders) {
-        if (header.textContent.trim() === `${sectionName} Section`) {
-            sectionContainer = header.closest('.review-section-item');
-            break;
-        }
-    }
-    
-    // Fallback: find by button ID
+    const slotRow = document.querySelector(`[data-slot="${sectionType}"]`);
+    let sectionContainer = slotRow ? slotRow.querySelector('.c-section') : null;
     if (!sectionContainer) {
         const addButton = document.getElementById(`add-${sectionType}-section`);
-        if (addButton) {
-            sectionContainer = addButton.closest('.review-section-item');
-        }
+        if (addButton) sectionContainer = addButton.parentNode;
     }
     
     if (!sectionContainer) {
@@ -1068,41 +1029,36 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
             hiddenInput.remove();
         }
         
-        // Create form group and select
-        const formGroup = document.createElement('div');
-        formGroup.className = 'form-group';
-        formGroup.innerHTML = `
-            <label for="${sectionId}">Select your ${sectionName.toLowerCase()} section:</label>
-            <select name="${sectionId}" id="${sectionId}" class="form-control" ${sectionType === 'lecture' ? 'required' : ''}>
-                <option value="${sectionType === 'lab' ? 'none' : ''}">-- ${sectionType === 'lab' ? 'No Lab Section' : 'Select Lecture Section'} --</option>
-            </select>
-        `;
-        
-        // Find the h3 header to insert after it
-        const header = sectionContainer.querySelector('h3');
-        if (header && header.nextSibling) {
-            // Insert after the header, before any existing content
-            sectionContainer.insertBefore(formGroup, header.nextSibling);
-        } else {
-            // Fallback: append to container
-            sectionContainer.appendChild(formGroup);
-        }
-        
-        selectElement = document.getElementById(sectionId);
-        
-        // Also add the button back (so user can add more sections)
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.marginTop = '10px';
+        // Build the select inside the slot row's "Your section" cell
+        const label = document.createElement('label');
+        label.className = 'sr-only';
+        label.setAttribute('for', sectionId);
+        label.textContent = `Select your ${sectionName.toLowerCase()} section`;
+
+        const select = document.createElement('select');
+        select.name = sectionId;
+        select.id = sectionId;
+        select.className = 'control';
+        if (sectionType === 'lecture') select.required = true;
+        const placeholder = document.createElement('option');
+        placeholder.value = sectionType === 'lab' ? 'none' : '';
+        placeholder.textContent = sectionType === 'lab' ? 'No lab section' : 'Select a section';
+        select.appendChild(placeholder);
+
+        sectionContainer.insertBefore(label, sectionContainer.firstChild);
+        sectionContainer.insertBefore(select, label.nextSibling);
+        selectElement = select;
+
         const addMoreButton = document.createElement('button');
         addMoreButton.type = 'button';
-        addMoreButton.className = 'btn btn-secondary';
+        addMoreButton.className = 'btn btn-quiet btn-sm';
         addMoreButton.id = `add-${sectionType}-section`;
-        addMoreButton.textContent = `+ Add Another ${sectionName} Section`;
+        addMoreButton.textContent = 'Add Section';
         addMoreButton.addEventListener('click', function() {
             showManualSectionForm(sectionType);
         });
-        buttonContainer.appendChild(addMoreButton);
-        sectionContainer.appendChild(buttonContainer);
+        sectionContainer.appendChild(addMoreButton);
+
     }
     
     // Store manual sections in a hidden input for form submission
@@ -1149,9 +1105,9 @@ function addManualSection(sectionType, days, startTime, endTime, location) {
     option.setAttribute('data-location', location || '');
     option.setAttribute('data-manual', 'true');
     option.setAttribute('data-manual-index', manualIndex);
-    
+
     selectElement.appendChild(option);
-    
+
     // Select the newly added option
     option.selected = true;
 }
@@ -1183,20 +1139,20 @@ function initAssessmentAddRemove() {
         
         if (closeBtn) {
             closeBtn.addEventListener('click', function() {
-                modal.style.display = 'none';
+                closeAddAssessmentModal();
             });
         }
         
         if (cancelBtn) {
             cancelBtn.addEventListener('click', function() {
-                modal.style.display = 'none';
+                closeAddAssessmentModal();
             });
         }
         
         // Close when clicking outside modal
         window.addEventListener('click', function(event) {
             if (event.target === modal) {
-                modal.style.display = 'none';
+                closeAddAssessmentModal();
             }
         });
     }
@@ -1213,10 +1169,53 @@ function initAssessmentAddRemove() {
     }
 }
 
+let _modalOpener = null;
+let _modalKeyHandler = null;
+
+/**
+ * Open the "Add assessment" dialog: focus moves in, Escape closes, Tab stays
+ * inside, and focus returns to whatever opened it.
+ */
+function openAddAssessmentModal(modal) {
+    _modalOpener = document.activeElement;
+    modal.hidden = false;
+    const focusables = modal.querySelectorAll('input, select, textarea, button, [href]');
+    if (focusables.length) focusables[0].focus();
+    _modalKeyHandler = function (e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeAddAssessmentModal();
+            return;
+        }
+        if (e.key !== 'Tab' || focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    };
+    document.addEventListener('keydown', _modalKeyHandler);
+}
+
+function closeAddAssessmentModal() {
+    const modal = document.getElementById('add-assessment-modal');
+    if (modal) modal.hidden = true;
+    if (_modalKeyHandler) {
+        document.removeEventListener('keydown', _modalKeyHandler);
+        _modalKeyHandler = null;
+    }
+    if (_modalOpener && typeof _modalOpener.focus === 'function') _modalOpener.focus();
+    _modalOpener = null;
+}
+
 function showAddAssessmentModal() {
     const modal = document.getElementById('add-assessment-modal');
     if (modal) {
-        modal.style.display = 'block';
+        openAddAssessmentModal(modal);
         // Reset form
         const form = document.getElementById('add-assessment-form');
         if (form) {
@@ -1260,11 +1259,8 @@ function addAssessment() {
     .then(result => {
         if (result.success) {
             // Close modal
-            const modal = document.getElementById('add-assessment-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            
+            closeAddAssessmentModal();
+
             // Reload page to show new assessment
             window.location.reload();
         } else {
@@ -1306,3 +1302,182 @@ function removeAssessment(index) {
     });
 }
 
+
+/* ==========================================================================
+   Registrar's ledger — motion, icons, and the download confirmation.
+
+   Motion policy (MengTo `animation-systems`): every beat below exists to
+   explain hierarchy, confirm an action, guide attention or keep continuity;
+   anything that served none of those was deleted with the old hero. One
+   easing family lives in style.css. `prefers-reduced-motion: reduce` lands on
+   the complete final state, never a shortened animation, so each gate here
+   marks its targets done rather than animating them faster.
+   ========================================================================== */
+
+const REDUCED_MOTION = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : { matches: false, addEventListener: function () {} };
+
+/**
+ * Lucide draws after the deferred CDN script has run, which is later than this
+ * file. Icons are decoration; a failure must never take the page with it.
+ */
+function drawIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (e) { /* decoration only */ }
+    }
+}
+
+/**
+ * M1/M2/M3 — the sheet settles top-down so the reading order is obvious, and
+ * the drop screen's headline rises word-by-word through a mask.
+ *
+ * `animation-on-scroll` for the observer, `masked-reveal` for the headline
+ * (implemented in CSS rather than GSAP: one headline does not justify a
+ * render-blocking animation library on a cold-starting Python function).
+ */
+function initMotion() {
+    const revealTargets = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
+    const headlines = Array.prototype.slice.call(document.querySelectorAll('[data-masked-reveal]'));
+
+    if (REDUCED_MOTION.matches) {
+        revealTargets.forEach(function (el) { el.classList.add('is-in'); });
+        headlines.forEach(function (el) { el.classList.add('is-in'); });
+        return;
+    }
+
+    headlines.forEach(splitMaskedReveal);
+
+    if (!('IntersectionObserver' in window)) {
+        revealTargets.concat(headlines).forEach(function (el) { el.classList.add('is-in'); });
+        return;
+    }
+
+    let index = 0;
+    const observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-in');
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: 0.2, rootMargin: '0px 0px -10% 0px' });
+
+    revealTargets.forEach(function (el) {
+        // Above the fold the stagger reads as one settle; below it each
+        // section arrives on its own, so the delay resets.
+        el.style.setProperty('--reveal-i', String(index < 4 ? index : 0));
+        index += 1;
+        observer.observe(el);
+    });
+    headlines.forEach(function (el) { observer.observe(el); });
+
+    window.addEventListener('pagehide', function () { observer.disconnect(); }, { once: true });
+}
+
+/**
+ * Wrap each word in an overflow mask so it can rise into place. The un-split
+ * text stays available to assistive technology via aria-label.
+ */
+function splitMaskedReveal(element) {
+    if (element.dataset.maskedRevealReady === 'true') return;
+    const text = element.textContent.trim();
+    element.setAttribute('aria-label', text);
+    const words = text.split(/(\s+)/);
+    let i = 0;
+    element.innerHTML = words.map(function (part) {
+        if (!part.trim()) return part;
+        const html = '<span class="word-mask" aria-hidden="true">' +
+                     '<span class="word" style="--i:' + i + '">' + escapeHtml(part) + '</span></span>';
+        i += 1;
+        return html;
+    }).join('');
+    element.dataset.maskedRevealReady = 'true';
+    element.classList.add('is-split');
+}
+
+/**
+ * The header earns its hairline lift only once there is content above it.
+ */
+function initHeaderShadow() {
+    const head = document.querySelector('.sheet-head');
+    if (!head) return;
+    const update = function () {
+        head.classList.toggle('is-scrolled', window.scrollY > 4);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+}
+
+/**
+ * M12 — screen 3. The server still streams text/calendar from POST /review;
+ * this only reads the file back through fetch so the page can say what landed
+ * (file name, event count, range). Any failure hands the submit straight back
+ * to the browser, so the no-JS path is exactly what it was before.
+ */
+function initDownloadConfirm() {
+    const form = document.getElementById('review-form');
+    const done = document.getElementById('download-done');
+    if (!form || !done || typeof window.fetch !== 'function' || typeof window.FormData !== 'function') return;
+
+    let passthrough = false;
+
+    form.addEventListener('submit', function (e) {
+        if (passthrough) return;
+        if (document.querySelector('.editable-field.editing')) return;  // the save handler owns this click
+        e.preventDefault();
+
+        const button = document.getElementById('generate-calendar-btn');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Generating…'; }
+
+        const fallback = function () {
+            passthrough = true;
+            if (button) { button.disabled = false; button.textContent = label; }
+            form.submit();
+        };
+
+        fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' })
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const type = response.headers.get('Content-Type') || '';
+                if (type.indexOf('text/calendar') === -1) throw new Error('not a calendar');
+                const filename = filenameFrom(response.headers.get('Content-Disposition'));
+                const events = response.headers.get('X-Plato-Events') || '';
+                const range = response.headers.get('X-Plato-Range') || '';
+                return response.blob().then(function (blob) {
+                    saveBlob(blob, filename);
+                    showDownloadConfirm(done, filename, events, range);
+                    if (button) { button.disabled = false; button.textContent = label; }
+                });
+            })
+            .catch(fallback);
+    });
+}
+
+function filenameFrom(disposition) {
+    const match = /filename="?([^";]+)"?/.exec(disposition || '');
+    return match ? match[1] : 'course-calendar.ics';
+}
+
+function saveBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function showDownloadConfirm(done, filename, events, range) {
+    const set = function (key, text) {
+        const el = done.querySelector('[data-confirm="' + key + '"]');
+        if (el) el.textContent = text;
+    };
+    set('file', filename);
+    set('events', events ? (events + (events === '1' ? ' event' : ' events')) : 'unknown');
+    set('range', range || 'no dated events');
+    done.hidden = false;
+    done.scrollIntoView({ behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth', block: 'nearest' });
+}
