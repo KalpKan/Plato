@@ -1698,14 +1698,26 @@ def download(filename: str):
 
 @app.route('/api/health')
 def health():
-    """Liveness + database check used by the portfolio hub and UptimeRobot."""
-    db = 'ok'
+    """Liveness for UptimeRobot and the hub tile; the database only with `?db=1`.
+
+    The plain route must never touch Neon: a 5-minute monitor that ran `select 1` kept
+    the compute awake around the clock and used up the free plan's monthly compute hours
+    (2026-10-19). `cache` says whether Postgres is answering (`ok`) or the SQLite stand-in
+    is in use (`fallback`); `?db=1` runs the real ping and answers 503 when it fails.
+    """
+    cache = get_cache()
+
+    def cache_state():
+        return cache.status() if hasattr(cache, 'status') else 'ok'
+
+    if not request.args.get('db'):
+        return jsonify(ok=True, service='plato', parser=PARSER_VERSION, cache=cache_state()), 200
     try:
-        if not get_cache().ping():
-            db = 'error'
+        db = 'ok' if cache.ping() else 'error'
     except Exception:
         db = 'error'
-    return jsonify(ok=(db == 'ok'), db=db, service='plato', parser=PARSER_VERSION), (200 if db == 'ok' else 503)
+    return jsonify(ok=(db == 'ok'), db=db, service='plato', parser=PARSER_VERSION,
+                   cache=cache_state()), (200 if db == 'ok' else 503)
 
 
 @app.errorhandler(413)

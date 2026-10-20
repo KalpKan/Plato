@@ -13,6 +13,7 @@ import os
 import sqlite3
 import json
 import hashlib
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -395,17 +396,98 @@ class CacheManager:
         return selections
 
 
+class FallbackCache:
+    """Postgres first; a SQLite cache in the tmp dir when Postgres cannot be reached.
+
+    On 2026-10-19 Neon refused every connection ("exceeded the quota") and each upload
+    bounced with "could not be read", because the first cache lookup raised before the
+    PDF was parsed. With this wrapper the same call goes to SQLite instead, so the app
+    keeps working on that server instance (the tmp dir is per instance, so a visitor
+    whose next request lands elsewhere is asked to upload again; still far better than
+    an error). Only connection-type errors are caught: a programming error still raises.
+    After a failure Postgres is left alone for RETRY_AFTER seconds so a dead server does
+    not add a connect timeout to every request.
+    """
+
+    RETRY_AFTER = 300  # seconds
+
+    _METHODS = ("lookup_extraction", "store_extraction", "delete_extraction",
+                "lookup_user_choices", "store_user_choices")
+
+    def __init__(self, primary, fallback_dir: Path, transient_errors: tuple, clock=time.monotonic):
+        self.primary = primary
+        self._fallback_dir = Path(fallback_dir)
+        self._fallback = None
+        self._transient = tuple(transient_errors)
+        self._clock = clock
+        self._down_since: Optional[float] = None
+        self.last_error: Optional[str] = None
+
+    def _sqlite(self) -> "CacheManager":
+        if self._fallback is None:
+            self._fallback = CacheManager(cache_dir=self._fallback_dir)
+        return self._fallback
+
+    def _primary_is_resting(self) -> bool:
+        return self._down_since is not None and (self._clock() - self._down_since) < self.RETRY_AFTER
+
+    def _call(self, name, *args, **kwargs):
+        if not self._primary_is_resting():
+            try:
+                result = getattr(self.primary, name)(*args, **kwargs)
+                self._down_since = None
+                return result
+            except self._transient as e:
+                self._down_since = self._clock()
+                self.last_error = f"{type(e).__name__}: {e}".strip()[:300]
+        return getattr(self._sqlite(), name)(*args, **kwargs)
+
+    def lookup_extraction(self, pdf_hash):
+        return self._call("lookup_extraction", pdf_hash)
+
+    def store_extraction(self, pdf_hash, extracted_data):
+        return self._call("store_extraction", pdf_hash, extracted_data)
+
+    def delete_extraction(self, pdf_hash):
+        return self._call("delete_extraction", pdf_hash)
+
+    def lookup_user_choices(self, pdf_hash, session_id=None):
+        return self._call("lookup_user_choices", pdf_hash, session_id)
+
+    def store_user_choices(self, pdf_hash, user_selections, session_id=None):
+        return self._call("store_user_choices", pdf_hash, user_selections, session_id)
+
+    def ping(self) -> bool:
+        """True only when Postgres itself answers (never the SQLite stand-in)."""
+        try:
+            ok = bool(self.primary.ping())
+        except self._transient as e:
+            self._down_since = self._clock()
+            self.last_error = f"{type(e).__name__}: {e}".strip()[:300]
+            return False
+        if ok:
+            self._down_since = None
+        return ok
+
+    def status(self) -> str:
+        """`ok` while Postgres answers, `fallback` while SQLite is standing in."""
+        return "fallback" if self._down_since is not None else "ok"
+
+
 # Auto-select cache manager based on environment
 def get_cache_manager():
     """Get the appropriate cache manager based on environment.
-    
+
     Returns:
-        SupabaseCacheManager if DATABASE_URL is set, otherwise SQLiteCacheManager
+        FallbackCache around SupabaseCacheManager (Postgres via DATABASE_URL, SQLite in the
+        tmp dir when Postgres is unreachable) in production, otherwise SQLiteCacheManager
     """
     if os.getenv("DATABASE_URL"):
-        # Use Supabase for production
+        import psycopg2
         from .supabase_cache import SupabaseCacheManager
-        return SupabaseCacheManager()
+        fallback_dir = Path(os.getenv("PLATO_TMP_DIR", "/tmp")) / "plato" / "cache-fallback"
+        return FallbackCache(SupabaseCacheManager(), fallback_dir,
+                             transient_errors=(psycopg2.OperationalError, psycopg2.InterfaceError))
     else:
         # Use SQLite for local development
         return CacheManager()

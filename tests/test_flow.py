@@ -84,12 +84,49 @@ def test_review_get_without_hash_redirects(monkeypatch, tmp_path):
     assert r.status_code == 302
 
 
-def test_health_without_db(monkeypatch, tmp_path):
+def test_health_is_liveness_and_never_touches_the_db(monkeypatch, tmp_path):
+    """UptimeRobot hits this every 5 minutes; a DB round trip here kept Neon's compute
+    awake all month and used up the free quota (2026-10-19). Plain GET = liveness only."""
     mod = _app(monkeypatch, tmp_path)
+    calls = []
+    mod.get_cache().ping = lambda: calls.append(1) or True
     r = mod.app.test_client().get("/api/health")
     assert r.status_code == 200
     body = r.get_json()
-    assert body["ok"] is True and body["db"] == "ok"
+    assert body["ok"] is True and body["service"] == "plato" and body["cache"] == "ok"
+    assert "db" not in body and calls == []
+
+
+def test_health_checks_the_db_only_when_asked(monkeypatch, tmp_path):
+    mod = _app(monkeypatch, tmp_path)
+    r = mod.app.test_client().get("/api/health?db=1")
+    assert r.status_code == 200 and r.get_json()["db"] == "ok"
+    mod.get_cache().ping = lambda: False
+    r = mod.app.test_client().get("/api/health?db=1")
+    assert r.status_code == 503
+    assert r.get_json()["ok"] is False and r.get_json()["db"] == "error"
+
+
+def test_health_stays_up_while_the_cache_runs_on_fallback(monkeypatch, tmp_path):
+    from src.cache import FallbackCache
+
+    class Dead(Exception):
+        pass
+
+    class DeadPrimary:
+        def __getattr__(self, name):
+            def fail(*a, **kw):
+                raise Dead("quota exceeded")
+            return fail
+
+    mod = _app(monkeypatch, tmp_path)
+    mod._cache = FallbackCache(DeadPrimary(), fallback_dir=tmp_path / "fb", transient_errors=(Dead,))
+    mod.get_cache().lookup_extraction("h" * 64)  # one real request has already hit the dead server
+    r = mod.app.test_client().get("/api/health")
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True and r.get_json()["cache"] == "fallback"
+    r = mod.app.test_client().get("/api/health?db=1")
+    assert r.status_code == 503 and r.get_json()["db"] == "error"
 
 
 def test_review_post_keeps_custom_lead_time_mapping(monkeypatch, tmp_path):

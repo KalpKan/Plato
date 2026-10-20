@@ -1,5 +1,28 @@
 # Plato — status
 
+## 2026-10-20 — incident: Neon free compute quota exhausted; uploads bounced for ~32 h
+
+- **Symptom.** UptimeRobot `plato health (DB, Neon)` DOWN from 2026-10-19 11:27 UTC (`/api/health` 503
+  `{"db":"error"}`). Every upload bounced to `/` with "could not be read … Try again or use manual mode."
+  because the first cache lookup raised before the PDF was parsed. The page itself (`/`) stayed 200.
+- **Cause.** Neon Free gives each project 100 compute-hours a month. The 5-minute monitor ran `select 1`
+  against Neon, so the compute (0.25 CU minimum) never scaled to zero: `compute_time_seconds` 399 187
+  (≈ 111 CU-h) by Oct 19, then Neon refused connections with "Your account or project has exceeded the
+  quota. Upgrade your plan to increase limits." and archived the idle branch on Oct 20. Quota resets
+  2026-11-01; the branch un-archives itself on first access.
+- **Fix (this commit).** `src/cache.py` `FallbackCache`: Postgres first, SQLite under
+  `$PLATO_TMP_DIR/plato/cache-fallback` whenever Postgres raises `OperationalError`/`InterfaceError`,
+  with a 5-minute rest before Postgres is retried; programming errors still raise. `/api/health` is
+  liveness only (`{ok, service, parser, cache: ok|fallback}`) and touches the database only with
+  `?db=1` (then `db: ok|error`, 503 on error). Tests: `tests/test_cache.py` (4 new),
+  `tests/test_flow.py` (3 replace `test_health_without_db`). Local run against the real, refused Neon
+  URL: upload → `/review` 200 with the assessments shown, `cache: fallback`.
+- **Limits of the fallback.** The SQLite file is per server instance; a visitor whose next request
+  lands on another instance is asked to upload again. Nothing is lost permanently: Plato's database is
+  only a cache.
+- **Prevention.** The monitor no longer wakes Neon (the URL is unchanged, the route changed). Expected
+  Neon usage from now on: minutes per month, from real uploads only.
+
 Night protocol acknowledged 2026-09-21 06:23 UTC.
 
 ## Definition of done — "Registrar's ledger" redesign (2026-09-21)
